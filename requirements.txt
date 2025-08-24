@@ -1,0 +1,16 @@
+dash>=3.1.1,<4.0.0
+feffery_antd_components>=0.4.0,<0.5.0
+feffery_dash_utils>=0.2.6
+feffery_utils_components>=0.3.2,<0.4.0
+Flask_Login
+peewee
+user_agents
+flask-compress
+flask-principal
+yarl
+pandas
+dash_extensions
+dash-offline-detect-plugin>=0.1.4
+dash-disable-devtool-plugin>=0.1.2
+loguru>=0.6.0
+gunicorn>=23.0.0
