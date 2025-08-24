@@ -5,13 +5,13 @@ class BaseConfig:
     """应用基础配置参数"""
 
     # 应用基础标题
-    app_title: str = "Magic Dash Pro"
+    app_title: str = "yyAsistant"
 
     # 应用版本
-    app_version: str = "0.4.1"
+    app_version: str = "0.2.1"
 
     # 应用密钥
-    app_secret_key: str = "magic-dash-pro-demo"
+    app_secret_key: str = "yyAsistant-bgt56yhn-passkey"
 
     # 日志配置参数
     app_log_filename: str = 'app.log'
@@ -23,7 +23,7 @@ class BaseConfig:
     # 共享cookies，因此在同一主机地址下部署多套基于
     # magic-dash-pro模板开发的独立项目时，请为各个项目
     # 设置不同的app_session_cookie_name
-    app_session_cookie_name: str = "magic_dash_pro_session"
+    app_session_cookie_name: str = "yyAsistant_session"
 
     # 浏览器最低版本限制规则
     min_browser_versions: List[dict] = [

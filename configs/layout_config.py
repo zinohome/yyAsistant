@@ -14,4 +14,4 @@ class LayoutConfig:
     core_layout_type: Literal["single", "tabs"] = "single"
 
     # 是否在页首中显示页面搜索框
-    show_core_page_search: bool = True
+    show_core_page_search: bool = False

@@ -14,3 +14,4 @@ dash-offline-detect-plugin>=0.1.4
 dash-disable-devtool-plugin>=0.1.2
 loguru>=0.6.0
 gunicorn>=23.0.0
+psycopg2-binary>=2.9.10

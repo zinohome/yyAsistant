@@ -108,6 +108,25 @@ class RouterConfig:
                 {
                     "component": "SubMenu",
                     "props": {
+                        "key": "用户管理",
+                        "title": "用户管理",
+                        "icon": "antd-user",
+                    },
+                    "children": [
+                        {
+                            "component": "Item",
+                            "props": {
+                                "key": "/core/users",
+                                "title": "系统用户",
+                                "icon": "antd-user",
+                                "href": "/core/users",
+                            },
+                        },
+                    ],
+                },
+                {
+                    "component": "SubMenu",
+                    "props": {
                         "key": "日志管理",
                         "title": "日志管理",
                         "icon": "antd-history",
@@ -163,6 +182,7 @@ class RouterConfig:
         "/core/independent-page": "独立页面渲染入口页",
         "/core/independent-wildcard-page": "独立通配页面渲染入口页",
         "/core/url-params-page": "url参数提取示例",
+        "/core/users": "系统用户",
         "/core/login-logs": "登录日志",
         "/core/other-page1": "其他页面1",
         "/403-demo": "403状态页演示",
