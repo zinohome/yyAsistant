@@ -16,7 +16,7 @@ from views.core_pages import (
     independent_wildcard_page,
     url_params_page,
     # 系统管理相关页面
-    login_logs,
+    login_logs, users_man,
 )
 
 # 路由配置参数
@@ -175,6 +175,12 @@ def core_router(
     elif pathname == "/core/url-params-page":
         # 更新页面返回内容
         page_content = url_params_page.render(current_url=current_url)
+
+    # 系统管理相关页面
+    # 用户管理-系统用户
+    elif pathname == "/core/users":
+        # 更新页面返回内容
+        page_content = users_man.render()
 
     # 系统管理相关页面
     # 日志管理-登录日志
