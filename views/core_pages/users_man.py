@@ -30,9 +30,6 @@ def render():
                             {
                                 "dataIndex": "user_id",
                                 "title": "用户id",
-                                "renderOptions": {
-                                    "renderType": "ellipsis-copyable",
-                                },
                             },
                             {
                                 "dataIndex": "user_name",
@@ -44,10 +41,22 @@ def render():
                                 "renderOptions": {"renderType": "tags"},
                             },
                             {
-                                "dataIndex": "操作",
-                                "title": "操作",
+                                "dataIndex": "编辑",
+                                "title": "编辑",
+                                "renderOptions": {
+                                    "renderType": "button"
+                                },
+                            },
+                            {
+                                "dataIndex": "删除",
+                                "title": "删除",
                                 "renderOptions": {
                                     "renderType": "button",
+                                    "renderButtonPopConfirmProps": {
+                                        "title": "确认删除",
+                                        "okText": "确定",
+                                        "cancelText": "取消"
+                                    }
                                 },
                             },
                         ],
@@ -108,21 +117,23 @@ def render():
                     delay=300,
                 ),
                 # 添加用户模态框
-                fac.AntdModal(
+                fac.AntdDrawer(
                     id="core-users-add-modal",
                     title=fac.AntdSpace([fac.AntdIcon(icon="antd-user-add"), "添加用户"]),
                     mask=False,
-                    renderFooter=True,
-                    okClickClose=False,
+                    placement='right',
+                    width="40vw",
+                    maskClosable=False,
                     visible=False,
                 ),
                 # 编辑用户模态框
-                fac.AntdModal(
+                fac.AntdDrawer(
                     id="core-users-edit-modal",
-                    title=fac.AntdSpace([fac.AntdIcon(icon="antd-user-edit"), "编辑用户"]),
+                    title=fac.AntdSpace([fac.AntdIcon(icon="antd-user"), "编辑用户"]),
                     mask=False,
-                    renderFooter=True,
-                    okClickClose=False,
+                    placement='right',
+                    width="40vw",
+                    maskClosable=False,
                     visible=False,
                 ),
             ],

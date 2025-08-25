@@ -186,7 +186,7 @@ def open_add_user_modal(nClicks):
             ],
             id="user-manage-add-user-form",
             key=str(uuid.uuid4()),  # 强制刷新
-            enableBatchControl=True,
+            enableBatchControl=False,
             layout="vertical",
             values={"user-manage-add-user-form-user-role": AuthConfig.normal_role},
             style=style(marginTop=32),
