@@ -30,8 +30,7 @@ def render(
     return fac.AntdRow(
         [
             fac.AntdCol(
-                flex="auto",
-                style=style(textAlign="right")
+                flex="auto"
             ),
             fac.AntdCol(
                 [
@@ -58,22 +57,24 @@ def render(
                         style=style(
                             backgroundColor=message_bg_color,
                             color=message_text_color,
-                            borderRadius="12px 12px 0 12px",
+                            borderRadius="12px 0 12px 12px",
                             padding="12px 16px",
-                            maxWidth="70%"
+                            maxWidth="80%",
+                            width="100%",
+                            marginLeft="auto"
                         )
                     )
                 ],
-                flex="auto",
-                style=style(textAlign="right", paddingRight="12px")
+                flex="auto"
             ),
             fac.AntdCol(
                 fac.AntdAvatar(
                     icon=icon,
                     style=style(backgroundColor=icon_bg_color, width="36px", height="36px")
                 ),
-                flex="none"
+                flex="none",
+                style=style(marginLeft="12px")
             )
         ],
-        style=style(marginBottom="16px", padding="0 24px")
+        style=style(marginBottom="16px", padding="16px 24px 0 24px")
     )

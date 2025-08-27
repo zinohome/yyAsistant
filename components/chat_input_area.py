@@ -132,6 +132,22 @@ def render(
                                                 style=style(padding="4px 8px")
                                             )
                                         ] if enable_voice_input else [] ),
+
+                                        # 通话按钮
+                                        *( [
+                                            fac.AntdButton(
+                                                #icon=fac.AntdIcon(icon="proicons:microphone"),
+                                                icon=DashIconify(icon="bi:telephone",
+                                                        width=25,
+                                                        height=25,
+                                                        rotate=3,
+                                                        flip="horizontal",
+                                                    ),
+                                                type="text",
+                                                title="直接通话",
+                                                style=style(padding="4px 8px")
+                                            )
+                                        ] if enable_voice_input else [] ),
                                         
                                         # 发送按钮（上箭头）
                                         *( [

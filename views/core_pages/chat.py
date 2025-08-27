@@ -229,7 +229,7 @@ def render():
                                                         fac.AntdDivider(direction="vertical", style=style(margin="0 12px")),
                                                         fac.AntdTag(
                                                             "ai-chat-x-current-session",
-                                                            color="blue",
+                                                            color="green",
                                                             icon=fac.AntdIcon(icon="antd-check-circle", style=style(fontSize="12px"))
                                                         )
                                                     ],
