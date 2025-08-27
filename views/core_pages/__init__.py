@@ -75,7 +75,7 @@ def render(current_user_access_rule: str, current_pathname: str = None):
             return independent_page_demo.render()
         elif current_pathname == "/core/chat":
             # 导入并渲染AI聊天页面
-            return ai_chat_x.render()
+            return chat.render()
 
     # 判断是否需要独立通配渲染
     elif any(

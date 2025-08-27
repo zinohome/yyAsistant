@@ -15,7 +15,7 @@ app = dash.Dash(
     compress=True,  # 隐式依赖flask-compress
     update_title=None,
     external_stylesheets=[
-        '/assets/css/ai_chat_x.css'
+        '/assets/css/chat.css'
     ]
 )
 server = app.server
