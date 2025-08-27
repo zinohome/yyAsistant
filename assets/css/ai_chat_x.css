@@ -1,0 +1,129 @@
+/* AntDesign X风格聊天界面样式 */
+
+/* 会话列表项样式 */
+#ai-chat-x-session-list .ant-card:hover {
+    background-color: #e6f7ff !important;
+    transform: translateX(4px);
+}
+
+/* 消息气泡样式优化 */
+#ai-chat-x-history .ant-card {
+    transition: all 0.2s ease;
+}
+
+#ai-chat-x-history .ant-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 输入区域样式 */
+#ai-chat-x-input {
+    resize: none;
+    font-size: 14px;
+}
+
+#ai-chat-x-input:focus {
+    border-color: #1890ff !important;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 滚动条样式 - AntDesign X风格 */
+#ai-chat-x-history::-webkit-scrollbar,
+#ai-chat-x-session-list::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+#ai-chat-x-history::-webkit-scrollbar-track,
+#ai-chat-x-session-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#ai-chat-x-history::-webkit-scrollbar-thumb,
+#ai-chat-x-session-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#ai-chat-x-history::-webkit-scrollbar-thumb:hover,
+#ai-chat-x-session-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 深色主题支持 */
+@media (prefers-color-scheme: dark) {
+    #ai-chat-x-history {
+        background-color: #1f1f1f;
+    }
+    
+    #ai-chat-x-session-list .ant-card {
+        background-color: #2a2a2a;
+        color: #fff;
+    }
+    
+    #ai-chat-x-session-list .ant-card:hover {
+        background-color: #1890ff33 !important;
+    }
+    
+    #ai-chat-x-history .ant-card {
+        color: #000;
+    }
+    
+    .ant-input,
+    .ant-input-textarea {
+        background-color: #2a2a2a;
+        color: #fff;
+        border-color: #434343;
+    }
+    
+    .ant-input::placeholder,
+    .ant-input-textarea::placeholder {
+        color: #999;
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    #ai-chat-x-session-list {
+        display: none;
+    }
+    
+    .ant-col[style*="width: 280px"] {
+        display: none;
+    }
+}
+
+/* 加载动画 */
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.typing-indicator {
+    display: inline-flex;
+    align-items: center;
+}
+
+.typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background-color: #1890ff;
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: pulse 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: -0.16s;
+}

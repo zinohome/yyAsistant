@@ -16,7 +16,7 @@ from views.core_pages import (
     independent_wildcard_page,
     url_params_page,
     # 系统管理相关页面
-    login_logs, users_man,
+    login_logs, users_man, ai_chat_x,
 )
 
 # 路由配置参数
@@ -181,6 +181,10 @@ def core_router(
     elif pathname == "/core/users":
         # 更新页面返回内容
         page_content = users_man.render()
+    # AIChat
+    elif pathname == "/core/chat":
+        # 更新页面返回内容
+        page_content = ai_chat_x.render()
 
     # 系统管理相关页面
     # 日志管理-登录日志

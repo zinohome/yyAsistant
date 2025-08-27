@@ -21,7 +21,13 @@ def render():
                         html.A(
                             "此处", href="/core/independent-page/demo", target="_blank"
                         ),
-                        "打开示例独立显示页面。",
+                        "打开独立显示页面。",
+                        html.Br(),
+                        "点击",
+                        html.A(
+                            "此处", href="/core/chat", target="_blank"
+                        ),
+                        "打开AI聊天页面。",
                         html.Br(),
                         "本页面模块路径：",
                         fac.AntdText(
