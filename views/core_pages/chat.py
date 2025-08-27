@@ -5,7 +5,7 @@ from feffery_dash_utils.style_utils import style
 import html
 
 # 令对应当前页面的回调函数子模块生效
-import callbacks.core_pages_c.ai_chat_x_c  # noqa: F401
+import callbacks.core_pages_c.chat_c  # noqa: F401
 
 
 def render():

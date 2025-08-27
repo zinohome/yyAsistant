@@ -8,7 +8,7 @@ from feffery_dash_utils.style_utils import style
 from components import core_side_menu, personal_info, user_manage
 from configs import BaseConfig, RouterConfig, LayoutConfig, AuthConfig
 from views.core_pages import independent_page_demo, independent_wildcard_page_demo
-from views.core_pages import ai_chat_x
+from views.core_pages import chat
 # 令绑定的回调函数子模块生效
 import callbacks.core_pages_c  # noqa: F401
 
