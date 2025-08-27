@@ -5,7 +5,7 @@ import feffery_utils_components as fuc
 from feffery_dash_utils.style_utils import style
 
 # 导入聊天组件
-from components.chat_welcome_message import render as render_welcome_message
+from components.chat_agent_message import render as render_agent_message
 from components.chat_feature_hints import render as render_feature_hints
 from components.chat_user_message import render as render_user_message
 from components.chat_session_list import render as render_session_list
@@ -262,7 +262,7 @@ def render():
                                             id="ai-chat-x-history",
                                             children=[
                                                 # 使用欢迎消息组件
-                                                render_welcome_message(),
+                                                render_agent_message(),
                                                 
                                                 # 使用功能提示卡片组件
                                                 #render_feature_hints(),
