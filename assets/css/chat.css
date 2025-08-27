@@ -21,7 +21,15 @@
     font-size: 14px;
 }
 
+/* 输入区域样式
 #ai-chat-x-input:focus {
+    border-color: #1890ff !important;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+     */
+
+/* 当输入框获得焦点时，改变外框容器的边框颜色 */
+#chat-input-container:focus-within {
     border-color: #1890ff !important;
     box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }

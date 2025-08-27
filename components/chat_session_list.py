@@ -3,12 +3,13 @@ import feffery_utils_components as fuc
 from feffery_dash_utils.style_utils import style
 
 
-def render(sessions=None, search_placeholder="搜索会话内容"):
+def render(sessions=None, search_placeholder="搜索会话内容", collapsed=False):
     """渲染聊天会话列表组件
     
     参数:
         sessions (list, optional): 会话数据列表，每个会话包含key, title, time, content, unread字段
         search_placeholder (str, optional): 搜索框占位符文本
+        collapsed (bool, optional): 是否折叠会话列表，默认为False
     
     返回:
         Dash组件对象
@@ -24,74 +25,143 @@ def render(sessions=None, search_placeholder="搜索会话内容"):
     # 使用传入的会话数据或默认数据
     session_data = sessions if sessions else default_sessions
     
-    return [
-        # 搜索框区域
-        fac.AntdInput(
-            id="ai-chat-x-session-search",
-            placeholder=search_placeholder,
-            prefix=fac.AntdIcon(icon="antd-search"),
-            size="middle",
-            style=style(
-                marginBottom="16px",
-                borderRadius="6px"
+    if collapsed:
+        # 折叠状态：只显示展开图标，并确保其在顶部位置，与非折叠状态保持一致的顶部距离
+        return [
+            fuc.FefferyDiv(
+                fac.AntdRow(
+                    [
+                        fac.AntdCol(
+                            fac.AntdButton(
+                                icon=fac.AntdIcon(icon="antd-menu-unfold"),
+                                id="ai-chat-x-collapse-sessions",
+                                type="text",
+                                style=style(
+                                    padding="4px",
+                                    position="relative",  # 相对定位
+                                    left="-4px"  # 向左微调，解决偏右问题
+                                ),
+                                title="展开会话列表"
+                            ),
+                            flex="none"
+                        )
+                    ],
+                    justify="center",  # 确保图标居中显示，不被边框挡住
+                    style=style(paddingRight="0px", paddingLeft="0px")
+                ),
+                style=style(marginBottom="8px", paddingTop="4px", paddingLeft="0px", paddingRight="0px")
             )
+        ]
+
+    return [
+        # 折叠按钮区域 - 使用FefferyDiv统一容器
+        fuc.FefferyDiv(
+            fac.AntdRow(
+                [
+                    fac.AntdCol(
+                        flex="auto"
+                    ),
+                    fac.AntdCol(
+                        fac.AntdButton(
+                            icon=fac.AntdIcon(icon="antd-menu-fold"),
+                            id="ai-chat-x-collapse-sessions",
+                            type="text",
+                            style=style(padding="4px"),
+                            title="折叠会话列表"
+                        ),
+                        flex="none"
+                    )
+                ],
+                justify="end",
+                style=style(paddingRight="8px")
+            ),
+            style=style(marginBottom="8px", paddingTop="4px")  # 添加相同的顶部内边距
         ),
-        
-        # 会话列表区域
+                
+        # 新的会话按钮区域 - 使用FefferyDiv统一容器
+        fuc.FefferyDiv(
+            [
+                fac.AntdIcon(icon="antd-plus", style=style(marginRight="8px", color="#1677ff")),
+                fac.AntdText('新的会话', style=style(color="#1677ff"))
+            ],
+            id="ai-chat-x-new-session",
+            style=style(
+                display="flex",
+                alignItems="center",
+                justifyContent="center",
+                backgroundColor="#1677ff10",  # 转换自 rgba(22, 119, 255, 0.06)
+                border="1px solid #1677ff34",  # 转换自 rgba(22, 119, 255, 0.204)
+                borderRadius="6px",
+                padding="8px 0",
+                cursor="pointer",
+                transition="all 0.2s ease",  # 平滑过渡
+            ),
+            shadow="hover-shadow-light",
+            enableEvents=['click', 'hover']
+        ),
+
+        # 会话列表区域 - 保持FefferyDiv容器
         fuc.FefferyDiv(
             [
                 fac.AntdSpace(
                     [
-                        fac.AntdCard(
-                            [
-                                fac.AntdRow(
-                                    [
-                                        fac.AntdCol(
-                                            fac.AntdText(
-                                                item["title"], 
-                                                strong=True,
-                                                ellipsis=True
-                                            ),
-                                            flex="auto"
+                        # 将AntdCard替换为FefferyDiv
+                        fuc.FefferyDiv(
+                            fac.AntdRow(
+                                [
+                                    fac.AntdCol(
+                                        fac.AntdText(
+                                            item["title"], 
+                                            strong=True,
+                                            ellipsis=True,
+                                            style=style(padding="12px 0")
                                         ),
-                                        fac.AntdCol(
-                                            [
-                                                # 未读消息提示
-                                                *( [
-                                                    fac.AntdBadge(
-                                                        count=item["unread"],
-                                                        showZero=False,
-                                                        style=style(
-                                                            backgroundColor="#1890ff",
-                                                            marginRight="4px"
-                                                        )
-                                                    )
-                                                ] if item["unread"] > 0 else [] ),
-                                                # 时间
-                                                fac.AntdText(
-                                                    item["time"], 
-                                                    type="secondary",
-                                                    style=style(fontSize="12px")
-                                                )
+                                        flex="auto"
+                                    ),
+                                    fac.AntdCol(
+                                        # 添加下拉菜单
+                                        fac.AntdDropdown(
+                                            fac.AntdButton(
+                                                icon=fac.AntdIcon(
+                                                    icon="antd-more",
+                                                    className="global-help-text",
+                                                ),
+                                                type="text",
+                                                size="small",
+                                                style=style(color="#8c8c8c")  # 设置按钮颜色为灰色
+                                            ),
+                                            id={"type": "ai-chat-x-session-dropdown", "index": item["key"]},
+                                            menuItems=[
+                                                {
+                                                    "title": "改名",
+                                                    "key": "rename",
+                                                    "icon": "antd-edit"  # 添加改名图标
+                                                },
+                                                {
+                                                    "title": "删除",
+                                                    "key": "delete",
+                                                    "icon": "antd-delete"  # 添加删除图标
+                                                }
                                             ],
-                                            flex="none",
-                                            style=style(textAlign="right")
-                                        )
-                                    ],
-                                    style=style(marginBottom="4px")
-                                ),
-                                fac.AntdText(
-                                    item["content"], 
-                                    type="secondary",
-                                    ellipsis=True,
-                                    style=style(fontSize="12px")
-                                )
-                            ],
-                            size="small",
-                            hoverable=True,
+                                            trigger="click",
+                                        ),
+                                        flex="none"
+                                    )
+                                ],
+                                align="middle"
+                            ),
                             id={"type": "ai-chat-x-session-item", "index": item["key"]},
-                            styles={'header': {'display': 'none'}},
-                            style=style(marginBottom="8px", cursor="pointer")
+                            style=style(
+                                #border="1px solid #f0f0f0",
+                                borderRadius="6px",
+                                padding="0 12px",
+                                marginBottom="4px",  # 将间距从8px改为4px
+                                cursor="pointer",
+                                backgroundColor="#fafafa"  # 设置浅灰色背景
+                                #**({"backgroundColor": "#e6f7ff", "borderColor": "#bae7ff"} if item["key"] == "1" else {})
+                            ),
+                            enableEvents=['click', 'hover'],
+                            shadow="hover-shadow"
                         )
                         for item in session_data
                     ],

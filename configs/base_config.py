@@ -5,7 +5,7 @@ class BaseConfig:
     """应用基础配置参数"""
 
     # 应用基础标题
-    app_title: str = "yyAsistant"
+    app_title: str = "智能助手"
 
     # 应用版本
     app_version: str = "0.2.1"

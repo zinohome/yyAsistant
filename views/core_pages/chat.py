@@ -1,14 +1,19 @@
 import dash
+from dash import html, dcc
 import feffery_antd_components as fac
 import feffery_utils_components as fuc
 from feffery_dash_utils.style_utils import style
-import html
 
 # 导入聊天组件
 from components.chat_welcome_message import render as render_welcome_message
 from components.chat_feature_hints import render as render_feature_hints
 from components.chat_user_message import render as render_user_message
 from components.chat_session_list import render as render_session_list
+from components.chat_input_area import render as render_chat_input_area
+
+# 导入配置和用户相关模块
+from configs import BaseConfig, AuthConfig
+from flask_login import current_user
 
 # 令对应当前页面的回调函数子模块生效
 import callbacks.core_pages_c.chat_c  # noqa: F401
@@ -19,37 +24,182 @@ def render():
 
     return fac.AntdSpace(
         [            
-            # 页面标题和操作按钮区域
+            # 页面标题和操作功能区域
             fac.AntdRow(
                 [
                     fac.AntdCol(
                         flex='auto',
-                        children=fac.AntdPageHeader(
-                            title="智能对话助手",
-                            subTitle="与AI进行自然语言交互，获取智能助手的帮助",
-                            showBackIcon=False  # 可选：隐藏返回按钮
+                        children=fac.AntdSpace(
+                            [
+                                # logo图标
+                                html.Img(
+                                    src="/assets/imgs/logo.svg",
+                                    height=32,
+                                    style=style(display="block"),
+                                ),
+                                # 标题和版本号
+                                fac.AntdSpace(
+                                    [
+                                        # 标题
+                                        fac.AntdText(
+                                            BaseConfig.app_title,
+                                            strong=True,
+                                            style=style(fontSize=20),
+                                        ),
+                                        fac.AntdText(
+                                            BaseConfig.app_version,
+                                            className="global-help-text",
+                                            style=style(fontSize=12),
+                                        ),
+                                    ],
+                                    align="baseline",
+                                    size=3,
+                                ),
+                            ],
+                            size=8
                         )
                     ),
+                    # 右侧操作功能区和用户信息
                     fac.AntdCol(
                         children=fac.AntdSpace(
                             [
-                                fac.AntdButton(
-                                    "历史会话",
-                                    id="ai-chat-x-history-btn",
-                                    type="text"
+                                # 页面全屏化切换
+                                fac.AntdTooltip(
+                                    fac.AntdButton(
+                                        icon=fac.AntdIcon(
+                                            icon="antd-full-screen",
+                                            className="global-help-text",
+                                        ),
+                                        type="text",
+                                    ),
+                                    title="全屏切换",
                                 ),
-                                fac.AntdButton(
-                                    "新建会话",
-                                    id="ai-chat-x-new-conversation",
-                                    type="primary",
-                                    icon=fac.AntdIcon(icon="antd-plus")
-                                )
-                            ]
+                                # 页面重载
+                                fac.AntdTooltip(
+                                    fac.AntdButton(
+                                        icon=fac.AntdIcon(
+                                            icon="antd-reload",
+                                            className="global-help-text",
+                                        ),
+                                        type="text",
+                                    ),
+                                    title="页面重载",
+                                ),
+                                # 示例功能图标
+                                fac.AntdTooltip(
+                                    fac.AntdButton(
+                                        icon=fac.AntdIcon(
+                                            icon="antd-setting",
+                                            className="global-help-text",
+                                        ),
+                                        type="text",
+                                    ),
+                                    title="设置",
+                                ),
+                                # 示例功能图标
+                                fac.AntdTooltip(
+                                    fac.AntdButton(
+                                        icon=fac.AntdIcon(
+                                            icon="antd-bell",
+                                            className="global-help-text",
+                                        ),
+                                        type="text",
+                                    ),
+                                    title="通知",
+                                ),
+                                # 自定义分隔符
+                                html.Div(
+                                    style=style(
+                                        width=0,
+                                        height=42,
+                                        borderLeft="1px solid #e1e5ee",
+                                        margin="0 12px",
+                                    )
+                                ),
+                                # 用户头像
+                                fac.AntdAvatar(
+                                    mode="text",
+                                    text="🤩",
+                                    size=36,
+                                    style=style(background="#f4f6f9"),
+                                ),
+                                # 用户名+角色
+                                fac.AntdFlex(
+                                    [
+                                        fac.AntdText(
+                                            current_user.user_name.capitalize(),
+                                            strong=True,
+                                        ),
+                                        fac.AntdText(
+                                            "角色：{}".format(
+                                                AuthConfig.roles.get(
+                                                    current_user.user_role
+                                                )["description"]
+                                            ),
+                                            className="global-help-text",
+                                            style=style(fontSize=12),
+                                        ),
+                                    ],
+                                    vertical=True,
+                                ),
+                                # 用户管理菜单
+                                fac.AntdDropdown(
+                                    fac.AntdButton(
+                                        icon=fac.AntdIcon(
+                                            icon="antd-more",
+                                            className="global-help-text",
+                                        ),
+                                        type="text",
+                                    ),
+                                    id="ai-chat-x-user-dropdown",
+                                    menuItems=[
+                                        {
+                                            "title": "个人信息",
+                                            "key": "个人信息",
+                                        },
+                                        # 若当前用户角色为系统管理员
+                                        *(
+                                            [
+                                                {
+                                                    "title": "用户管理",
+                                                    "key": "用户管理",
+                                                }
+                                            ]
+                                            if (
+                                                current_user.user_role
+                                                == AuthConfig.admin_role
+                                            )
+                                            else []
+                                        ),
+                                        {"isDivider": True},
+                                        {
+                                            "title": "退出登录",
+                                            "href": "/logout",
+                                        },
+                                    ],
+                                    trigger="click",
+                                ),
+                            ],
+                            size=8
                         )
                     )
                 ],
                 gutter=16,
-                align='middle'
+                align='middle',
+                style=style(
+                    borderBottom="1px solid #dae0ea",
+                    height=50,
+                    position="sticky",
+                    top=0,
+                    zIndex=1000,
+                    background="#fff",
+                )
+            ),
+            
+            # 状态存储：用于管理会话列表的折叠状态
+            dcc.Store(
+                id='ai-chat-x-session-collapse-state',
+                data=False  # 默认不折叠
             ),
             
             # 聊天界面主容器 - 使用卡片组件包装
@@ -60,7 +210,8 @@ def render():
                         [
                             # 左侧会话列表 - 使用组件
                             fac.AntdCol(
-                                render_session_list(),
+                                id="ai-chat-x-session-container",
+                                children=render_session_list(collapsed=False),
                                 flex="none",
                                 style=style(width="280px", padding="16px", borderRight="1px solid #f0f0f0")
                             ),
@@ -77,7 +228,7 @@ def render():
                                                         fac.AntdText("当前会话", strong=True),
                                                         fac.AntdDivider(direction="vertical", style=style(margin="0 12px")),
                                                         fac.AntdTag(
-                                                            "进行中",
+                                                            "ai-chat-x-current-session",
                                                             color="blue",
                                                             icon=fac.AntdIcon(icon="antd-check-circle", style=style(fontSize="12px"))
                                                         )
@@ -114,7 +265,7 @@ def render():
                                                 render_welcome_message(),
                                                 
                                                 # 使用功能提示卡片组件
-                                                render_feature_hints(),
+                                                #render_feature_hints(),
                                                 
                                                 # 使用用户消息组件
                                                 render_user_message(
@@ -122,115 +273,17 @@ def render():
                                                 )
                                             ],
                                             style=style(
-                                                height="calc(100% - 170px)",
+                                                height="calc(100% - 110px)",
                                                 overflowY="auto",
                                                 backgroundColor="#fafafa"
                                             )
                                         ),
                                         
                                         # 输入区域
-                                        fuc.FefferyDiv(
-                                            [
-                                                # 工具栏
-                                                fac.AntdSpace(
-                                                    [
-                                                        fac.AntdButton(
-                                                            icon=fac.AntdIcon(icon="antd-plus-circle"),
-                                                            type="text",
-                                                            title="上传文件"
-                                                        ),
-                                                        fac.AntdButton(
-                                                            icon=fac.AntdIcon(icon="antd-picture"),
-                                                            type="text",
-                                                            title="上传图片"
-                                                        ),
-                                                        fac.AntdDivider(direction="vertical", style=style(margin="0 8px")),
-                                                        fac.AntdButton(
-                                                            icon=fac.AntdIcon(icon="antd-smile"),
-                                                            type="text",
-                                                            title="表情"
-                                                        ),
-                                                        fac.AntdButton(
-                                                            icon=fac.AntdIcon(icon="antd-save"),
-                                                            type="text",
-                                                            title="保存对话"
-                                                        )
-                                                    ],
-                                                    style=style(padding="8px 0")
-                                                ),
-                                                
-                                                # 输入框和发送按钮
-                                                fac.AntdRow(
-                                                    [
-                                                        fac.AntdCol(
-                                                            flex="auto",
-                                                            children=fac.AntdInput(
-                                                                id="ai-chat-x-input",
-                                                                placeholder="输入您的问题...",
-                                                                autoSize={"minRows": 3, "maxRows": 6},
-                                                                showCount=True,
-                                                                maxLength=2000,
-                                                                style=style(
-                                                                    borderRadius="8px 0 0 8px",
-                                                                    borderRight="none"
-                                                                )
-                                                            )
-                                                        ),
-                                                        fac.AntdCol(
-                                                            flex="none",
-                                                            children=fac.AntdButton(
-                                                                "发送",
-                                                                id="ai-chat-x-send-btn",
-                                                                type="primary",
-                                                                icon=fac.AntdIcon(icon="antd-right"),
-                                                                style=style(
-                                                                    height="100%",
-                                                                    borderRadius="0 8px 8px 0",
-                                                                    padding="0 24px"
-                                                                )
-                                                            )
-                                                        )
-                                                    ],
-                                                    gutter=0
-                                                ),
-                                                
-                                                # 底部提示
-                                                fac.AntdRow(
-                                                    [
-                                                        fac.AntdCol(
-                                                            [
-                                                                fac.AntdText(
-                                                                    "按 Enter 发送，Shift + Enter 换行",
-                                                                    type="secondary",
-                                                                    style=style(fontSize="12px")
-                                                                )
-                                                            ],
-                                                            flex="auto",
-                                                            style=style(textAlign="left", paddingTop="8px")
-                                                        ),
-                                                        fac.AntdCol(
-                                                            [
-                                                                fac.AntdButton(
-                                                                    "清空对话",
-                                                                    id="ai-chat-x-clear-btn",
-                                                                    type="text",
-                                                                    style=style(fontSize="12px")
-                                                                )
-                                                            ],
-                                                            flex="none"
-                                                        )
-                                                    ]
-                                                )
-                                            ],
-                                            style=style(
-                                                padding="16px 24px",
-                                                backgroundColor="#fff",
-                                                borderTop="1px solid #f0f0f0"
-                                            )
-                                        )
+                                        render_chat_input_area()
                                     ],
                                     style=style(
-                                        height="calc(100vh - 210px)",
+                                        height="calc(100vh - 150px)",
                                         display="flex",
                                         flexDirection="column"
                                     )
@@ -247,14 +300,16 @@ def render():
                 styles={'header': {'display': 'none'}},
                 style=style(
                     width="100%",
+                    height="calc(100vh - 100px)",  # 调整高度计算
                     borderRadius="8px",
                     overflow="hidden",
+                    flexShrink=0  # 防止被压缩
                 )
             )
         ],
         direction="vertical",
         style=style(
-            width="100%",
+            width="100vw",  # 修改为100vw以适应整个视口宽度
             height="100vh",
             padding="16px",
             margin="0",
