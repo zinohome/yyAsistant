@@ -12,7 +12,7 @@ from flask_principal import identity_changed, Identity
 
 from server import app, User
 from models.users import Users
-from configs import BaseConfig
+from configs import BaseConfig, AuthConfig
 from models.logs import LoginLogs
 
 
@@ -157,10 +157,18 @@ def handle_login(nClicks, nSubmit, values, remember_me):
         # 更新用户身份信息
         identity_changed.send(app.server, identity=Identity(new_user.id))
 
+        # 根据用户角色确定重定向目标页面
+        if match_user.user_role == AuthConfig.admin_role:
+            # 管理员角色重定向至首页
+            redirect_path = '/'
+        else:
+            # 普通用户角色重定向至AI聊天页面
+            redirect_path = '/core/chat'
+
         # 重定向至首页
         set_props(
             "global-redirect",
-            {"children": dcc.Location(pathname="/", id="global-redirect-target")},
+            {"children": dcc.Location(pathname=redirect_path, id="global-redirect-target")},
         )
 
         # 登录日志记录
