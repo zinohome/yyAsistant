@@ -202,8 +202,8 @@ def render():
                 data=False  # 默认不折叠
             ),
             
-            # 聊天界面主容器 - 使用卡片组件包装
-            fac.AntdCard(
+            # 聊天界面主容器 - 使用FefferyDiv组件替换AntdCard
+            fuc.FefferyDiv(
                 [
                     # 聊天主体区域（左右布局）
                     fac.AntdRow(
@@ -305,15 +305,21 @@ def render():
                         style=style(width="100%")
                     )
                 ],
-                variant='borderless',
-                styles={'header': {'display': 'none'}},
+                # 保留原有样式并添加FefferyDiv特有的属性
                 style=style(
                     width="100%",
                     height="calc(100vh - 100px)",  # 调整高度计算
                     borderRadius="8px",
                     overflow="hidden",
-                    flexShrink=0  # 防止被压缩
-                )
+                    flexShrink=0,  # 防止被压缩
+                    # 添加边框以模拟AntdCard的效果
+                    border="1px solid #f0f0f0",
+                    # 添加背景色
+                    backgroundColor="#fff"
+                ),
+                # 添加FefferyDiv特有的属性
+                shadow="always-shadow-light",  # 添加柔和的阴影效果
+                scrollbar="simple"  # 使用简洁的滚动条样式
             )
         ],
         direction="vertical",
