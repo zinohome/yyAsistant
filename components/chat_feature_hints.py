@@ -1,4 +1,5 @@
 import feffery_antd_components as fac
+import feffery_utils_components as fuc  # 导入FefferyDiv所在的模块
 from feffery_dash_utils.style_utils import style
 
 
@@ -26,7 +27,8 @@ def render(
                 style=style(marginRight="12px")
             ),
             fac.AntdCol(
-                fac.AntdCard(
+                # 使用FefferyDiv替换AntdCard
+                fuc.FefferyDiv(
                     [
                         fac.AntdText(prefix, type="secondary"),
                         fac.AntdSpace(
@@ -38,14 +40,14 @@ def render(
                             style=style(width="100%")
                         )
                     ],
-                    size="small",
-                    variant='borderless',
-                    styles={'header': {'display': 'none'}},
                     style=style(
                         borderRadius="8px",
                         padding="12px",
                         maxWidth="70%",
-                        backgroundColor="#f0f8ff"
+                        backgroundColor="#f0f8ff",
+                        # 添加FefferyDiv特有的属性
+                        shadow="always-shadow-light",  # 始终显示浅色阴影效果
+                        scrollbar="simple"  # 如果内容过长，使用简洁的滚动条
                     )
                 ),
                 flex="auto",

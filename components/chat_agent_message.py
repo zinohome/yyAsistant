@@ -1,11 +1,9 @@
 import feffery_antd_components as fac
+import feffery_utils_components as fuc  # 导入FefferyDiv所在的模块
 from dash_iconify import DashIconify
 from feffery_dash_utils.style_utils import style
 from dash.dependencies import Input, Output, State, MATCH
 from server import app
-
-
-from feffery_dash_utils.style_utils import style
 
 
 def render(
@@ -56,17 +54,18 @@ def render(
                         justify="start",
                         style=style(marginBottom="4px")
                     ),
-                    fac.AntdCard(
-                        message,
-                        size="small",
-                        variant='borderless',
-                        styles={'header': {'display': 'none'}},
+                    # 使用FefferyDiv替换AntdCard
+                    fuc.FefferyDiv(
+                        fac.AntdText(message),
                         style=style(
                             backgroundColor="#f5f5f5",
                             borderRadius="0 12px 12px 12px",
                             padding="12px 16px",
                             maxWidth="80%",
-                            width="100%"
+                            width="100%",
+                            # 添加FefferyDiv特有的属性
+                            shadow="hover-shadow-light",  # 添加悬浮阴影效果
+                            scrollbar="simple"  # 如果消息内容过长，使用简洁的滚动条
                         )
                     ),
                     # 添加底部操作栏
