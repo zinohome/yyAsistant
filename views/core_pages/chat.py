@@ -212,8 +212,12 @@ def render():
                             fac.AntdCol(
                                 id="ai-chat-x-session-container",
                                 children=render_session_list(collapsed=False),
-                                flex="none",
-                                style=style(width="280px", padding="16px", borderRight="1px solid #f0f0f0")
+                                xs=0,  # 超小屏幕隐藏
+                                sm=0,  # 小屏幕隐藏
+                                md=6,  # 中等屏幕占用6格
+                                lg=5,  # 大屏幕占用5格
+                                xl=4,  # 超大屏幕占用4格
+                                style=style(padding="16px", borderRight="1px solid #f0f0f0")
                             ),
                             
                             # 右侧聊天内容区域
@@ -288,7 +292,12 @@ def render():
                                         flexDirection="column"
                                     )
                                 ),
-                                flex="auto",
+                                id="ai-chat-x-right-content",
+                                xs=24,  # 超小屏幕占用24格
+                                sm=24,  # 小屏幕占用24格
+                                md=18,  # 中等屏幕占用18格
+                                lg=19,  # 大屏幕占用19格
+                                xl=20,  # 超大屏幕占用20格
                                 style=style(padding="0")
                             )
                         ],
