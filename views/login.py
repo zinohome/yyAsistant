@@ -1,7 +1,7 @@
-from dash import html
 import feffery_utils_components as fuc
 import feffery_antd_components as fac
 from feffery_dash_utils.style_utils import style
+from dash import html
 
 from configs import BaseConfig, LayoutConfig
 
@@ -16,107 +16,103 @@ def render():
         [
             # 左侧半边
             fac.AntdCol(
-                *(
-                    [
-                        fuc.FefferyMotion(
-                            html.Img(
-                                src="/assets/imgs/login/插图1.svg",
-                                style=style(width="25vw"),
-                            ),
-                            style={
-                                "position": "absolute",
-                                "left": "10%",
-                                "top": "15%",
-                                "rotateZ": "-5deg",
-                            },
-                            animate={"y": [25, -25, 25]},
-                            transition={
-                                "duration": 4.5,
-                                "repeat": "infinity",
-                                "type": "spring",
-                            },
+                [
+                    fuc.FefferyMotion(
+                        html.Img(
+                            src="/assets/imgs/login/插图1.svg",
+                            style=style(width="25vw"),
                         ),
-                        fuc.FefferyMotion(
-                            html.Img(
-                                src="/assets/imgs/login/插图2.svg",
-                                style=style(width="15vw"),
-                            ),
-                            style={
-                                "position": "absolute",
-                                "right": "20%",
-                                "top": "25%",
-                                "rotateZ": "15deg",
-                            },
-                            animate={"y": [-15, 15, -15]},
-                            transition={
-                                "duration": 5.5,
-                                "repeat": "infinity",
-                                "type": "spring",
-                            },
+                        style={
+                            "position": "absolute",
+                            "left": "10%",
+                            "top": "15%",
+                            "rotateZ": "-5deg",
+                        },
+                        animate={"y": [25, -25, 25]},
+                        transition={
+                            "duration": 4.5,
+                            "repeat": "infinity",
+                            "type": "spring",
+                        },
+                    ),
+                    fuc.FefferyMotion(
+                        html.Img(
+                            src="/assets/imgs/login/插图2.svg",
+                            style=style(width="15vw"),
                         ),
-                        fuc.FefferyMotion(
-                            html.Img(
-                                src="/assets/imgs/login/插图3.svg",
-                                style=style(width="12vw"),
-                            ),
-                            style={
-                                "position": "absolute",
-                                "left": "25%",
-                                "bottom": "25%",
-                                "rotateZ": "-8deg",
-                            },
-                            animate={"y": [10, -10, 10]},
-                            transition={
-                                "duration": 5,
-                                "repeat": "infinity",
-                                "type": "spring",
-                            },
+                        style={
+                            "position": "absolute",
+                            "right": "20%",
+                            "top": "25%",
+                            "rotateZ": "15deg",
+                        },
+                        animate={"y": [-15, 15, -15]},
+                        transition={
+                            "duration": 5.5,
+                            "repeat": "infinity",
+                            "type": "spring",
+                        },
+                    ),
+                    fuc.FefferyMotion(
+                        html.Img(
+                            src="/assets/imgs/login/插图3.svg",
+                            style=style(width="12vw"),
                         ),
-                        fuc.FefferyMotion(
-                            html.Img(
-                                src="/assets/imgs/login/插图4.svg",
-                                style=style(width="25vw"),
-                            ),
-                            style={
-                                "position": "absolute",
-                                "right": "15%",
-                                "bottom": "8%",
-                                "rotateZ": "5deg",
-                            },
-                            animate={"y": [20, -20, 20]},
-                            transition={
-                                "duration": 6,
-                                "repeat": "infinity",
-                                "type": "spring",
-                            },
+                        style={
+                            "position": "absolute",
+                            "left": "25%",
+                            "bottom": "25%",
+                            "rotateZ": "-8deg",
+                        },
+                        animate={"y": [10, -10, 10]},
+                        transition={
+                            "duration": 5,
+                            "repeat": "infinity",
+                            "type": "spring",
+                        },
+                    ),
+                    fuc.FefferyMotion(
+                        html.Img(
+                            src="/assets/imgs/login/插图4.svg",
+                            style=style(width="25vw"),
                         ),
-                    ]
-                    if LayoutConfig.login_left_side_content_type == "image"
-                    else [
-                        html.Video(
-                            src="/assets/videos/login-bg.mp4",
-                            autoPlay=True,
-                            muted=True,
-                            loop=True,
-                            style=style(
-                                width="100%",
-                                height="100%",
-                                position="absolute",
-                                objectFit="cover",
-                                borderTopRightRadius=12,
-                                borderBottomRightRadius=12,
-                                pointerEvents="none",
-                            ),
-                        )
-                    ],
-                ),
-                span=14,
+                        style={
+                            "position": "absolute",
+                            "right": "15%",
+                            "bottom": "8%",
+                            "rotateZ": "5deg",
+                        },
+                        animate={"y": [20, -20, 20]},
+                        transition={
+                            "duration": 6,
+                            "repeat": "infinity",
+                            "type": "spring",
+                        },
+                    ),
+                ]
+                if LayoutConfig.login_left_side_content_type == "image"
+                else [
+                    html.Video(
+                        src="/assets/videos/login-bg.mp4",
+                        autoPlay=True,
+                        muted=True,
+                        loop=True,
+                        style=style(
+                            width="100%",
+                            height="100%",
+                            position="absolute",
+                            objectFit="cover",
+                            borderTopRightRadius=12,
+                            borderBottomRightRadius=12,
+                            pointerEvents="none",
+                        ),
+                    )
+                ],
+                xs=0,  # 超小屏幕隐藏左侧
+                sm=0,  # 小屏幕隐藏左侧
+                md=14, # 中等屏幕及以上显示左侧
+                style=style(position="relative", height="100vh"),
                 className="login-left-side",
-                style=(
-                    style()
-                    if LayoutConfig.login_left_side_content_type == "image"
-                    else style(backgroundImage="none")
-                ),
             ),
             # 右侧半边
             fac.AntdCol(
@@ -176,7 +172,11 @@ def render():
                                     id="login-form",
                                     enableBatchControl=True,
                                     layout="vertical",
-                                    style=style(width=350),
+                                    style=style(width={
+                                        'xs': '100%',  # 小屏幕下宽度自适应
+                                        'sm': '85%',   # 平板下宽度85%
+                                        'md': 350      # 桌面端固定宽度350px
+                                    }),
                                 ),
                             ],
                             direction="vertical",
@@ -185,10 +185,13 @@ def render():
                     ],
                     style=style(height="calc(100% - 200px)"),
                 ),
-                span=10,
+                # 修改响应式布局
+                xs=24,  # 超小屏幕占满24格
+                sm=24,  # 小屏幕占满24格
+                md=10,  # 中等屏幕及以上保持10格
                 className="login-right-side",
             ),
         ],
-        wrap=False,
-        style=style(height="100vh"),
+        wrap=True,  # 允许换行以适应小屏幕
+        style=style(height="100vh", minHeight=600),
     )
