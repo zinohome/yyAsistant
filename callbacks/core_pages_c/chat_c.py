@@ -8,35 +8,27 @@ import time
 from datetime import datetime
 from components.chat_session_list import render as render_session_list
 
-@app.callback(
-    Output('ai-chat-x-session-container', 'children'),
-    Output('ai-chat-x-session-container', 'style'),
-    Output('ai-chat-x-session-collapse-state', 'data'),
-    Input('ai-chat-x-collapse-sessions', 'nClicks'),
-    State('ai-chat-x-session-collapse-state', 'data'),
-    prevent_initial_call=True
+# 添加自定义折叠按钮的客户端回调函数 - 支持切换本地SVG图标
+app.clientside_callback(
+    """(nClicks, collapsed, currentStyle) => {
+        // 切换折叠状态并根据状态返回对应的图标路径
+        const newCollapsedState = !collapsed;
+        const iconSrc = newCollapsedState ? '/assets/imgs/right.svg' : '/assets/imgs/left.svg';
+        
+        // 控制新建会话按钮的显示/隐藏 - 只更新display属性，保留其他样式
+        const updatedStyle = {...currentStyle, display: newCollapsedState ? 'none' : 'flex'};
+        
+        return [newCollapsedState, iconSrc, updatedStyle];
+    }""",
+    [
+        Output('ai-chat-x-session-container', 'collapsed'),
+        Output('ai-chat-x-session-collapse-trigger-icon', 'src'),  # 修改为src属性而不是icon
+        Output('ai-chat-x-session-new', 'style')  # 添加对新建会话按钮样式的控制
+    ],
+    Input('ai-chat-x-session-collapse-trigger', 'nClicks'),
+    [
+        State('ai-chat-x-session-container', 'collapsed'),
+        State('ai-chat-x-session-new', 'style')  # 获取当前样式状态
+    ],
+    prevent_initial_call=True,
 )
-def toggle_session_list(collapse_clicks, is_collapsed):
-    """切换会话列表的折叠状态"""
-    
-    # 检查是否有点击事件触发
-    if collapse_clicks is None:
-        return dash.no_update, dash.no_update, dash.no_update
-    
-    # 根据当前状态执行相反操作
-    if is_collapsed is False:
-        # 当前是展开状态，执行折叠
-        return (
-            render_session_list(collapsed=True),
-            style(width="40px", padding="16px", borderRight="1px solid #f0f0f0"),
-            True
-        )
-    else:
-        # 当前是折叠状态，执行展开
-        return (
-            render_session_list(collapsed=False),
-            style(width="280px", padding="16px", borderRight="1px solid #f0f0f0"),
-            False
-        )
-    
-    return dash.no_update, dash.no_update, dash.no_update

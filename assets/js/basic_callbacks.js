@@ -139,6 +139,15 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                     [true, 'antd-full-screen-exit'] :
                     [false, 'antd-full-screen']
             )
+        },
+        // 处理聊天会话列表折叠
+        handleChatSessionMenuCollapse: (nClicks, collapsed) => {
+            // 切换折叠状态
+            const newCollapsedState = !collapsed;
+            // 根据新的折叠状态返回相应的图标
+            const newIcon = newCollapsedState ? 'antd-arrow-right' : 'antd-arrow-left';
+            
+            return [newCollapsedState, newIcon];
         }
     }
 });
