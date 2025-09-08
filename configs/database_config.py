@@ -11,7 +11,7 @@ class DatabaseConfig:
 
     # 当database_type为'postgresql'时，对应的数据库连接配置参数，使用时请根据实际情况修改
     postgresql_config = {
-        "host": "192.168.66.163",
+        "host": "192.168.32.11",
         "port": 5432,
         "user": "yyasistant",
         "password": "passw0rd",
