@@ -49,12 +49,7 @@ def render():
                                     BaseConfig.app_title,
                                     strong=True,
                                     style=style(fontSize=20),
-                                ),
-                                fac.AntdText(
-                                    BaseConfig.app_version,
-                                    className="global-help-text",
-                                    style=style(fontSize=12),
-                                ),
+                                )
                             ],
                             align="baseline",
                             size=3,
@@ -67,37 +62,6 @@ def render():
             fac.AntdCol(
                 children=fac.AntdSpace(
                     [
-                        # 示例功能图标
-                        fac.AntdTooltip(
-                            fac.AntdButton(
-                                icon=fac.AntdIcon(
-                                    icon="antd-setting",
-                                    className="global-help-text",
-                                ),
-                                type="text",
-                            ),
-                            title="设置",
-                        ),
-                        # 示例功能图标
-                        fac.AntdTooltip(
-                            fac.AntdButton(
-                                icon=fac.AntdIcon(
-                                    icon="antd-bell",
-                                    className="global-help-text",
-                                ),
-                                type="text",
-                            ),
-                            title="通知",
-                        ),
-                        # 自定义分隔符
-                        html.Div(
-                            style=style(
-                                width=0,
-                                height=42,
-                                borderLeft="1px solid #e1e5ee",
-                                margin="0 12px",
-                            )
-                        ),
                         # 用户头像
                         fac.AntdAvatar(
                             mode="text",
@@ -111,16 +75,7 @@ def render():
                                 fac.AntdText(
                                     current_user.user_name.capitalize(),
                                     strong=True,
-                                ),
-                                fac.AntdText(
-                                    "角色：{}".format(
-                                        AuthConfig.roles.get(
-                                            current_user.user_role
-                                        )["description"]
-                                    ),
-                                    className="global-help-text",
-                                    style=style(fontSize=12),
-                                ),
+                                )
                             ],
                             vertical=True,
                         ),
@@ -204,16 +159,15 @@ def render():
                                     type="text"
                                 ),
                                 fac.AntdButton(
-                                    icon=fac.AntdIcon(icon="antd-more"),
+                                    icon=fac.AntdIcon(icon="antd-plus"),
                                     id="ai-chat-x-more-btn",
                                     type="text"
                                 )
                             ],
                             size="small",
-                            align="start"
                         ),
-                        flex="none",
-                        style=style(display="flex", alignItems="center")
+                        flex='none',
+                        style=style(display='flex',alignItems='center',whiteSpace='nowrap')
                     )
                 ],
                 align="middle",
