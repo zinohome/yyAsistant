@@ -67,28 +67,6 @@ def render():
             fac.AntdCol(
                 children=fac.AntdSpace(
                     [
-                        # 页面全屏化切换
-                        fac.AntdTooltip(
-                            fac.AntdButton(
-                                icon=fac.AntdIcon(
-                                    icon="antd-full-screen",
-                                    className="global-help-text",
-                                ),
-                                type="text",
-                            ),
-                            title="全屏切换",
-                        ),
-                        # 页面重载
-                        fac.AntdTooltip(
-                            fac.AntdButton(
-                                icon=fac.AntdIcon(
-                                    icon="antd-reload",
-                                    className="global-help-text",
-                                ),
-                                type="text",
-                            ),
-                            title="页面重载",
-                        ),
                         # 示例功能图标
                         fac.AntdTooltip(
                             fac.AntdButton(
@@ -231,11 +209,15 @@ def render():
                                     type="text"
                                 )
                             ],
-                            size="small"
+                            size="small",
+                            align="start"
                         ),
-                        flex="none"
+                        flex="none",
+                        style=style(display="flex", alignItems="center")
                     )
                 ],
+                align="middle",
+                className="ai-chat-x-header-row",
                 style=style(padding="12px 24px", borderBottom="1px solid #f0f0f0", backgroundColor="#fff")
             ),
             
