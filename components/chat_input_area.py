@@ -122,8 +122,8 @@ def render(
                                             fac.AntdButton(
                                                 #icon=fac.AntdIcon(icon="proicons:microphone"),
                                                 icon=DashIconify(icon="proicons:microphone",
-                                                        width=25,
-                                                        height=25,
+                                                        width=20,
+                                                        height=20,
                                                         rotate=0,
                                                         flip="horizontal",
                                                     ),
@@ -138,8 +138,8 @@ def render(
                                             fac.AntdButton(
                                                 #icon=fac.AntdIcon(icon="proicons:microphone"),
                                                 icon=DashIconify(icon="bi:telephone",
-                                                        width=25,
-                                                        height=25,
+                                                        width=20,
+                                                        height=20,
                                                         rotate=3,
                                                         flip="horizontal",
                                                     ),

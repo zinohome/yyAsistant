@@ -54,3 +54,9 @@
         min-height: 42px;
     }
 }
+
+@media (max-width: 576px) {
+  .ai-chat-x-header-session-collapse-hide {
+    display: none !important;
+  }
+}

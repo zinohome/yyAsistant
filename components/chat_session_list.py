@@ -30,35 +30,6 @@ def render(sessions=None):
     # 修复：使用html.Div作为容器包裹所有组件
     return html.Div(
         [
-            # 自定义折叠按钮
-            fac.AntdButton(
-                id='ai-chat-x-session-collapse-trigger',
-                icon=html.Img(
-                    id='ai-chat-x-session-collapse-trigger-icon',  # 添加ID以便回调可以修改它
-                    src='/assets/imgs/left.svg',
-                    style={
-                        'width': '14px',
-                        'height': '14px',
-                        'margin': '0',
-                        'padding': '0'
-                    }
-                ),
-                shape='circle',
-                type='text',
-                style={
-                    'position': 'absolute',
-                    'zIndex': 1,
-                    'top': 25,
-                    'right': -17,
-                    'boxShadow': 'rgb(0 0 0 / 10%) 0px 4px 10px 0px',
-                    'background': 'white',
-                    'width': '28px',
-                    'height': '28px',
-                    'display': 'flex',
-                    'alignItems': 'center',
-                    'justifyContent': 'center',
-                },
-            ),
             
             # 新建会话按钮 - 使用html.Div实现
             html.Div(

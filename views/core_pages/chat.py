@@ -10,6 +10,7 @@ from components.chat_feature_hints import render as render_feature_hints
 from components.chat_user_message import render as render_user_message
 from components.chat_session_list import render as render_session_list
 from components.chat_input_area import render as render_chat_input_area
+from components.ai_chat_message_history import AiChatMessageHistory
 
 # 导入配置和用户相关模块
 from configs import BaseConfig, AuthConfig
@@ -49,7 +50,12 @@ def render():
                                     BaseConfig.app_title,
                                     strong=True,
                                     style=style(fontSize=20),
-                                )
+                                ),
+                                fac.AntdText(
+                                    BaseConfig.app_version,
+                                    className="global-help-text",
+                                    style=style(fontSize=12),
+                                ),
                             ],
                             align="baseline",
                             size=3,
@@ -140,6 +146,26 @@ def render():
                 [
                     fac.AntdCol(
                         [
+                            # 会话折叠按钮
+                            fac.AntdButton(
+                                id='ai-chat-x-session-collapse-trigger',
+                                className="ai-chat-x-header-session-collapse-hide",
+                                icon=html.Img(
+                                    id='ai-chat-x-session-collapse-trigger-icon',
+                                    src='/assets/imgs/left.svg',
+                                    style={
+                                        'width': '14px',
+                                        'height': '14px',
+                                        'margin': '0',
+                                        'padding': '0'
+                                    }
+                                ),
+                                shape='circle',
+                                type='text',
+                                style={
+                                    'marginRight': 8
+                                }
+                            ),
                             fac.AntdText("当前会话", strong=True),
                             fac.AntdDivider(direction="vertical", style=style(margin="0 12px")),
                             fac.AntdTag(
@@ -179,22 +205,13 @@ def render():
             fuc.FefferyDiv(
                 id="ai-chat-x-history",
                 children=[
-                    # 使用欢迎消息组件
-                    render_agent_message(),
-                    
-                    # 使用功能提示卡片组件
-                    #render_feature_hints(),
-                    
-                    # 使用用户消息组件
-                    render_user_message(
-                        message="如何实现一个AntDesign X风格的聊天界面？需要注意哪些设计要点？"
-                    )
+                    AiChatMessageHistory(messages=None)
                 ],
                 style=style(
                     height="calc(100% - 110px)",
                     overflowY="auto",
                     backgroundColor="#fafafa",
-                    minWidth=0  # 防止在flex容器中溢出
+                    minWidth=0
                 )
             ),
         ],
