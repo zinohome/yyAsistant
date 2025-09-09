@@ -257,14 +257,18 @@ def render():
                 style=style(
                     height="calc(100% - 110px)",
                     overflowY="auto",
-                    backgroundColor="#fafafa"
+                    backgroundColor="#fafafa",
+                    minWidth=0  # 防止在flex容器中溢出
                 )
             ),
         ],
         style=style(
             height="100%",
             display="flex",
-            flexDirection="column"
+            flexDirection="column",
+            minWidth=0,  # 防止flex子元素溢出
+            flexShrink=1,  # 确保在小屏幕下可以适当收缩
+            width="100%"
         )
     )
 
@@ -272,9 +276,11 @@ def render():
     footer_content = render_chat_input_area()
 
     # 完整的AntdLayout布局
-    return fac.AntdLayout(
-        [
-            # 页首
+    return [
+        # 主布局
+        fac.AntdLayout(
+            [
+                # 页首
             fac.AntdHeader(
                 header_content,
                 style={
@@ -284,8 +290,11 @@ def render():
                     'backgroundColor': '#fff',
                     'borderBottom': '1px solid #dae0ea',
                     'padding': '0 16px',
-                    'zIndex': 1000
+                    'zIndex': 1000,  # 确保页首在最上层
+                    'minWidth': 0,  # 防止在flex容器中溢出
+                    'flexShrink': 0  # 确保页首不被压缩
                 },
+                id="ai-chat-x-header"
             ),
             # 主体布局
             fac.AntdLayout(
@@ -295,27 +304,39 @@ def render():
                         sider_content,
                         id="ai-chat-x-session-container",
                         collapsible=True,
-                        collapsedWidth=10,
+                        collapsedWidth=0,  # 完全折叠
+                        breakpoint="sm",  # 在小屏幕下自动折叠（<576px）
                         trigger=None,
                         style={
                             'backgroundColor': 'white',
                             'borderRight': '1px solid #f0f0f0',
-                            # 'overflow': 'hidden',
-                            'position': 'relative'
+                            'position': 'relative',
+                            'transition': 'all 0.3s ease'
                         },
                     ),
                     # 内容区和页尾
                     fac.AntdLayout(
                         [
-                            # 内容区
-                            fac.AntdContent(
-                                content_area,
+                            # 内容区 - 使用Div包裹来增加额外的响应式保障
+                            html.Div(
+                                fac.AntdContent(
+                                    content_area,
+                                    style={
+                                        'backgroundColor': 'white',
+                                        'padding': '0',
+                                        'overflow': 'auto',  # 允许内容区滚动
+                                        'minWidth': 0,  # 防止在flex容器中溢出
+                                        'flex': 1  # 确保内容区占据剩余空间
+                                    },
+                                    id="ai-chat-x-right-content"
+                                ),
                                 style={
-                                    'backgroundColor': 'white',
-                                    'padding': '0',
-                                    'overflow': 'hidden'
-                                },
-                                id="ai-chat-x-right-content"
+                                    'width': '100%',
+                                    'minWidth': 0,
+                                    'flex': 1,
+                                    'display': 'flex',
+                                    'flexDirection': 'column'
+                                }
                             ),
                             # 页尾（输入区域）
                             fac.AntdFooter(
@@ -323,15 +344,33 @@ def render():
                                 style={
                                     'backgroundColor': 'white',
                                     'padding': '0',
-                                    'borderTop': '1px solid #f0f0f0'
+                                    'borderTop': '1px solid #f0f0f0',
+                                    'flexShrink': 0  # 确保页尾不被压缩
                                 },
                             ),
-                        ]
+                        ],
+                        style={
+                            'display': 'flex',  # 确保内容区和页尾使用flex布局
+                            'flexDirection': 'column',
+                            'minWidth': 0,  # 防止在flex容器中溢出
+                            'width': '100%'
+                        }
                     ),
                 ],
-                style={'height': 'calc(100vh - 50px)'},
+                style={
+                    'height': 'calc(100vh - 50px)',
+                    'display': 'flex',  # 确保侧边栏和内容区使用flex布局
+                    'width': '100%'
+                },
             ),
             session_collapse_store  # 状态存储组件
         ],
-        style={'height': '100vh', 'backgroundColor': '#fff'},
-    )
+        style={
+            'height': '100vh', 
+            'backgroundColor': '#fff',
+            'display': 'flex',
+            'flexDirection': 'column',
+            'width': '100%'
+        },
+        id="ai-chat-x-main-layout"
+    )]

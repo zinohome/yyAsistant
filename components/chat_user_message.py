@@ -1,6 +1,8 @@
 import feffery_antd_components as fac
 import feffery_utils_components as fuc  # 导入FefferyDiv所在的模块
+import feffery_antd_components as fac
 from feffery_dash_utils.style_utils import style
+import dash.html as html
 
 
 def render(
@@ -28,53 +30,56 @@ def render(
         用户消息组件的渲染结果
     """
     
-    return fac.AntdRow(
+    return html.Div(
         [
-            fac.AntdCol(
-                flex="auto"
-            ),
-            fac.AntdCol(
+            # 第一行：时间戳、发送者名称和头像（纵向居中对齐）
+            fac.AntdRow(
                 [
-                    fac.AntdRow(
+                    fac.AntdCol(
                         [
-                            fac.AntdCol(
-                                fac.AntdText(timestamp, type="secondary", style=style(fontSize="12px")),
-                                flex="none",
-                                style=style(marginRight="8px")
-                            ),
-                            fac.AntdCol(
-                                fac.AntdText(sender_name, strong=True),
-                                flex="none"
-                            )
+                            fac.AntdText(timestamp, type="secondary", style=style(fontSize="12px", marginRight="8px")),
+                            fac.AntdText(sender_name, strong=True)
                         ],
-                        justify="end",
-                        style=style(marginBottom="4px")
+                        flex="auto",
+                        style=style(display="flex", alignItems="center", justifyContent="end")
                     ),
-                    # 使用FefferyDiv替换AntdCard
-                    fuc.FefferyDiv(
-                        fac.AntdText(message, style=style(color=message_text_color)),
-                        style=style(
-                            backgroundColor=message_bg_color,
-                            borderRadius="12px 0 12px 12px",
-                            padding="12px 16px",
-                            maxWidth="80%",
-                            width="100%",
-                            marginLeft="auto",
-                            # 可以添加FefferyDiv特有的属性
-                            shadow="hover-shadow-light",  # 添加悬浮阴影效果
-                            scrollbar="simple"  # 如果消息内容过长，使用简洁的滚动条
-                        )
+                    fac.AntdCol(
+                        fac.AntdAvatar(
+                            icon=icon,
+                            style=style(backgroundColor=icon_bg_color, width="36px", height="36px")
+                        ),
+                        flex="none",
+                        style=style(marginLeft="12px", display="flex", alignItems="center")
                     )
                 ],
-                flex="auto"
+                align="middle",
+                style=style(padding="0 0 4px 0", minHeight="40px")
             ),
-            fac.AntdCol(
-                fac.AntdAvatar(
-                    icon=icon,
-                    style=style(backgroundColor=icon_bg_color, width="36px", height="36px")
-                ),
-                flex="none",
-                style=style(marginLeft="12px")
+            
+            # 第二行：消息内容
+            fac.AntdRow(
+                [
+                    fac.AntdCol(
+                        flex="auto"
+                    ),
+                    fac.AntdCol(
+                        fuc.FefferyDiv(
+                            fac.AntdText(message, style=style(color=message_text_color)),
+                            style=style(
+                                backgroundColor=message_bg_color,
+                                borderRadius="12px 0 12px 12px",
+                                padding="12px 16px",
+                                maxWidth="80%",
+                                width="100%",
+                                marginLeft="auto",
+                                shadow="hover-shadow-light",
+                                scrollbar="simple"
+                            )
+                        ),
+                        flex="auto"
+                    )
+                ],
+                style=style(padding="0 0 8px 0")
             )
         ],
         style=style(marginBottom="16px", padding="16px 24px 0 24px")

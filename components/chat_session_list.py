@@ -1,7 +1,7 @@
+
 import feffery_utils_components as fuc
 import feffery_antd_components as fac
 from dash import html
-from dash_iconify import DashIconify
 from feffery_dash_utils.style_utils import style
 
 

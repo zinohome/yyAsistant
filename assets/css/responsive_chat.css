@@ -1,0 +1,108 @@
+/* 响应式布局特殊样式 - 确保小屏幕下内容区域正常显示 */
+
+/* 为主体布局添加专用响应式样式 */
+#ai-chat-x-main-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 100vh !important;  /* 确保主布局高度固定为视口高度 */
+    overflow: hidden !important;  /* 防止整体页面滚动 */
+}
+
+/* 确保页首在小屏幕下固定显示 */
+#ai-chat-x-header {
+    flex-shrink: 0 !important;  /* 确保页首不被压缩 */
+    position: relative !important;
+    z-index: 1000 !important;  /* 确保页首在最上层 */
+    width: 100% !important;
+}
+
+/* 侧边栏在小屏幕下的行为优化 */
+@media screen and (max-width: 575px) {
+    #ai-chat-x-session-container {
+        position: absolute !important;
+        z-index: 2 !important;
+        height: calc(100vh - 50px) !important;
+        transform: translateX(0) !important;
+        transition: transform 0.3s ease !important;
+    }
+    
+    #ai-chat-x-session-container.ant-layout-sider-collapsed {
+        transform: translateX(-100%) !important;
+    }
+}
+
+/* 确保内容区在小屏幕下占据所有可用空间 */
+#ai-chat-x-right-content {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* 确保聊天历史区域在小屏幕下正常显示和滚动 */
+#ai-chat-x-history {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+}
+
+/* 防止任何flex子元素在小屏幕下溢出 */
+#ai-chat-x-main-layout > div, 
+#ai-chat-x-main-layout > div > div {
+    min-width: 0 !important;
+    min-height: 0 !important;
+}
+
+/* 页尾在小屏幕下固定显示 */
+#ai-chat-x-main-layout .ant-layout-footer {
+    flex-shrink: 0 !important;
+    width: 100% !important;
+}
+
+/* 当屏幕宽度小于576px时的特殊处理 */
+@media screen and (max-width: 575px) {
+    /* 确保内容区域在小屏幕下完全可见 */
+    #ai-chat-x-right-content {
+        position: relative !important;
+        z-index: 1 !important;
+        width: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+    }
+    
+    /* 确保所有flex容器在小屏幕下正常工作 */
+    .ant-layout {
+        min-width: 0 !important;
+        min-height: 0 !important;
+    }
+    
+    /* 小屏幕下调整字体大小 */
+    #ai-chat-x-main-layout {
+        font-size: 14px !important;
+    }
+    
+    #ai-chat-x-header .ant-typography {
+        font-size: 16px !important;
+    }
+    
+    #ai-chat-x-header .ant-btn {
+        font-size: 14px !important;
+    }
+    
+    /* 调整主体内容区域，确保固定高度 */
+    #ai-chat-x-main-layout > div.ant-layout {
+        height: calc(100vh - 50px) !important;
+        overflow: hidden !important;
+    }
+    
+    /* 确保页首不被压缩或隐藏 */
+    #ai-chat-x-header {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}

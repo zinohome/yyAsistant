@@ -15,6 +15,7 @@ app = dash.Dash(
     compress=True,  # 隐式依赖flask-compress
     update_title=None,
     external_stylesheets=[
+        '/assets/css/responsive_chat.css',
         '/assets/css/chat.css'
     ]
 )
