@@ -26,6 +26,9 @@ class Users(BaseModel):
     # 用户最近一次登录会话token
     session_token = CharField(null=True)
 
+    # 用户头像图标
+    user_icon = CharField(null=True)
+
     # 用户其他辅助信息，任意JSON格式，允许空值
     other_info = JSONField(null=True)
 
@@ -64,6 +67,7 @@ class Users(BaseModel):
         password_hash: str,
         user_role: str = "normal",
         other_info: Union[Dict, List] = None,
+        user_icon: str = "👨‍💼",
     ):
         """添加用户"""
 
@@ -88,6 +92,7 @@ class Users(BaseModel):
                     password_hash=password_hash,
                     user_role=user_role,
                     other_info=other_info,
+                    user_icon=user_icon,
                 )
 
     @classmethod

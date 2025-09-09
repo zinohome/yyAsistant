@@ -11,6 +11,7 @@ from server import app
 from models.users import Users
 from configs import AuthConfig
 
+from utils.log import log as log
 
 def render():
     """渲染用户管理抽屉"""
@@ -32,6 +33,7 @@ def refresh_user_manage_table_data():
         {
             "user_id": item["user_id"],
             "user_name": item["user_name"],
+            "user_icon": item.get("user_icon", ""),
             "user_role": {
                 "tag": AuthConfig.roles.get(item["user_role"])["description"],
                 "color": (
@@ -92,6 +94,13 @@ def render_user_manage_drawer(visible):
                                     "title": "用户名",
                                     "renderOptions": {
                                         "renderType": "ellipsis-copyable",
+                                    },
+                                },
+                                {
+                                    "dataIndex": "user_icon",
+                                    "title": "头像",
+                                    "renderOptions": {
+                                        "renderType": "ellipsis",
                                     },
                                 },
                                 {
@@ -183,10 +192,18 @@ def open_add_user_modal(nClicks):
                     ),
                     label="用户角色",
                 ),
+                fac.AntdFormItem(
+                    fac.AntdInput(
+                        id="user-manage-add-user-form-user-icon",
+                        placeholder="请输入表情或字符作为头像",
+                        allowClear=True,
+                    ),
+                    label="用户头像",
+                ),
             ],
             id="user-manage-add-user-form",
             key=str(uuid.uuid4()),  # 强制刷新
-            enableBatchControl=False,
+            enableBatchControl=True,
             layout="vertical",
             values={"user-manage-add-user-form-user-role": AuthConfig.normal_role},
             style=style(marginTop=32),
@@ -204,6 +221,7 @@ def handle_add_user(okCounts, values):
 
     # 获取表单数据
     values = values or {}
+    log.debug(values)
 
     # 检查表单数据完整性
     if not (
@@ -247,6 +265,7 @@ def handle_add_user(okCounts, values):
                     values["user-manage-add-user-form-user-password"]
                 ),
                 user_role=values["user-manage-add-user-form-user-role"],
+                user_icon=values.get("user-manage-add-user-form-user-icon", ""),
             )
 
             set_props(

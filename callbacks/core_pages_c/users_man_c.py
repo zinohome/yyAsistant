@@ -18,6 +18,7 @@ def format_user_data(user, all_users_count):
     return {
         "user_id": user["user_id"],
         "user_name": user["user_name"],
+        "user_icon": user.get("user_icon", ""),
         "user_role": {
             "tag": AuthConfig.roles.get(user["user_role"])["description"],
             "color": (
@@ -143,6 +144,14 @@ def open_add_user_modal(nClicks):
                     ),
                     fac.AntdFormItem(
                         fac.AntdInput(
+                            id="core-users-add-form-user-icon",
+                            placeholder="请输入头像emoji或字符（如🤩或A）",
+                            allowClear=True
+                        ),
+                        label="用户头像",
+                    ),
+                    fac.AntdFormItem(
+                        fac.AntdInput(
                             id="core-users-add-form-user-password",
                             placeholder="请输入密码",
                             mode="password",
@@ -250,6 +259,7 @@ def handle_add_user_actions(submit_clicks, cancel_clicks, values):
                         values["core-users-add-form-user-password"]
                     ),
                     user_role=values["core-users-add-form-user-role"],
+                    user_icon=values.get("core-users-add-form-user-icon", "")
                 )
 
                 set_props(
@@ -319,12 +329,17 @@ def open_edit_user_modal(nClicksButton, clickedContent, recentlyButtonClickedRow
                         ),
                         fac.AntdFormItem(
                             fac.AntdInput(
-                                id="core-users-edit-form-user-password",
-                                placeholder="若不修改密码则留空",
-                                mode="password",
+                                id="core-users-edit-form-user-icon",
+                                placeholder="请输入头像emoji或字符（如🤩或A）",
                                 allowClear=True,
                             ),
-                            label="密码",
+                            label="用户头像",
+                        ),
+                        fac.AntdInput(
+                            id="core-users-edit-form-user-password",
+                            placeholder="若不修改密码则留空",
+                            mode="password",
+                            allowClear=True,
                         ),
                         fac.AntdFormItem(
                             fac.AntdSelect(
@@ -360,7 +375,8 @@ def open_edit_user_modal(nClicksButton, clickedContent, recentlyButtonClickedRow
                     values={
                         "core-users-edit-form-user-id": user_id,
                         "core-users-edit-form-user-name": user.user_name,
-                        "core-users-edit-form-user-role": user.user_role
+                        "core-users-edit-form-user-role": user.user_role,
+                        "core-users-edit-form-user-icon": getattr(user, "user_icon", "")
                     }
                 ),
             ],

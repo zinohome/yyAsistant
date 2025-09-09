@@ -143,6 +143,7 @@ def handle_login(nClicks, nSubmit, values, remember_me):
             id=match_user.user_id,
             user_name=match_user.user_name,
             user_role=match_user.user_role,
+            user_icon=match_user.user_icon,
             session_token=new_session_token,
         )
 

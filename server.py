@@ -3,7 +3,6 @@ from flask import request
 from user_agents import parse
 from flask_principal import Principal, Permission, RoleNeed, identity_loaded
 from flask_login import LoginManager, UserMixin, current_user, AnonymousUserMixin
-
 # 应用基础参数
 from models.users import Users
 from configs import BaseConfig, AuthConfig
@@ -21,6 +20,7 @@ app = dash.Dash(
 )
 server = app.server
 
+
 # 设置应用密钥
 app.server.config["SECRET_KEY"] = BaseConfig.app_secret_key
 app.server.config["SESSION_COOKIE_NAME"] = BaseConfig.app_session_cookie_name
@@ -37,13 +37,14 @@ class User(UserMixin):
     """flask-login专用用户类"""
 
     def __init__(
-        self, id: str, user_name: str, user_role: str, session_token: str = None
+        self, id: str, user_name: str, user_role: str, user_icon: str, session_token: str = None
     ) -> None:
         """初始化用户信息"""
 
         self.id = id
         self.user_name = user_name
         self.user_role = user_role
+        self.user_icon = user_icon
         self.session_token = session_token
 
 
@@ -73,6 +74,7 @@ def user_loader(user_id):
         id=match_user.user_id,
         user_name=match_user.user_name,
         user_role=match_user.user_role,
+        user_icon=match_user.user_icon,
         session_token=match_user.session_token,
     )
 

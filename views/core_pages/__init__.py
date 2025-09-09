@@ -11,6 +11,7 @@ from views.core_pages import independent_page_demo, independent_wildcard_page_de
 from views.core_pages import chat
 # 令绑定的回调函数子模块生效
 import callbacks.core_pages_c  # noqa: F401
+from utils.log import log as log
 
 
 def get_page_search_options(current_user_access_rule: str):
@@ -305,7 +306,7 @@ def render(current_user_access_rule: str, current_pathname: str = None):
                                         # 用户头像
                                         fac.AntdAvatar(
                                             mode="text",
-                                            text="🤩",
+                                            text=current_user.user_icon if current_user.user_icon else "👨‍💼",
                                             size=36,
                                             style=style(background="#f4f6f9"),
                                         ),
@@ -342,6 +343,7 @@ def render(current_user_access_rule: str, current_pathname: str = None):
                                                 {
                                                     "title": "个人信息",
                                                     "key": "个人信息",
+                                                    "icon": "antd-user",
                                                 },
                                                 # 若当前用户角色为系统管理员
                                                 *(
@@ -349,6 +351,7 @@ def render(current_user_access_rule: str, current_pathname: str = None):
                                                         {
                                                             "title": "用户管理",
                                                             "key": "用户管理",
+                                                            "icon": "antd-user-add",
                                                         }
                                                     ]
                                                     if (
@@ -361,6 +364,7 @@ def render(current_user_access_rule: str, current_pathname: str = None):
                                                 {
                                                     "title": "退出登录",
                                                     "href": "/logout",
+                                                    "icon": "antd-logout",  
                                                 },
                                             ],
                                             trigger="click",

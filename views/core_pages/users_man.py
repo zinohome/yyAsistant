@@ -41,6 +41,11 @@ def render():
                                 "renderOptions": {"renderType": "tags"},
                             },
                             {
+                                "dataIndex": "user_icon",
+                                "title": "用户头像",
+                                "renderOptions": {"renderType": "ellipsis"}
+                            },
+                            {
                                 "dataIndex": "编辑",
                                 "title": "编辑",
                                 "renderOptions": {

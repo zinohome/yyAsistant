@@ -71,7 +71,7 @@ def render():
                         # 用户头像
                         fac.AntdAvatar(
                             mode="text",
-                            text="🤩",
+                            text=current_user.user_icon if current_user.user_icon else "👨‍💼",
                             size=36,
                             style=style(background="#f4f6f9"),
                         ),
@@ -99,25 +99,18 @@ def render():
                                 {
                                     "title": "个人信息",
                                     "key": "个人信息",
+                                    "icon": "antd-user"
                                 },
-                                # 若当前用户角色为系统管理员
-                                *(
-                                    [
-                                        {
-                                            "title": "用户管理",
-                                            "key": "用户管理",
-                                        }
-                                    ]
-                                    if (
-                                        current_user.user_role
-                                        == AuthConfig.admin_role
-                                    )
-                                    else []
-                                ),
+                                {
+                                    "title": "系统设置",
+                                    "key": "系统设置",
+                                    "icon": "antd-setting"
+                                },
                                 {"isDivider": True},
                                 {
                                     "title": "退出登录",
                                     "href": "/logout",
+                                    "icon": "antd-logout"
                                 },
                             ],
                             trigger="click",

@@ -12,6 +12,7 @@ from feffery_dash_utils.version_utils import (
     check_dependencies_version,
 )
 
+from callbacks.core_pages_c.chat_input_area_c import register_chat_input_callbacks
 from server import app
 from models.users import Users
 from views import core_pages, login
@@ -29,6 +30,9 @@ check_dependencies_version(
         {"name": "feffery_dash_utils", "specifier": ">=0.2.6"},
     ]
 )
+
+
+register_chat_input_callbacks(app)
 
 app.layout = lambda: fuc.FefferyTopProgress(
     [
