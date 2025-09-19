@@ -1,5 +1,6 @@
+
 import dash
-from dash import Input, Output, State, ctx
+from dash import Input, Output, State, ctx, set_props
 import feffery_antd_components as fac
 from server import app
 from feffery_dash_utils.style_utils import style
@@ -7,6 +8,7 @@ import dash.html as html
 import time
 from datetime import datetime
 from components.chat_session_list import render as render_session_list
+from utils.log import log as log
 
 # 添加自定义折叠按钮的客户端回调函数 - 支持切换本地SVG图标
 app.clientside_callback(
@@ -35,12 +37,14 @@ app.clientside_callback(
 
 # 添加处理"我的信息"菜单项点击事件的回调函数
 @app.callback(
-    Output("my-info-drawer", "visible"),
-    Input("ai-chat-x-user-dropdown", "recentlyButtonClickedKey"),
+    Input("ai-chat-x-user-dropdown", "nClicks"),
+    State("ai-chat-x-user-dropdown", "clickedKey"),
     prevent_initial_call=True,
 )
-def handle_my_info_click(recentlyButtonClickedKey):
+def handle_my_info_click(nClicks, clickedKey):
     """处理用户下拉菜单中"我的信息"项的点击事件"""
-    if recentlyButtonClickedKey == "我的信息":
-        return True
-    return dash.no_update
+    #log.debug(f"回调被触发，点击的key是: {clickedKey}")
+    if clickedKey == "my_info":
+        set_props("my-info-drawer", {"visible": True})
+    if clickedKey == "preference":
+        set_props("preference-drawer", {"visible": True})

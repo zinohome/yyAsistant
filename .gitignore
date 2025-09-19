@@ -29,6 +29,8 @@ venv/
 .idea
 env.bak/
 venv.bak/
+.trae/
+.venv/
 
 # PyCharm IDE
 .idea/

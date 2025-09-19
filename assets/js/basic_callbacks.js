@@ -148,6 +148,16 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             const newIcon = newCollapsedState ? 'antd-arrow-right' : 'antd-arrow-left';
             
             return [newCollapsedState, newIcon];
+        },
+        // 在clientside_basic对象末尾添加以下函数
+        // 处理健康档案抽屉的响应式宽度
+        handleResponsiveDrawerWidth: () => {
+            // 获取当前窗口宽度
+            const windowWidth = window.innerWidth;
+            
+            // 判断屏幕尺寸并返回相应的宽度值
+            // 小屏幕(≤575px)下使用80vw，其他情况使用65vw
+            return windowWidth <= 575 ? "100vw" : "65vw";
         }
     }
 });

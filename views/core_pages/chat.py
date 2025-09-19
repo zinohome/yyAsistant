@@ -11,7 +11,9 @@ from components.chat_user_message import render as render_user_message
 from components.chat_session_list import render as render_session_list
 from components.chat_input_area import render as render_chat_input_area
 from components.ai_chat_message_history import AiChatMessageHistory
-from components.my_info import render as render_my_info_drawer
+from components.my_info import render_my_info_drawer as render_my_info_drawer
+# 添加preference组件导入
+from components.preference import render as render_preference_drawer
 
 # 导入配置和用户相关模块
 from configs import BaseConfig, AuthConfig
@@ -99,12 +101,12 @@ def render():
                             menuItems=[
                                 {
                                     "title": "我的信息",
-                                    "key": "我的信息",
+                                    "key": "my_info",
                                     "icon": "antd-user"
                                 },
                                 {
                                     "title": "偏好设置",
-                                    "key": "偏好设置",
+                                    "key": "preference",
                                     "icon": "antd-setting"
                                 },
                                 {"isDivider": True},
@@ -311,7 +313,8 @@ def render():
                 },
             ),
             session_collapse_store,  # 状态存储组件
-            render_my_info_drawer()  # 添加我的信息抽屉组件
+            render_my_info_drawer(),  # 添加我的信息抽屉组件
+            render_preference_drawer()  # 添加偏好设置抽屉组件
         ],
         style={
             'height': '100vh', 
