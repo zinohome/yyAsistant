@@ -32,3 +32,15 @@ app.clientside_callback(
     ],
     prevent_initial_call=True,
 )
+
+# 添加处理"我的信息"菜单项点击事件的回调函数
+@app.callback(
+    Output("my-info-drawer", "visible"),
+    Input("ai-chat-x-user-dropdown", "recentlyButtonClickedKey"),
+    prevent_initial_call=True,
+)
+def handle_my_info_click(recentlyButtonClickedKey):
+    """处理用户下拉菜单中"我的信息"项的点击事件"""
+    if recentlyButtonClickedKey == "我的信息":
+        return True
+    return dash.no_update

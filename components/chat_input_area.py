@@ -7,7 +7,7 @@ from feffery_dash_utils.style_utils import style
 def render(
     placeholder="输入您的问题...",
     max_length=2000,
-    topics=["如何提高工作效率", "数据分析技巧", "代码优化建议", "项目管理方法"],
+    topics=["提高工作效率", "数据分析技巧", "代码优化建议", "项目管理方法"],
     icons=["fluent-mdl2:web-components", "fluent-mdl2:activate-orders", "fluent-mdl2:add-in", "fluent-mdl2:company-directory-mirrored"],
     enable_file_upload=True,
     enable_voice_input=True,
@@ -56,6 +56,7 @@ def render(
                                     cursor="pointer",  # 鼠标移到上面显示手型
                                     border="1px solid #e8e8e8",  # 更浅的边框
                                     transition="all 0.2s ease",  # 平滑过渡
+                                    whiteSpace="nowrap"  # 关键修改：防止工具项内文本换行
                                 ),
                                 enableEvents=['click', 'hover'],
                                 # 点击事件，暂时置空
@@ -63,11 +64,17 @@ def render(
 
                             ) for index, topic in enumerate(topics)
                         ],
-                        wrap=True,
+                        wrap=False,
                         style=style(width="100%")
                     )
                 ],
-                style=style(marginBottom="8px")
+                scrollbar='hidden',
+                style=style(
+                    display="flex", 
+                    overflowX="auto",
+                    marginBottom="8px",
+                    paddingBottom="4px" 
+                    )
             ),
             
             # 输入框区域 - 包含统一外框

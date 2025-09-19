@@ -22,7 +22,14 @@ def AiChatMessageHistory(messages):
     return html.Div(children)
     """
     children = []
-    children.append(render_feature_hints())
+    #children.append(render_feature_hints())
     children.append(render_agent_message())
     children.append(render_user_message())
-    return html.Div(children)
+    children.append(render_agent_message())
+    children.append(render_user_message())
+    children.append(render_agent_message())
+    children.append(render_user_message())
+    children.append(render_agent_message())
+    children.append(render_user_message())
+    children.append(render_agent_message())
+    return children

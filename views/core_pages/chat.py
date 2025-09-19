@@ -11,6 +11,7 @@ from components.chat_user_message import render as render_user_message
 from components.chat_session_list import render as render_session_list
 from components.chat_input_area import render as render_chat_input_area
 from components.ai_chat_message_history import AiChatMessageHistory
+from components.my_info import render as render_my_info_drawer
 
 # 导入配置和用户相关模块
 from configs import BaseConfig, AuthConfig
@@ -97,13 +98,13 @@ def render():
                             id="ai-chat-x-user-dropdown",
                             menuItems=[
                                 {
-                                    "title": "个人信息",
-                                    "key": "个人信息",
+                                    "title": "我的信息",
+                                    "key": "我的信息",
                                     "icon": "antd-user"
                                 },
                                 {
-                                    "title": "系统设置",
-                                    "key": "系统设置",
+                                    "title": "偏好设置",
+                                    "key": "偏好设置",
                                     "icon": "antd-setting"
                                 },
                                 {"isDivider": True},
@@ -197,11 +198,11 @@ def render():
             # 聊天历史区域
             fuc.FefferyDiv(
                 id="ai-chat-x-history",
-                children=[
-                    AiChatMessageHistory(messages=None)
-                ],
+                children=AiChatMessageHistory(messages=None),
+                scrollbar='simple',
                 style=style(
-                    height="calc(100% - 110px)",
+                    height="calc(100vh - 240px)",
+                    maxHeight="calc(100vh - 240px)",
                     overflowY="auto",
                     backgroundColor="#fafafa",
                     minWidth=0
@@ -309,7 +310,8 @@ def render():
                     'width': '100%'
                 },
             ),
-            session_collapse_store  # 状态存储组件
+            session_collapse_store,  # 状态存储组件
+            render_my_info_drawer()  # 添加我的信息抽屉组件
         ],
         style={
             'height': '100vh', 
