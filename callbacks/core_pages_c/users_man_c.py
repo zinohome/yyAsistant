@@ -257,7 +257,7 @@ def handle_add_user_actions(submit_clicks, cancel_clicks, values):
             else:
                 # 添加用户
                 Users.add_user(
-                    user_id=str(uuid.uuid4()),
+                    user_id=str(values["core-users-add-form-user-name"].strip()),
                     user_name=values["core-users-add-form-user-name"],
                     password_hash=generate_password_hash(
                         values["core-users-add-form-user-password"]
