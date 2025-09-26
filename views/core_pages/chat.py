@@ -1,3 +1,4 @@
+import time
 import dash
 from dash import html, dcc
 import feffery_antd_components as fac
@@ -19,6 +20,9 @@ from components.preference import render as render_preference_drawer
 from configs import BaseConfig, AuthConfig
 from flask_login import current_user
 
+
+from utils.log import log as log
+
 # 令对应当前页面的回调函数子模块生效
 import callbacks.core_pages_c.chat_c  # noqa: F401
 
@@ -30,6 +34,12 @@ def render():
     session_collapse_store = dcc.Store(
         id='ai-chat-x-session-collapse-state',
         data=False  # 默认不折叠
+    )
+    
+    # 添加：会话列表刷新触发器
+    session_refresh_trigger = dcc.Store(
+        id='ai-chat-x-session-refresh-trigger',
+        data={'timestamp': time.time()}  # 使用时间戳作为刷新标识
     )
 
     # 页面标题和操作功能区域 - 用于页首
@@ -132,7 +142,16 @@ def render():
     )
 
     # 左侧会话列表内容
-    sider_content = render_session_list()
+    #log.debug(f"current_user: {current_user}")
+    #if hasattr(current_user, '__dict__'):
+    #        user_attrs = vars(current_user)
+    #        log.debug(f"current_user属性(vars): {user_attrs}")
+
+    # 修改：传递刷新触发器给render_session_list
+    sider_content = html.Div(
+        id='ai-chat-x-session-list-container',
+        children=render_session_list(user_id=current_user.id)
+    )
 
     # 右侧聊天内容区域
     content_area = fuc.FefferyDiv(
@@ -313,6 +332,7 @@ def render():
                 },
             ),
             session_collapse_store,  # 状态存储组件
+            session_refresh_trigger,  # 添加：刷新触发器
             render_my_info_drawer(),  # 添加我的信息抽屉组件
             render_preference_drawer()  # 添加偏好设置抽屉组件
         ],

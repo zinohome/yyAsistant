@@ -1,15 +1,21 @@
 
 import feffery_utils_components as fuc
 import feffery_antd_components as fac
+import dash
 from dash import html
 from feffery_dash_utils.style_utils import style
 
+# 导入conversations模型
+from models.conversations import Conversations
 
-def render(sessions=None):
+
+def render(sessions=None, user_id=None, refresh_timestamp=None):
     """渲染聊天会话列表组件
     
     参数:
         sessions (list, optional): 会话数据列表，每个会话包含key, title字段
+        user_id (str, optional): 用户ID，用于从数据库获取会话数据
+        refresh_timestamp (float, optional): 刷新时间戳，用于触发重新渲染
         search_placeholder (str, optional): 搜索框占位符文本
         collapsed (bool, optional): 是否折叠会话列表，默认为False
     
@@ -19,18 +25,67 @@ def render(sessions=None):
     
     # 默认会话数据 - 只保留key和title
     default_sessions = [
-        {"key": "1", "title": "如何使用Dash框架"},
-        {"key": "2", "title": "数据可视化最佳实践"},
-        {"key": "3", "title": "Python性能优化技巧"}
+        {"key": "1", "title": "新会话1"},
+        {"key": "2", "title": "新会话2"},
+        {"key": "3", "title": "新会话3"}
     ]
     
-    # 使用传入的会话数据或默认数据
-    session_data = sessions if sessions else default_sessions
+    # 从数据库获取会话数据
+    session_data = []
+    if user_id:
+        try:
+            # 调用get_user_conversations方法获取用户会话
+            db_sessions = Conversations.get_user_conversations(user_id=user_id)
+            if db_sessions:
+                # 转换数据格式：key对应conv_id，title对应conv_name
+                # 辅助函数：截断中文字符串
+                def truncate_chinese_text(text, max_length=12):
+                    """截断中文字符串，如果超过最大长度则添加省略号"""
+                    if len(text) > max_length:
+                        return text[:max_length] + "..."
+                    return text
+                    
+                session_data = [
+                    {"key": session["conv_id"], "title": truncate_chinese_text(session["conv_name"])}
+                    for session in db_sessions
+                ]
+        except Exception as e:
+            print(f"获取会话数据失败: {e}")
+            # 发生错误时使用默认数据
+            session_data = default_sessions
+    elif sessions:
+        # 使用传入的会话数据
+        session_data = sessions
+    else:
+        # 使用默认数据
+        session_data = default_sessions
 
     # 修复：使用html.Div作为容器包裹所有组件
     return html.Div(
         [
+            # 添加：用于存储当前要改名的会话ID的隐藏组件
+            dash.dcc.Store(id='ai-chat-x-current-rename-conv-id', data=None),
             
+            # 添加：会话改名对话框
+            fac.AntdModal(
+                [
+                    fac.AntdInput(
+                        id='ai-chat-x-session-rename-input',
+                        placeholder='请输入新的会话名称',
+                        maxLength=50,
+                        style={'marginBottom': '16px'}
+                    )
+                ],
+                id='ai-chat-x-session-rename-modal',
+                key='ai-chat-x-session-rename-modal-key',  # 添加key属性以确保状态一致性
+                title='修改会话名称',
+                width=400,
+                renderFooter=True,
+                visible=False,  # 确保初始状态是隐藏的
+                okText='确定',
+                cancelText='取消'
+            ),
+
             # 新建会话按钮 - 使用html.Div实现
             html.Div(
                 id='ai-chat-x-session-new',  # 设置指定的ID
