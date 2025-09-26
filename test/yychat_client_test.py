@@ -6,6 +6,9 @@ import time
 import argparse
 from typing import List, Dict
 
+# 添加项目根目录到Python路径
+sys.path.append('../')
+
 from utils.yychat_client import yychat_client
 from utils.log import log
 
@@ -115,7 +118,7 @@ def test_conversation_memory():
     """测试会话记忆API"""
     log.info("开始测试会话记忆API")
     
-    conversation_id = "test_memory_conversation"
+    conversation_id = "test_conversation"
     
     try:
         # 先发送一条消息以创建会话记忆

@@ -15,9 +15,9 @@ class YYChatClient:
         """初始化YYChat客户端"""
         self.api_base_url = BaseConfig.yychat_api_base_url
         # 从环境变量获取API密钥
-        self.api_key = os.environ.get(BaseConfig.yychat_api_key_env, "")
+        self.api_key = BaseConfig.yychat_api_key
         if not self.api_key:
-            log.warning(f"未找到环境变量 {BaseConfig.yychat_api_key_env}，请确保已正确配置API密钥")
+            log.warning(f"未找到yychat_api_key，请确保已正确配置API密钥")
         
         # 设置默认请求头
         self.headers = {
@@ -36,24 +36,22 @@ class YYChatClient:
                         **kwargs) -> Dict[str, Any]:
         """
         调用聊天完成API
-        
-        参数:
-            messages: 消息历史列表
-            model: 使用的模型名称
-            temperature: 采样温度
-            stream: 是否使用流式输出
-            conversation_id: 会话ID，用于上下文管理
-            personality_id: 人格ID
-            use_tools: 是否使用工具
-            **kwargs: 其他可选参数
-        
-        返回:
-            API响应结果
         """
+        # 验证并修复消息列表中的角色字段
+        validated_messages = []
+        for msg in messages:
+            # 确保每个消息都有有效的role字段
+            if "role" not in msg or not msg["role"]:
+                log.warning(f"发现无效消息角色，默认为'user': {msg}")
+                validated_msg = {**msg, "role": "user"}
+            else:
+                validated_msg = msg
+            validated_messages.append(validated_msg)
+        
         # 设置请求参数
         payload = {
             "model": model or BaseConfig.yychat_default_model,
-            "messages": messages,
+            "messages": validated_messages,  # 使用验证后的消息列表
             "temperature": temperature if temperature is not None else BaseConfig.yychat_default_temperature,
             "stream": stream if stream is not None else BaseConfig.yychat_default_stream,
         }
@@ -79,7 +77,7 @@ class YYChatClient:
             response = requests.post(
                 url, 
                 headers=self.headers, 
-                json=payload, 
+                json=payload,
                 stream=payload["stream"]
             )
             
@@ -99,8 +97,14 @@ class YYChatClient:
                 return self._process_streaming_response(response)
             else:
                 # 处理非流式响应
-                return response.json()
-                
+                try:
+                    # 尝试直接解析JSON响应
+                    return response.json()
+                except Exception as json_error:
+                    log.warning(f"直接解析JSON失败，尝试其他方式处理响应: {str(json_error)}")
+                    # 尝试以流式方式处理非流式响应（应对服务器可能的行为不一致）
+                    return self._process_streaming_response(response)
+                    
         except Exception as e:
             log.error(f"YYChat API调用异常: {str(e)}")
             raise
@@ -108,12 +112,6 @@ class YYChatClient:
     def _process_streaming_response(self, response: requests.Response) -> Generator[Dict[str, Any], None, None]:
         """
         处理流式响应，返回生成器
-        
-        参数:
-            response: requests响应对象
-            
-        返回:
-            包含部分响应内容的生成器
         """
         for chunk in response.iter_lines():
             if chunk:
