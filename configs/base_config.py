@@ -60,7 +60,7 @@ class BaseConfig:
     # API基础URL
     yychat_api_base_url: str = "http://localhost:9800/v1"
     # API密钥配置在环境变量中，默认值仅供开发测试使用
-    yychat_api_key_env: str = "YYCHAT_API_KEY"
+    yychat_api_key: str = "yk-1aB2cD3eF4gH5iJ6kL7mN8oP9qR0sT1uV2wX3yZ4"
     # 默认模型
     yychat_default_model: str = "gpt-4.1"
     # 默认温度参数
