@@ -152,3 +152,4 @@ class Conversations(BaseModel):
 
             # 返回成功更新后的会话信息
             return cls.get_or_none(cls.conv_id == conv_id)
+

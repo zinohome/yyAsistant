@@ -8,3 +8,11 @@ class ExistingUserError(Exception):
     """用户信息已存在"""
 
     pass
+
+
+class InvalidConversationError:
+    pass
+
+
+class ExistingConversationError:
+    pass

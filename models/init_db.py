@@ -3,12 +3,15 @@ from werkzeug.security import generate_password_hash
 
 # 导入相关数据表模型
 from configs import AuthConfig
+from models.conversations import Conversations
 from models.logs import LoginLogs
 from models.users import Users
 
 # 创建表（如果表不存在）
 db.create_tables([Users])
 db.create_tables([LoginLogs])
+db.create_tables([Conversations])
+
 
 if __name__ == "__main__":
     # 重置数据库users表，并初始化管理员用户
