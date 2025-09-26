@@ -55,3 +55,17 @@ class BaseConfig:
     fullscreen_watermark_generator: Callable = (
         lambda current_user: current_user.user_name
     )
+
+    # YYChat API配置
+    # API基础URL
+    yychat_api_base_url: str = "http://localhost:9800/v1"
+    # API密钥配置在环境变量中，默认值仅供开发测试使用
+    yychat_api_key_env: str = "YYCHAT_API_KEY"
+    # 默认模型
+    yychat_default_model: str = "gpt-4.1"
+    # 默认温度参数
+    yychat_default_temperature: float = 0.7
+    # 默认是否使用流式响应
+    yychat_default_stream: bool = True
+    # 默认是否使用工具
+    yychat_default_use_tools: bool = True
