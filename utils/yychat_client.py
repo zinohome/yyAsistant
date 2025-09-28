@@ -3,6 +3,7 @@
 
 import os
 import json
+import copy  # 导入copy模块用于深拷贝
 import requests
 from typing import Dict, List, Any, Optional, Generator
 from configs.base_config import BaseConfig
@@ -25,6 +26,47 @@ class YYChatClient:
             "Authorization": f"Bearer {self.api_key}"
         }
     
+    def _serialize_payload_for_log(self, payload: Dict[str, Any]) -> str:
+        """序列化请求载荷用于日志记录，避免loguru处理字典时的问题"""
+        try:
+            # 使用深拷贝避免修改原始数据和确保嵌套结构正确复制
+            payload_copy = copy.deepcopy(payload)
+            
+            # 特殊处理messages字段，确保角色字段被正确保留
+            if "messages" in payload_copy:
+                # 确保messages中的每个消息都有正确的role字段
+                validated_messages = []
+                for msg in payload_copy["messages"]:
+                    if isinstance(msg, dict):
+                        # 检查msg的键是否都是有效的字符串
+                        valid_msg = {}
+                        for k, v in msg.items():
+                            if isinstance(k, str):  # 确保键是字符串
+                                valid_msg[k] = v
+                            else:
+                                log.warning(f"发现非字符串键: {k}")
+                        
+                        # 确保有有效的role字段
+                        if "role" not in valid_msg or not valid_msg["role"]:
+                            validated_messages.append({"role": "user", **valid_msg})
+                        else:
+                            validated_messages.append(valid_msg)
+                    else:
+                        # 如果消息不是字典，记录警告并跳过
+                        log.warning(f"消息不是有效的字典格式: {msg}")
+                payload_copy["messages"] = validated_messages
+            
+            # 使用json.dumps确保正确序列化
+            serialized = json.dumps(payload_copy, ensure_ascii=False)
+            return serialized
+        except Exception as e:
+            log.error(f"序列化日志数据失败: {str(e)}")
+            try:
+                # 作为备选方案，尝试使用更简单的序列化方式
+                return str(payload)
+            except:
+                return "无法序列化的payload"
+    
     def chat_completion(self, 
                         messages: List[Dict[str, str]],
                         model: str = None,
@@ -39,11 +81,11 @@ class YYChatClient:
         """
         # 验证并修复消息列表中的角色字段
         validated_messages = []
-        for msg in messages:
+        for i, msg in enumerate(messages):
             # 确保每个消息都有有效的role字段
             if "role" not in msg or not msg["role"]:
                 log.warning(f"发现无效消息角色，默认为'user': {msg}")
-                validated_msg = {**msg, "role": "user"}
+                validated_msg = {"role": "user", **msg}
             else:
                 validated_msg = msg
             validated_messages.append(validated_msg)
@@ -70,7 +112,40 @@ class YYChatClient:
         # 构建请求URL
         url = f"{self.api_base_url}/chat/completions"
         
-        log.debug(f"调用YYChat API: {url}, payload: {payload}")
+        # 分别记录不同部分的日志，避免单行过长被截断
+        log.debug(f"调用YYChat API: {url}")
+        log.debug(f"请求参数概览 - model: {payload.get('model')}, stream: {payload.get('stream')}")
+        
+        # 额外添加调试日志，直接打印原始消息列表和修复后的消息列表
+        log.debug(f"原始消息列表: {messages}")
+        log.debug(f"修复后消息列表: {validated_messages}")
+        
+        # 详细记录payload，但避免单行过长
+        try:
+            # 将payload拆分成多行记录，避免被截断
+            payload_str = json.dumps(payload, ensure_ascii=False, indent=2)
+            # 由于loguru可能仍会截断长消息，我们可以只记录关键部分
+            log.debug(f"Payload结构 (关键部分):")
+            log.debug(f"- model: {payload.get('model')}")
+            log.debug(f"- stream: {payload.get('stream')}")
+            log.debug(f"- conversation_id: {payload.get('conversation_id')}")
+            
+            # 获取消息列表
+            messages_list = payload.get('messages', [])
+            log.debug(f"- 消息数量: {len(messages_list)}")
+            
+            # 打印每条消息的详细内容
+            for i, message in enumerate(messages_list):
+                if isinstance(message, dict):
+                    role = message.get('role', 'unknown')
+                    content = message.get('content', '')
+                    # 限制内容长度，避免日志过长
+                    content_preview = content[:100] + ('...' if len(content) > 100 else '')
+                    log.debug(f"  消息 {i+1} [角色: {role}]: {content_preview}")
+                else:
+                    log.debug(f"  消息 {i+1} (非字典格式): {str(message)[:100]}...")
+        except Exception as e:
+            log.warning(f"记录Payload详情失败: {str(e)}")
         
         try:
             # 发送请求
@@ -96,15 +171,16 @@ class YYChatClient:
                 # 返回流式响应生成器
                 return self._process_streaming_response(response)
             else:
-                # 处理非流式响应
+                # 处理非流式响应 - 确保始终返回Dict，而不是Generator
                 try:
                     # 尝试直接解析JSON响应
                     return response.json()
                 except Exception as json_error:
-                    log.warning(f"直接解析JSON失败，尝试其他方式处理响应: {str(json_error)}")
-                    # 尝试以流式方式处理非流式响应（应对服务器可能的行为不一致）
-                    return self._process_streaming_response(response)
-                    
+                    log.warning(f"直接解析JSON失败: {str(json_error)}")
+                    log.warning(f"响应内容: {response.text[:200]}...")  # 只打印部分内容避免日志过长
+                    # 不尝试以流式方式处理，而是抛出异常让调用方处理
+                    raise Exception(f"解析非流式响应失败: {str(json_error)}")
+            
         except Exception as e:
             log.error(f"YYChat API调用异常: {str(e)}")
             raise
