@@ -403,26 +403,26 @@ def render():
 #     ]
 # )
 
-
-@callback(
-    Output('ai-chat-x-history-content', 'children'),
-    Input('ai-chat-x-messages-store', 'data'),
-    Input('ai-chat-x-streaming-state', 'data'),
-    prevent_initial_call=False
-)
-def update_chat_history(messages, streaming_state):
-    # 深拷贝消息列表以避免修改原始数据
-    display_messages = copy.deepcopy(messages or [])
-    
-    # 如果正在流式传输，添加当前正在生成的AI消息
-    if streaming_state and streaming_state.get('is_streaming') and streaming_state.get('current_ai_content'):
-        # 创建临时AI消息对象
-        streaming_ai_message = {
-            'role': 'agent',  # 修改为'agent'以匹配显示组件
-            'content': streaming_state.get('current_ai_content'),
-            'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'is_streaming': True
-        }
-        display_messages.append(streaming_ai_message)
-    
-    return AiChatMessageHistory(display_messages)
+# 删除这个重复的回调函数
+# @callback(
+#     Output('ai-chat-x-history-content', 'children'),
+#     Input('ai-chat-x-messages-store', 'data'),
+#     Input('ai-chat-x-streaming-state', 'data'),
+#     prevent_initial_call=False
+# )
+# def update_chat_history(messages, streaming_state):
+#     # 深拷贝消息列表以避免修改原始数据
+#     display_messages = copy.deepcopy(messages or [])
+#     
+#     # 如果正在流式传输，添加当前正在生成的AI消息
+#     if streaming_state and streaming_state.get('is_streaming') and streaming_state.get('current_ai_content'):
+#         # 创建临时AI消息对象
+#         streaming_ai_message = {
+#             'role': 'agent',  # 修改为'agent'以匹配显示组件
+#             'content': streaming_state.get('current_ai_content'),
+#             'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+#             'is_streaming': True
+#         }
+#         display_messages.append(streaming_ai_message)
+#     
+#     return AiChatMessageHistory(display_messages)

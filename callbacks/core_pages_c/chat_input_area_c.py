@@ -93,6 +93,9 @@ def process_streaming_response(session_id, messages, message_id):
             
         except Exception as api_error:
             log.error(f"处理流式响应生成器时出错: {str(api_error)}")
+            # 出错时，设置错误信息
+            error_message = f"处理响应时出错: {str(api_error)}"
+            streaming_updates[message_id] = error_message
         
         # 流式响应结束后，记录最终状态
         log.debug(f"流式响应完成，完整内容长度: {len(full_response)}, 消息ID: {message_id}")
@@ -102,6 +105,9 @@ def process_streaming_response(session_id, messages, message_id):
             log.warning(f"流式响应完成但未获取到任何内容，消息ID: {message_id}")
             # 设置一个默认的错误消息
             streaming_updates[message_id] = "抱歉，暂时无法获取响应内容，请稍后再试。"
+        else:
+            # 确保最终内容被设置到streaming_updates中
+            streaming_updates[message_id] = full_response
         
     except Exception as e:
         log.error(f"处理流式响应时出错: {str(e)}")
@@ -109,7 +115,8 @@ def process_streaming_response(session_id, messages, message_id):
         error_message = f"处理响应时出错: {str(e)}"
         streaming_updates[message_id] = error_message
     finally:
-        # 从streaming_tasks中移除当前任务
+        # 确保无论如何都会清理任务标记，但不立即清理streaming_updates
+        # 因为handle_chat_interactions还需要从中获取最终内容
         if message_id in streaming_tasks:
             del streaming_tasks[message_id]
         
@@ -176,6 +183,8 @@ def register_chat_input_callbacks(app):
             if 0 <= topic_index < len(topics):
                 # 返回话题内容到输入框
                 return messages, topics[topic_index], streaming_state
+            # 如果索引无效，返回默认值
+            return messages, message_content, streaming_state
         
         # 处理消息发送
         elif triggered_id in ['ai-chat-x-send-btn', 'ai-chat-x-input'] and message_content:
@@ -183,6 +192,9 @@ def register_chat_input_callbacks(app):
             message_content = message_content.strip()
             
             if message_content:
+                # 创建消息的深拷贝，避免修改原始数据
+                updated_messages = copy.deepcopy(messages)
+                
                 # 创建用户消息对象
                 user_message = {
                     'role': 'user',
@@ -190,26 +202,27 @@ def register_chat_input_callbacks(app):
                     'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }
                 
-                # 添加用户消息到消息列表
-                messages.append(user_message)
+                # 添加用户消息到消息列表的副本
+                updated_messages.append(user_message)
                 
                 # 更新流式状态
                 streaming_state = {
                     'is_streaming': True,
-                    'current_ai_message_id': f"ai-message-{len(messages)}",
+                    'current_ai_message_id': f"ai-message-{len(updated_messages)}",
                     'current_ai_content': ''
                 }
                 
-                # 清空输入框
-                # 启动流式响应处理线程
+                # 启动流式响应处理线程，传递消息副本
                 thread = threading.Thread(
                     target=process_streaming_response,
-                    args=(current_session_id, messages, streaming_state.get('current_ai_message_id'))
+                    args=(current_session_id, updated_messages, streaming_state.get('current_ai_message_id'))
                 )
                 thread.daemon = True
                 thread.start()
                 
-                return messages, '', streaming_state
+                return updated_messages, '', streaming_state
+            # 如果消息内容为空，返回默认值
+            return messages, message_content, streaming_state
         
         # 处理轮询更新（用于流式响应）
         elif triggered_id == 'ai-chat-x-streaming-poll' and streaming_state.get('is_streaming'):
@@ -227,14 +240,55 @@ def register_chat_input_callbacks(app):
                 
                 return messages, no_update, updated_streaming_state
             
+            # 如果当前没有更新，检查任务是否已完成
+            elif current_message_id and current_message_id not in streaming_tasks:
+                # 流式任务已完成，但仍在等待更新
+                # 检查是否有最终内容
+                if current_message_id in streaming_updates:
+                    final_content = streaming_updates[current_message_id]
+                    
+                    # 创建最终的AI消息并添加到消息历史
+                    ai_message = {
+                        'role': 'assistant',
+                        'content': final_content,
+                        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                    
+                    # 创建消息副本并添加AI回复
+                    updated_messages = copy.deepcopy(messages)
+                    updated_messages.append(ai_message)
+                    
+                    # 从streaming_updates中移除
+                    if current_message_id in streaming_updates:
+                        del streaming_updates[current_message_id]
+                    
+                    # 重置流式状态
+                    return updated_messages, no_update, {
+                        'is_streaming': False,
+                        'current_ai_message_id': None,
+                        'current_ai_content': ''
+                    }
+                else:
+                    # 如果没有内容，也重置流式状态以避免无限轮询
+                    log.warning(f"流式任务已完成但未找到内容，重置状态，消息ID: {current_message_id}")
+                    # 确保清理相关资源
+                    if current_message_id in streaming_updates:
+                        del streaming_updates[current_message_id]
+                    return messages, no_update, {
+                        'is_streaming': False,
+                        'current_ai_message_id': None,
+                        'current_ai_content': ''
+                    }
+            
             # 如果当前没有更新，返回no_update
-            return no_update, no_update, no_update
+            return messages, no_update, streaming_state
         
-        # 默认返回no_update
-        return no_update, no_update, no_update
+        # 默认返回当前状态，确保总是返回有效的元组
+        return messages, message_content, streaming_state
 
     @callback(
-        Output('ai-chat-x-history', 'children'),
+        # 修改输出目标为正确的组件ID
+        Output('ai-chat-x-history-content', 'children'),
         [Input('ai-chat-x-messages-store', 'data'),
          Input('ai-chat-x-streaming-state', 'data')],
         prevent_initial_call=False
@@ -249,17 +303,19 @@ def register_chat_input_callbacks(app):
         # 如果正在流式传输，添加当前正在生成的AI消息
         if streaming_state and streaming_state.get('is_streaming') and streaming_state.get('current_ai_content'):
             log.debug(f"正在流式传输，添加临时AI消息，内容长度: {len(streaming_state.get('current_ai_content'))}")
-            # 创建临时AI消息对象
+            # 创建临时AI消息对象 - 统一使用assistant角色
             streaming_ai_message = {
-                'role': 'agent',
+                'role': 'assistant',
                 'content': streaming_state.get('current_ai_content'),
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'is_streaming': True
             }
-            display_messages.append(streaming_ai_message)
-            log.debug(f"添加临时AI消息后，显示消息数: {len(display_messages)}")
-        
+            # 确保不会重复添加临时消息
+            if not any(msg.get('is_streaming') for msg in display_messages):
+                display_messages.append(streaming_ai_message)
+                log.debug(f"添加临时AI消息后，显示消息数: {len(display_messages)}")
+            
         log.debug(f"更新聊天历史完成，显示消息数: {len(display_messages)}")
-        return [html.Div(id="ai-chat-x-history-content", children=AiChatMessageHistory(display_messages))]
+        return AiChatMessageHistory(display_messages)
 
 # 若全局注册，需在app.py或server.py中import并调用 register_chat_input_callbacks(app) 即可
