@@ -9,6 +9,70 @@ console.error = function (...args) {
     }
 };
 
+if (!window.dash_clientside) {
+    window.dash_clientside = {};
+}
+
+// 初始化clientside对象（确保只定义一次）
+window.dash_clientside.clientside = {
+    // 处理SSE连接启动 - 统一版本
+    // 处理SSE连接启动 - 统一版本
+startSSE: function(input) {
+    console.log('startSSE函数被调用，输入:', input);
+    
+    // 兼容两种参数格式：如果是数组则处理为triggerIds，否则处理为divId
+    let messageId;
+    
+    if (Array.isArray(input) && input.length > 0) {
+        // 处理triggerIds数组格式
+        const lastTriggerId = input[input.length - 1];
+        messageId = lastTriggerId.replace('sse-trigger-', '');
+    } else if (typeof input === 'string') {
+        // 处理divId字符串格式
+        messageId = input.replace('sse-trigger-', '');
+    }
+    
+    if (messageId) {
+        console.log('从clientside调用startSSE，消息ID:', messageId);
+        
+        // 使用正确的ID获取会话ID和消息列表
+        const sessionIdEl = document.getElementById('ai-chat-x-current-session-id');
+        console.log('会话ID元素是否存在:', !!sessionIdEl);
+        const sessionId = sessionIdEl?.value || '';
+        console.log('获取到的会话ID:', sessionId);
+        
+        let messages = [];
+        try {
+            const messagesStore = document.getElementById('ai-chat-x-messages-store');
+            console.log('消息存储元素是否存在:', !!messagesStore);
+            if (messagesStore) {
+                messages = JSON.parse(messagesStore.value || '[]');
+                console.log('获取到的消息数量:', messages.length);
+                console.log('消息内容示例:', messages.length > 0 ? JSON.stringify(messages[0]) : '无消息');
+            }
+        } catch (e) {
+            console.error('获取消息列表失败:', e);
+        }
+        
+        // 调用全局函数，传递完整参数
+        if (window.startSSEConnection) {
+            console.log('准备调用window.startSSEConnection');
+            window.startSSEConnection(messageId, sessionId, messages);
+        } else {
+            console.error('未找到startSSEConnection函数');
+            // 如果找不到全局函数，尝试直接在页面中查找并执行
+            setTimeout(() => {
+                if (window.startSSEConnection) {
+                    console.log('延迟后找到startSSEConnection函数，尝试调用');
+                    window.startSSEConnection(messageId, sessionId, messages);
+                }
+            }, 500);
+        }
+    }
+    return window.dash_clientside.no_update;
+}
+};
+
 window.dash_clientside = Object.assign({}, window.dash_clientside, {
     clientside_basic: {
         // 处理核心页面侧边栏展开/收起

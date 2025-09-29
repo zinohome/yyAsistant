@@ -12,8 +12,12 @@ from feffery_dash_utils.version_utils import (
     check_dependencies_version,
 )
 
-from callbacks.core_pages_c.chat_input_area_c import register_chat_input_callbacks
+# 从server.py导入app
 from server import app
+from dash_extensions import SSE
+
+# 导入回调注册函数
+from callbacks.core_pages_c.chat_input_area_c import register_chat_input_callbacks
 from models.users import Users
 from views import core_pages, login
 from views.status_pages import _403, _404, _500
@@ -31,9 +35,10 @@ check_dependencies_version(
     ]
 )
 
-
+# 注册聊天输入区域回调
 register_chat_input_callbacks(app)
 
+# 修改app.layout，添加SSE组件到布局中
 app.layout = lambda: fuc.FefferyTopProgress(
     [
         # 全局消息提示
@@ -44,6 +49,8 @@ app.layout = lambda: fuc.FefferyTopProgress(
         fuc.FefferyReload(id="global-reload"),
         # 全局文件下载
         dcc.Download(id="global-download"),
+        # 添加SSE组件到布局
+        SSE(id="sse", concat=True, animate_chunk=5, animate_delay=10),
         *(
             [
                 # 重复登录辅助检查轮询

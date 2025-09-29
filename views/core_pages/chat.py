@@ -7,9 +7,9 @@ import feffery_utils_components as fuc
 from feffery_dash_utils.style_utils import style
 
 # 导入聊天组件
-from components.chat_agent_message import render as render_agent_message
-from components.chat_feature_hints import render as render_feature_hints
-from components.chat_user_message import render as render_user_message
+from components.chat_agent_message import ChatAgentMessage as render_agent_message
+from components.chat_feature_hints import ChatFeatureHints as render_feature_hints
+from components.chat_user_message import ChatUserMessage as render_user_message
 from components.chat_session_list import render as render_session_list
 from components.chat_input_area import render as render_chat_input_area
 from components.ai_chat_message_history import AiChatMessageHistory
@@ -21,9 +21,12 @@ from configs import BaseConfig
 from flask_login import current_user
 from utils.log import log
 
-# 令对应当前页面的回调函数子模块生效
+# 令对当当前页面的回调函数子模块生效
 import callbacks.core_pages_c.chat_c  # noqa: F401
 from dash import Input, Output, callback, no_update
+
+# 添加在文件顶部导入ClientsideFunction
+from dash import ClientsideFunction
 
 
 def _create_header_content():
@@ -203,7 +206,8 @@ def _create_content_area():
         children=[
             html.Div(
                 id="ai-chat-x-history-content",
-                children=AiChatMessageHistory(messages=None)
+                children=AiChatMessageHistory(messages=None),
+                **{"data-dummy": {}}  # 使用字典展开和引号确保正确的data-*格式
             )
         ],
         scrollbar='simple',
@@ -218,7 +222,7 @@ def _create_content_area():
 
     # 组合内容区域
     return fuc.FefferyDiv(
-        [chat_header, chat_history],
+        [chat_header, chat_history, html.Div(id="dummy-output-for-sse", style={'display': 'none'})],
         style=style(
             height="100%",
             display="flex",
@@ -281,6 +285,174 @@ def render():
         interval=200,  # 每200毫秒轮询一次
         n_intervals=0
     )
+
+    # 添加SSE客户端处理脚本
+    sse_client_script = html.Script(id="sse-client-script", children="""
+        // 全局变量保存当前的EventSource连接
+        let currentEventSource = null;
+        let connectionRetryCount = 0;
+        const maxRetries = 3;
+        
+        // 启动SSE连接的函数
+        function startSSEConnection(messageId, sessionId, messages) {
+            console.log('准备启动SSE连接，消息ID:', messageId, '会话ID:', sessionId, '消息数量:', messages.length);
+            
+            // 关闭之前的连接（如果存在）
+            if (currentEventSource) {
+                console.log('关闭现有SSE连接');
+                currentEventSource.close();
+                currentEventSource = null;
+            }
+            
+            // 重置重试计数
+            connectionRetryCount = 0;
+            
+            try {
+                // 创建新的SSE连接，使用正确的URL路径
+                const url = `/api/stream?message_id=${encodeURIComponent(messageId)}&session_id=${encodeURIComponent(sessionId || '')}&messages=${encodeURIComponent(JSON.stringify(messages))}`;
+                console.log('创建新的SSE连接到:', url);
+                
+                // 添加时间戳防止缓存
+                const timestamp = new Date().getTime();
+                const urlWithTimestamp = `${url}&t=${timestamp}`;
+                console.log('添加时间戳后的URL:', urlWithTimestamp);
+                
+                currentEventSource = new EventSource(urlWithTimestamp);
+                
+                // 监听消息事件
+                currentEventSource.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('收到SSE消息:', data);
+                        
+                        // 更新消息内容
+                        updateMessageContent(data);
+                    } catch (error) {
+                        console.error('解析SSE消息时出错:', error, '原始消息:', event.data);
+                    }
+                };
+                
+                // 监听错误事件
+                currentEventSource.onerror = function(error) {
+                    console.error('SSE连接错误:', error);
+                    // 自动关闭错误连接
+                    if (currentEventSource) {
+                        currentEventSource.close();
+                        currentEventSource = null;
+                    }
+                    
+                    // 添加重试逻辑
+                    connectionRetryCount++;
+                    if (connectionRetryCount <= maxRetries) {
+                        console.log(`尝试重新连接(${connectionRetryCount}/${maxRetries})...`);
+                        setTimeout(() => {
+                            startSSEConnection(messageId, sessionId, messages);
+                        }, 1000 * connectionRetryCount);
+                    }
+                };
+                
+                // 监听连接打开事件
+                currentEventSource.onopen = function() {
+                    console.log('SSE连接已打开');
+                    connectionRetryCount = 0; // 重置重试计数
+                };
+                
+            } catch (error) {
+                console.error('创建SSE连接时出错:', error);
+                
+                // 添加重试逻辑
+                connectionRetryCount++;
+                if (connectionRetryCount <= maxRetries) {
+                    console.log(`尝试重新连接(${connectionRetryCount}/${maxRetries})...`);
+                    setTimeout(() => {
+                        startSSEConnection(messageId, sessionId, messages);
+                    }, 1000 * connectionRetryCount);
+                }
+            }
+        }
+        
+        // 更新消息内容的函数
+        function updateMessageContent(data) {
+            console.log('进入updateMessageContent，接收到的数据:', data);
+            
+            // 查找消息元素
+            const messageElement = document.getElementById(data.id);
+            console.log('查找消息元素结果:', messageElement ? '找到' : '未找到');
+            
+            if (!messageElement) {
+                console.warn('未找到消息元素，ID:', data.id);
+                // 尝试查找所有消息容器
+                const allMessages = document.querySelectorAll('[id^="ai-message-"]');
+                console.log('当前页面中的AI消息元素数量:', allMessages.length);
+                // 列出所有找到的消息元素ID
+                allMessages.forEach(el => console.log('找到消息元素ID:', el.id));
+                return;
+            }
+            
+            console.log('消息元素HTML结构:', messageElement.innerHTML);
+            
+            // 使用正确的选择器查找内容元素
+            // 查找消息内容的AntdText元素
+            let contentElement = messageElement.querySelector('div.feffery-div span.ant-typography');
+            console.log('尝试选择器1结果:', contentElement ? '找到' : '未找到');
+            
+            // 如果没找到，尝试更通用的选择器
+            if (!contentElement) {
+                // 尝试直接查找FefferyDiv中的span
+                contentElement = messageElement.querySelector('div.feffery-div span');
+                console.log('尝试选择器2结果:', contentElement ? '找到' : '未找到');
+            }
+            if (!contentElement) {
+                // 尝试查找嵌套的AntdText
+                contentElement = messageElement.querySelector('span.ant-typography');
+                console.log('尝试选择器3结果:', contentElement ? '找到' : '未找到');
+            }
+            if (!contentElement) {
+                // 最后的备选方案：消息元素本身
+                contentElement = messageElement;
+                console.log('使用备选方案，内容元素:', contentElement);
+            }
+            
+            console.log('最终选择的内容元素:', contentElement);
+            console.log('更新前内容:', contentElement.textContent);
+            
+            // 更新内容
+            if (data.complete) {
+                contentElement.textContent = data.content;
+                messageElement.style.display = 'block';
+                // 标记为非流式
+                messageElement.setAttribute('data-streaming', 'false');
+                console.log('消息完成更新，ID:', data.id, '更新后内容:', data.content);
+                
+                // 关闭SSE连接
+                if (currentEventSource) {
+                    currentEventSource.close();
+                    currentEventSource = null;
+                    console.log('消息完成，关闭SSE连接');
+                }
+            } else {
+                // 累积内容
+                contentElement.textContent += data.content;
+                messageElement.style.display = 'block';
+                console.log('累积更新消息内容，ID:', data.id, '新增内容:', data.content, '累积后内容:', contentElement.textContent);
+            }
+            
+            // 滚动到最新消息
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+        
+        // 注册到window对象，供Dash回调调用
+        window.startSSEConnection = startSSEConnection;
+        
+        // 添加对SSE组件消息的直接监听
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查是否有SSE组件
+            const sseComponent = document.getElementById('sse');
+            if (sseComponent) {
+                console.log('SSE组件已加载');
+            }
+        });
+    """)
 
     # 完整的AntdLayout布局
     return [
@@ -373,7 +545,8 @@ def render():
                 *state_stores,  # 展开状态存储组件列表
                 render_my_info_drawer(),  # 添加我的信息抽屉组件
                 render_preference_drawer(),  # 添加偏好设置抽屉组件
-                streaming_poll  # 添加轮询组件到布局中
+                streaming_poll,  # 添加轮询组件到布局中
+                sse_client_script  # 添加SSE客户端脚本
             ],
             style={
                 'height': '100vh', 
@@ -385,44 +558,3 @@ def render():
             id="ai-chat-x-main-layout"
         )
     ]
-
-# 添加聊天历史更新回调
-# 移除文件末尾未使用的layout定义
-# layout = html.Div(
-#     [
-#         # ... existing components ...
-#         
-#         # 添加轮询组件用于更新流式响应
-#         dcc.Interval(
-#             id='ai-chat-x-streaming-poll',
-#             interval=200,  # 每200毫秒轮询一次
-#             n_intervals=0
-#         ),
-#         
-#         # ... existing components ...
-#     ]
-# )
-
-# 删除这个重复的回调函数
-# @callback(
-#     Output('ai-chat-x-history-content', 'children'),
-#     Input('ai-chat-x-messages-store', 'data'),
-#     Input('ai-chat-x-streaming-state', 'data'),
-#     prevent_initial_call=False
-# )
-# def update_chat_history(messages, streaming_state):
-#     # 深拷贝消息列表以避免修改原始数据
-#     display_messages = copy.deepcopy(messages or [])
-#     
-#     # 如果正在流式传输，添加当前正在生成的AI消息
-#     if streaming_state and streaming_state.get('is_streaming') and streaming_state.get('current_ai_content'):
-#         # 创建临时AI消息对象
-#         streaming_ai_message = {
-#             'role': 'agent',  # 修改为'agent'以匹配显示组件
-#             'content': streaming_state.get('current_ai_content'),
-#             'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-#             'is_streaming': True
-#         }
-#         display_messages.append(streaming_ai_message)
-#     
-#     return AiChatMessageHistory(display_messages)

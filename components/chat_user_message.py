@@ -4,7 +4,7 @@ from feffery_dash_utils.style_utils import style
 import dash.html as html
 
 
-def render(
+def ChatUserMessage(
     message="如何实现一个AntDesign X风格的聊天界面？需要注意哪些设计要点？",
     sender_name="我",
     timestamp="10:31",

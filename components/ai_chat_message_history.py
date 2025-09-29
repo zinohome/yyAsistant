@@ -1,7 +1,7 @@
 from dash import html
-from components.chat_agent_message import render as render_agent_message
-from components.chat_feature_hints import render as render_feature_hints
-from components.chat_user_message import render as render_user_message
+from components.chat_agent_message import ChatAgentMessage as render_agent_message
+from components.chat_feature_hints import ChatFeatureHints as render_feature_hints
+from components.chat_user_message import ChatUserMessage as render_user_message
 import datetime
 
 def AiChatMessageHistory(messages=None):
@@ -27,13 +27,17 @@ def AiChatMessageHistory(messages=None):
         for msg in messages:
             # 统一处理assistant和agent角色
             if msg.get('role') == 'assistant' or msg.get('role') == 'agent':
-                # 传递所有必要参数给 render_agent_message
+                # 添加调试日志
+                print(f"渲染AI消息 - ID: {msg.get('id')}, 内容: {msg.get('content')}")
+                # 传递所有必要参数给 render_agent_message，使用正确的message参数
                 children.append(render_agent_message(
-                    message=msg.get('content', ''),  # 使用content字段
+                    message=msg.get('content', ''),  # 修改为message参数
                     sender_name="智能助手",
                     timestamp=msg.get('timestamp', current_time),  # 使用消息自带的时间戳
                     icon="antd-robot",
-                    icon_bg_color="#1890ff"
+                    icon_bg_color="#1890ff",
+                    message_id=msg.get('id'),  # 传递消息ID
+                    is_streaming=msg.get('is_streaming', False)  # 传递流式状态
                 ))
             elif msg.get('role') == 'user':
                 # 传递所有必要参数给 render_user_message
@@ -49,7 +53,7 @@ def AiChatMessageHistory(messages=None):
             elif msg.get('role') == 'system':
                 # 系统消息处理
                 children.append(render_agent_message(
-                    message=msg.get('content', ''),
+                    message=msg.get('content', ''),  # 修改为message参数
                     sender_name="系统",
                     timestamp=msg.get('timestamp', current_time),
                     icon="antd-info-circle",

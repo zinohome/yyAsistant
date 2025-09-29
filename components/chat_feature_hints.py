@@ -5,7 +5,7 @@ from dash_iconify import DashIconify
 from feffery_dash_utils.style_utils import style
 
 
-def render(
+def ChatFeatureHints(
     message="您好！我是智能助手，很高兴为您服务。我可以帮助您解答问题、提供建议或协助您完成工作。",
     sender_name="智能助手",
     timestamp="10:30",
