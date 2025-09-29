@@ -195,7 +195,7 @@ def render():
                         fac.AntdSpace(
                             [
                                 fac.AntdButton(
-                                    icon=fac.AntdIcon(icon="antd-star"),
+                                    icon=fac.AntdIcon(icon="antd-history"),
                                     id="ai-chat-x-favorite-btn",
                                     type="text"
                                 ),
