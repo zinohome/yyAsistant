@@ -1,5 +1,6 @@
+import copy
+import datetime
 import time
-import dash
 from dash import html, dcc
 import feffery_antd_components as fac
 import feffery_utils_components as fuc
@@ -12,38 +13,22 @@ from components.chat_user_message import render as render_user_message
 from components.chat_session_list import render as render_session_list
 from components.chat_input_area import render as render_chat_input_area
 from components.ai_chat_message_history import AiChatMessageHistory
-from components.my_info import render_my_info_drawer as render_my_info_drawer
-# 添加preference组件导入
+from components.my_info import render_my_info_drawer
 from components.preference import render as render_preference_drawer
 
 # 导入配置和用户相关模块
-from configs import BaseConfig, AuthConfig
+from configs import BaseConfig
 from flask_login import current_user
-
-
-from utils.log import log as log
+from utils.log import log
 
 # 令对应当前页面的回调函数子模块生效
 import callbacks.core_pages_c.chat_c  # noqa: F401
+from dash import Input, Output, callback, no_update
 
 
-def render():
-    """子页面：AntDesign X风格AI聊天界面"""
-    
-    # 状态存储：用于管理会话列表的折叠状态
-    session_collapse_store = dcc.Store(
-        id='ai-chat-x-session-collapse-state',
-        data=False  # 默认不折叠
-    )
-    
-    # 添加：会话列表刷新触发器
-    session_refresh_trigger = dcc.Store(
-        id='ai-chat-x-session-refresh-trigger',
-        data={'timestamp': time.time()}  # 使用时间戳作为刷新标识
-    )
-
-    # 页面标题和操作功能区域 - 用于页首
-    header_content = fac.AntdRow(
+def _create_header_content():
+    """创建页面头部内容"""
+    return fac.AntdRow(
         [
             fac.AntdCol(
                 flex='auto',
@@ -141,95 +126,99 @@ def render():
         )
     )
 
-    # 左侧会话列表内容
-    #log.debug(f"current_user: {current_user}")
-    #if hasattr(current_user, '__dict__'):
-    #        user_attrs = vars(current_user)
-    #        log.debug(f"current_user属性(vars): {user_attrs}")
 
-    # 修改：传递刷新触发器给render_session_list
-    sider_content = html.Div(
+def _create_sider_content():
+    """创建侧边栏内容"""
+    return html.Div(
         id='ai-chat-x-session-list-container',
         children=render_session_list(user_id=current_user.id)
     )
 
-    # 右侧聊天内容区域
-    content_area = fuc.FefferyDiv(
+
+def _create_content_area():
+    """创建右侧聊天内容区域"""
+    # 聊天头部信息
+    chat_header = fac.AntdRow(
         [
-            # 聊天头部信息
-            fac.AntdRow(
+            fac.AntdCol(
                 [
-                    fac.AntdCol(
-                        [
-                            # 会话折叠按钮
-                            fac.AntdButton(
-                                id='ai-chat-x-session-collapse-trigger',
-                                className="ai-chat-x-header-session-collapse-hide",
-                                icon=html.Img(
-                                    id='ai-chat-x-session-collapse-trigger-icon',
-                                    src='/assets/imgs/left.svg',
-                                    style={
-                                        'width': '14px',
-                                        'height': '14px',
-                                        'margin': '0',
-                                        'padding': '0'
-                                    }
-                                ),
-                                shape='circle',
-                                type='text',
-                                style={
-                                    'marginRight': 8
-                                }
-                            ),
-                            fac.AntdText("当前会话", strong=True),
-                            fac.AntdDivider(direction="vertical", style=style(margin="0 12px")),
-                            fac.AntdTag(
-                                "ai-chat-x-current-session",
-                                color="green",
-                                icon=fac.AntdIcon(icon="antd-check-circle", style=style(fontSize="12px"))
-                            )
-                        ],
-                        flex="auto"
-                    ),
-                    fac.AntdCol(
-                        fac.AntdSpace(
-                            [
-                                fac.AntdButton(
-                                    icon=fac.AntdIcon(icon="antd-history"),
-                                    id="ai-chat-x-favorite-btn",
-                                    type="text"
-                                ),
-                                fac.AntdButton(
-                                    icon=fac.AntdIcon(icon="antd-plus"),
-                                    id="ai-chat-x-more-btn",
-                                    type="text"
-                                )
-                            ],
-                            size="small",
+                    # 会话折叠按钮
+                    fac.AntdButton(
+                        id='ai-chat-x-session-collapse-trigger',
+                        className="ai-chat-x-header-session-collapse-hide",
+                        icon=html.Img(
+                            id='ai-chat-x-session-collapse-trigger-icon',
+                            src='/assets/imgs/left.svg',
+                            style={
+                                'width': '14px',
+                                'height': '14px',
+                                'margin': '0',
+                                'padding': '0'
+                            }
                         ),
-                        flex='none',
-                        style=style(display='flex',alignItems='center',whiteSpace='nowrap')
+                        shape='circle',
+                        type='text',
+                        style={
+                            'marginRight': 8
+                        }
+                    ),
+                    fac.AntdText("当前会话", strong=True),
+                    fac.AntdDivider(direction="vertical", style=style(margin="0 12px")),
+                    fac.AntdTag(
+                        "ai-chat-x-current-session",
+                        color="green",
+                        icon=fac.AntdIcon(icon="antd-check-circle", style=style(fontSize="12px"))
                     )
                 ],
-                align="middle",
-                className="ai-chat-x-header-row",
-                style=style(padding="12px 24px", borderBottom="1px solid #f0f0f0", backgroundColor="#fff")
+                flex="auto"
             ),
-            
-            # 聊天历史区域
-            fuc.FefferyDiv(
-                id="ai-chat-x-history",
-                children=AiChatMessageHistory(messages=None),
-                scrollbar='simple',
-                style=style(
-                    height="calc(100vh - 240px)",
-                    maxHeight="calc(100vh - 240px)",
-                    overflowY="auto",
-                    backgroundColor="#fafafa",
-                    minWidth=0
-                )
-            ),
+            fac.AntdCol(
+                fac.AntdSpace(
+                    [
+                        fac.AntdButton(
+                            icon=fac.AntdIcon(icon="antd-history"),
+                            id="ai-chat-x-favorite-btn",
+                            type="text"
+                        ),
+                        fac.AntdButton(
+                            icon=fac.AntdIcon(icon="antd-plus"),
+                            id="ai-chat-x-more-btn",
+                            type="text"
+                        )
+                    ],
+                    size="small",
+                ),
+                flex='none',
+                style=style(display='flex', alignItems='center', whiteSpace='nowrap')
+            )
         ],
+        align="middle",
+        className="ai-chat-x-header-row",
+        style=style(padding="12px 24px", borderBottom="1px solid #f0f0f0", backgroundColor="#fff")
+    )
+
+    # 聊天历史区域
+    chat_history = fuc.FefferyDiv(
+        id="ai-chat-x-history",
+        children=[
+            html.Div(
+                id="ai-chat-x-history-content",
+                children=AiChatMessageHistory(messages=None)
+            )
+        ],
+        scrollbar='simple',
+        style=style(
+            height="calc(100vh - 240px)",
+            maxHeight="calc(100vh - 240px)",
+            overflowY="auto",
+            backgroundColor="#fafafa",
+            minWidth=0
+        )
+    )
+
+    # 组合内容区域
+    return fuc.FefferyDiv(
+        [chat_header, chat_history],
         style=style(
             height="100%",
             display="flex",
@@ -240,8 +229,58 @@ def render():
         )
     )
 
-    # 输入区域 - 用于页尾
+
+def _create_state_stores():
+    """创建页面所需的状态存储组件"""
+    # 状态存储：用于管理会话列表的折叠状态
+    session_collapse_store = dcc.Store(
+        id='ai-chat-x-session-collapse-state',
+        data=False  # 默认不折叠
+    )
+    
+    # 添加：会话列表刷新触发器
+    session_refresh_trigger = dcc.Store(
+        id='ai-chat-x-session-refresh-trigger',
+        data={'timestamp': time.time()}  # 使用时间戳作为刷新标识
+    )
+    
+    # 添加消息历史存储
+    messages_store = dcc.Store(id='ai-chat-x-messages-store', data=[])
+    
+    # 添加当前会话ID存储
+    current_session_id_store = dcc.Store(id='ai-chat-x-current-session-id', data='')
+    
+    # 添加流式响应状态存储
+    streaming_state_store = dcc.Store(id='ai-chat-x-streaming-state', data={
+        'is_streaming': False,
+        'current_ai_message_id': None,
+        'current_ai_content': ''
+    })
+
+    return [
+        session_collapse_store,
+        session_refresh_trigger,
+        messages_store,
+        current_session_id_store,
+        streaming_state_store  # 添加这一行，包含流式状态存储组件
+    ]
+
+
+def render():
+    """子页面：AntDesign X风格AI聊天界面"""
+    # 创建各个部分的内容
+    header_content = _create_header_content()
+    sider_content = _create_sider_content()
+    content_area = _create_content_area()
     footer_content = render_chat_input_area()
+    state_stores = _create_state_stores()
+
+    # 添加轮询组件
+    streaming_poll = dcc.Interval(
+        id='ai-chat-x-streaming-poll',
+        interval=200,  # 每200毫秒轮询一次
+        n_intervals=0
+    )
 
     # 完整的AntdLayout布局
     return [
@@ -249,99 +288,141 @@ def render():
         fac.AntdLayout(
             [
                 # 页首
-            fac.AntdHeader(
-                header_content,
-                style={
-                    'display': 'flex',
-                    'justifyContent': 'center',
-                    'alignItems': 'center',
-                    'backgroundColor': '#fff',
-                    'borderBottom': '1px solid #dae0ea',
-                    'padding': '0 16px',
-                    'zIndex': 1000,  # 确保页首在最上层
-                    'minWidth': 0,  # 防止在flex容器中溢出
-                    'flexShrink': 0  # 确保页首不被压缩
-                },
-                id="ai-chat-x-header"
-            ),
-            # 主体布局
-            fac.AntdLayout(
-                [
-                    # 侧边栏
-                    fac.AntdSider(
-                        sider_content,
-                        id="ai-chat-x-session-container",
-                        collapsible=True,
-                        collapsedWidth=0,  # 完全折叠
-                        breakpoint="sm",  # 在小屏幕下自动折叠（<576px）
-                        trigger=None,
-                        style={
-                            'backgroundColor': 'white',
-                            'borderRight': '1px solid #f0f0f0',
-                            'position': 'relative',
-                            'transition': 'all 0.3s ease'
-                        },
-                    ),
-                    # 内容区和页尾
-                    fac.AntdLayout(
-                        [
-                            # 内容区 - 使用Div包裹来增加额外的响应式保障
-                            html.Div(
-                                fac.AntdContent(
-                                    content_area,
+                fac.AntdHeader(
+                    header_content,
+                    style={
+                        'display': 'flex',
+                        'justifyContent': 'center',
+                        'alignItems': 'center',
+                        'backgroundColor': '#fff',
+                        'borderBottom': '1px solid #dae0ea',
+                        'padding': '0 16px',
+                        'zIndex': 1000,  # 确保页首在最上层
+                        'minWidth': 0,  # 防止在flex容器中溢出
+                        'flexShrink': 0  # 确保页首不被压缩
+                    },
+                    id="ai-chat-x-header"
+                ),
+                # 主体布局
+                fac.AntdLayout(
+                    [
+                        # 侧边栏
+                        fac.AntdSider(
+                            sider_content,
+                            id="ai-chat-x-session-container",
+                            collapsible=True,
+                            collapsedWidth=0,  # 完全折叠
+                            breakpoint="sm",  # 在小屏幕下自动折叠（<576px）
+                            trigger=None,
+                            style={
+                                'backgroundColor': 'white',
+                                'borderRight': '1px solid #f0f0f0',
+                                'position': 'relative',
+                                'transition': 'all 0.3s ease'
+                            },
+                        ),
+                        # 内容区和页尾
+                        fac.AntdLayout(
+                            [
+                                # 内容区 - 使用Div包裹来增加额外的响应式保障
+                                html.Div(
+                                    fac.AntdContent(
+                                        content_area,
+                                        style={
+                                            'backgroundColor': 'white',
+                                            'padding': '0',
+                                            'overflow': 'auto',  # 允许内容区滚动
+                                            'minWidth': 0,  # 防止在flex容器中溢出
+                                            'flex': 1  # 确保内容区占据剩余空间
+                                        },
+                                        id="ai-chat-x-right-content"
+                                    ),
+                                    style={
+                                        'width': '100%',
+                                        'minWidth': 0,
+                                        'flex': 1,
+                                        'display': 'flex',
+                                        'flexDirection': 'column'
+                                    }
+                                ),
+                                # 页尾（输入区域）
+                                fac.AntdFooter(
+                                    footer_content,
                                     style={
                                         'backgroundColor': 'white',
                                         'padding': '0',
-                                        'overflow': 'auto',  # 允许内容区滚动
-                                        'minWidth': 0,  # 防止在flex容器中溢出
-                                        'flex': 1  # 确保内容区占据剩余空间
+                                        'borderTop': '1px solid #f0f0f0',
+                                        'flexShrink': 0  # 确保页尾不被压缩
                                     },
-                                    id="ai-chat-x-right-content"
                                 ),
-                                style={
-                                    'width': '100%',
-                                    'minWidth': 0,
-                                    'flex': 1,
-                                    'display': 'flex',
-                                    'flexDirection': 'column'
-                                }
-                            ),
-                            # 页尾（输入区域）
-                            fac.AntdFooter(
-                                footer_content,
-                                style={
-                                    'backgroundColor': 'white',
-                                    'padding': '0',
-                                    'borderTop': '1px solid #f0f0f0',
-                                    'flexShrink': 0  # 确保页尾不被压缩
-                                },
-                            ),
-                        ],
-                        style={
-                            'display': 'flex',  # 确保内容区和页尾使用flex布局
-                            'flexDirection': 'column',
-                            'minWidth': 0,  # 防止在flex容器中溢出
-                            'width': '100%'
-                        }
-                    ),
-                ],
-                style={
-                    'height': 'calc(100vh - 50px)',
-                    'display': 'flex',  # 确保侧边栏和内容区使用flex布局
-                    'width': '100%'
-                },
-            ),
-            session_collapse_store,  # 状态存储组件
-            session_refresh_trigger,  # 添加：刷新触发器
-            render_my_info_drawer(),  # 添加我的信息抽屉组件
-            render_preference_drawer()  # 添加偏好设置抽屉组件
-        ],
-        style={
-            'height': '100vh', 
-            'backgroundColor': '#fff',
-            'display': 'flex',
-            'flexDirection': 'column',
-            'width': '100%'
-        },
-        id="ai-chat-x-main-layout"
-    )]
+                            ],
+                            style={
+                                'display': 'flex',  # 确保内容区和页尾使用flex布局
+                                'flexDirection': 'column',
+                                'minWidth': 0,  # 防止在flex容器中溢出
+                                'width': '100%'
+                            }
+                        ),
+                    ],
+                    style={
+                        'height': 'calc(100vh - 50px)',
+                        'display': 'flex',  # 确保侧边栏和内容区使用flex布局
+                        'width': '100%'
+                    },
+                ),
+                *state_stores,  # 展开状态存储组件列表
+                render_my_info_drawer(),  # 添加我的信息抽屉组件
+                render_preference_drawer(),  # 添加偏好设置抽屉组件
+                streaming_poll  # 添加轮询组件到布局中
+            ],
+            style={
+                'height': '100vh', 
+                'backgroundColor': '#fff',
+                'display': 'flex',
+                'flexDirection': 'column',
+                'width': '100%'
+            },
+            id="ai-chat-x-main-layout"
+        )
+    ]
+
+# 添加聊天历史更新回调
+# 移除文件末尾未使用的layout定义
+# layout = html.Div(
+#     [
+#         # ... existing components ...
+#         
+#         # 添加轮询组件用于更新流式响应
+#         dcc.Interval(
+#             id='ai-chat-x-streaming-poll',
+#             interval=200,  # 每200毫秒轮询一次
+#             n_intervals=0
+#         ),
+#         
+#         # ... existing components ...
+#     ]
+# )
+
+
+@callback(
+    Output('ai-chat-x-history-content', 'children'),
+    Input('ai-chat-x-messages-store', 'data'),
+    Input('ai-chat-x-streaming-state', 'data'),
+    prevent_initial_call=False
+)
+def update_chat_history(messages, streaming_state):
+    # 深拷贝消息列表以避免修改原始数据
+    display_messages = copy.deepcopy(messages or [])
+    
+    # 如果正在流式传输，添加当前正在生成的AI消息
+    if streaming_state and streaming_state.get('is_streaming') and streaming_state.get('current_ai_content'):
+        # 创建临时AI消息对象
+        streaming_ai_message = {
+            'role': 'agent',  # 修改为'agent'以匹配显示组件
+            'content': streaming_state.get('current_ai_content'),
+            'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'is_streaming': True
+        }
+        display_messages.append(streaming_ai_message)
+    
+    return AiChatMessageHistory(display_messages)

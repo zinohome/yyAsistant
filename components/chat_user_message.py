@@ -1,6 +1,5 @@
 import feffery_antd_components as fac
 import feffery_utils_components as fuc  # 导入FefferyDiv所在的模块
-import feffery_antd_components as fac
 from feffery_dash_utils.style_utils import style
 import dash.html as html
 
