@@ -27,7 +27,7 @@ def render(
     """
     
     # 统一外框的输入区域容器
-    return fuc.FefferyDiv(
+    children =  fuc.FefferyDiv(
         [
             # 话题提示栏 - 替代工具栏
             fuc.FefferyDiv(
@@ -198,3 +198,4 @@ def render(
             borderTop="1px solid #f0f0f0"
         )
     )
+    return children

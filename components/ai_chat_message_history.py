@@ -36,8 +36,10 @@ def AiChatMessageHistory(messages=None):
                     timestamp=msg.get('timestamp', current_time),  # 使用消息自带的时间戳
                     icon="antd-robot",
                     icon_bg_color="#1890ff",
+                    message_bg_color="#f5f5f5",
+                    message_text_color="#000000",
                     message_id=msg.get('id'),  # 传递消息ID
-                    is_streaming=msg.get('is_streaming', False)  # 传递流式状态
+                    is_streaming=msg.get('is_streaming', False)  # 传递流式状态,
                 ))
             elif msg.get('role') == 'user':
                 # 传递所有必要参数给 render_user_message
@@ -48,7 +50,8 @@ def AiChatMessageHistory(messages=None):
                     icon="antd-user",
                     icon_bg_color="#52c41a",
                     message_bg_color="#1890ff",
-                    message_text_color="white"
+                    message_text_color="white",
+                    message_id=msg.get('id'),  # 传递消息ID
                 ))
             elif msg.get('role') == 'system':
                 # 系统消息处理

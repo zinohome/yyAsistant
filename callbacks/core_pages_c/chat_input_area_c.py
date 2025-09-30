@@ -84,15 +84,15 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
         if message_content:
             # 创建消息的深拷贝，避免修改原始数据
             updated_messages = copy.deepcopy(messages)
-            
-            # 创建用户消息对象
+                       
+            # 添加用户消息到消息列表的副本
+            usr_message_id = f"usr-message-{len(updated_messages)}"
             user_message = {
                 'role': 'user',
                 'content': message_content,
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'id': usr_message_id
             }
-            
-            # 添加用户消息到消息列表的副本
             updated_messages.append(user_message)
             
             # 创建一个空白的AI消息，用于后续接收流式响应

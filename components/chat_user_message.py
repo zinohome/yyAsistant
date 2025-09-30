@@ -6,6 +6,7 @@ import dash.html as html
 
 def ChatUserMessage(
     message="如何实现一个AntDesign X风格的聊天界面？需要注意哪些设计要点？",
+    message_id=None,
     sender_name="我",
     timestamp="10:31",
     icon="antd-user",
@@ -18,6 +19,7 @@ def ChatUserMessage(
     
     参数:
         message: 消息内容
+        message_id: 消息ID
         sender_name: 发送者名称
         timestamp: 时间戳
         icon: 发送者头像图标

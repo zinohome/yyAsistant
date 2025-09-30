@@ -14,7 +14,6 @@ from feffery_dash_utils.version_utils import (
 
 # 从server.py导入app
 from server import app
-from dash_extensions import SSE
 
 # 导入回调注册函数
 from callbacks.core_pages_c.chat_input_area_c import register_chat_input_callbacks
@@ -49,8 +48,6 @@ app.layout = lambda: fuc.FefferyTopProgress(
         fuc.FefferyReload(id="global-reload"),
         # 全局文件下载
         dcc.Download(id="global-download"),
-        # 添加SSE组件到布局
-        SSE(id="sse", concat=True, animate_chunk=5, animate_delay=10),
         *(
             [
                 # 重复登录辅助检查轮询

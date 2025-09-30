@@ -6,6 +6,7 @@ from feffery_dash_utils.style_utils import style
 import dash.html as html
 from utils.log import log
 import time
+from dash_iconify import DashIconify  # 新增：导入DashIconify
 
 
 def ChatAgentMessage(
@@ -102,7 +103,46 @@ def ChatAgentMessage(
                         ),
                         flex="auto"
                     )
-                ]
+                ],
+                style=style(padding="0 0 8px 0")
+            ),
+            
+            # 第三行：底部操作栏（新增）
+            fac.AntdRow(
+                [
+                    fac.AntdCol(
+                        style=style(width="48px", height="0")  # 用于与头像对齐的占位符
+                    ),
+                    fac.AntdCol(
+                        fac.AntdSpace(
+                            [
+                                fac.AntdIcon(
+                                    icon='antd-reload',
+                                    style=style(fontSize=16, color='rgba(0,0,0,0.45)')
+                                ),
+                                fac.AntdIcon(
+                                    icon='antd-copy',
+                                    style=style(fontSize=16, color='rgba(0,0,0,0.45)')
+                                ),
+                                DashIconify(icon="mingcute:thumb-up-2-line",
+                                    width=20,
+                                    height=20,
+                                    rotate=0,
+                                    flip="horizontal",
+                                ),
+                                DashIconify(icon="mingcute:thumb-down-2-line",
+                                    width=20,
+                                    height=20,
+                                    rotate=0,
+                                    flip="horizontal",
+                                ),
+                            ],
+                            size=16
+                        ),
+                        style=style(paddingLeft="4px")
+                    )
+                ],
+                justify="start"
             )
         ],
         style=style(marginBottom="16px", padding="16px 24px 0 24px")

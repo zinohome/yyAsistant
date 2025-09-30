@@ -24,7 +24,7 @@ from utils.log import log
 # 令对当当前页面的回调函数子模块生效
 import callbacks.core_pages_c.chat_c  # noqa: F401
 from dash import Input, Output, callback, no_update
-
+from dash_extensions import SSE
 # 添加在文件顶部导入ClientsideFunction
 from dash import ClientsideFunction
 
@@ -222,7 +222,10 @@ def _create_content_area():
 
     # 组合内容区域
     return fuc.FefferyDiv(
-        [chat_header, chat_history, html.Div(id="dummy-output-for-sse", style={'display': 'none'})],
+        [chat_header,
+        # 添加SSE组件到布局
+        SSE(id="sse", concat=True, animate_chunk=5, animate_delay=10), 
+        chat_history],
         style=style(
             height="100%",
             display="flex",
@@ -233,6 +236,12 @@ def _create_content_area():
         )
     )
 
+def _create_input_content():
+    """创建输入区域内容"""
+    return html.Div(
+        id='ai-chat-x-input-container',
+        children=render_chat_input_area()
+    )
 
 def _create_state_stores():
     """创建页面所需的状态存储组件"""
@@ -242,31 +251,16 @@ def _create_state_stores():
         data=False  # 默认不折叠
     )
     
-    # 添加：会话列表刷新触发器
-    session_refresh_trigger = dcc.Store(
-        id='ai-chat-x-session-refresh-trigger',
-        data={'timestamp': time.time()}  # 使用时间戳作为刷新标识
-    )
-    
     # 添加消息历史存储
     messages_store = dcc.Store(id='ai-chat-x-messages-store', data=[])
     
     # 添加当前会话ID存储
     current_session_id_store = dcc.Store(id='ai-chat-x-current-session-id', data='')
-    
-    # 添加流式响应状态存储
-    streaming_state_store = dcc.Store(id='ai-chat-x-streaming-state', data={
-        'is_streaming': False,
-        'current_ai_message_id': None,
-        'current_ai_content': ''
-    })
 
     return [
         session_collapse_store,
-        session_refresh_trigger,
         messages_store,
-        current_session_id_store,
-        streaming_state_store  # 添加这一行，包含流式状态存储组件
+        current_session_id_store
     ]
 
 
@@ -276,7 +270,7 @@ def render():
     header_content = _create_header_content()
     sider_content = _create_sider_content()
     content_area = _create_content_area()
-    footer_content = render_chat_input_area()
+    footer_content = _create_input_content()
     state_stores = _create_state_stores()
 
     # 完整的AntdLayout布局
