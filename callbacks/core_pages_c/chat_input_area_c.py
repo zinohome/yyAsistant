@@ -13,10 +13,9 @@ import threading
 import time
 from flask import Response, stream_with_context
 from dash_extensions.streaming import sse_message, sse_options
-from components.ai_chat_message_history import AiChatMessageHistory
-from server import app, server  # 确保同时导入了server
-from utils.log import log
-import copy
+
+# 添加用于SSE连接的存储
+active_sse_connections = {}
 
 # 聊天交互处理函数
 @app.callback(
@@ -99,7 +98,7 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
             ai_message_id = f"ai-message-{len(updated_messages)}"
             ai_message = {
                 'role': 'assistant',
-                'content': '正在输入 …',
+                'content': '正在思考中...',
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'id': ai_message_id,
                 'is_streaming': True
@@ -117,20 +116,80 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
     # 默认返回当前状态
     return messages, message_content
 
-# 更新聊天历史显示
+# SSE触发回调 - 用于启动SSE连接
+@app.callback(
+    [
+        Output('chat-X-sse', 'url'),
+        Output('chat-X-sse', 'options')
+    ],
+    [Input('ai-chat-x-messages-store', 'data')],
+    [State('ai-chat-x-current-session-id', 'data')],
+    prevent_initial_call=True
+)
+def trigger_sse(messages, current_session_id):
+    # 检查是否有新的AI消息正在流式传输
+    if messages and len(messages) > 0:
+        last_message = messages[-1]
+        # 只有当最后一条消息是AI消息并且处于流式传输状态时才触发SSE
+        if last_message.get('role') in ['assistant', 'agent'] and last_message.get('is_streaming', False):
+            # 获取消息ID
+            message_id = last_message.get('id')
+            role = last_message.get('role', 'assistant')
+            
+            # 准备要发送给/stream端点的消息
+            # 只包含对话历史，不包含当前正在流式传输的消息
+            conversation_messages = []
+            for msg in messages:
+                if msg.get('role') in ['user', 'assistant', 'agent', 'system'] and \
+                   not (msg.get('role') in ['assistant', 'agent'] and msg.get('is_streaming', False)):
+                    conversation_messages.append({
+                        'role': msg.get('role'),
+                        'content': msg.get('content')
+                    })
+            
+            # 处理会话ID - 如果为空，使用默认值
+            session_id = current_session_id or 'conversation_0001'
+            
+            # 构建请求数据
+            request_data = {
+                'messages': conversation_messages,
+                'session_id': session_id,
+                'personality_id': 'health_assistant',
+                'message_id': message_id,
+                'role': role
+            }
+            
+            log.debug(f"触发SSE连接，消息ID: {message_id}, 会话ID: {session_id}")
+            log.debug(f"SSE请求数据: {request_data}")
+            
+            # 使用sse_options函数正确配置SSE连接
+            # 注意：这里需要传入正确的请求参数
+            options = sse_options(
+                payload=json.dumps(request_data),  # 转换为JSON字符串
+                method='POST',
+                headers={'Content-Type': 'application/json'}
+            )
+            
+            return '/stream', options
+    
+    # 如果不需要触发SSE，返回no_update
+    return no_update, no_update
+
+# 消息处理回调 - 已移除，所有更新通过客户端回调完成
+
+# 更新聊天历史显示 - 只在初始加载和非流式场景下更新
 @app.callback(
     Output('ai-chat-x-history-content', 'children'),
     [Input('ai-chat-x-messages-store', 'data')],
     prevent_initial_call=True
 )
 def update_chat_history(messages):
-    """更新聊天历史显示"""
+    """更新聊天历史显示 - 只在消息存储初始化或非流式更新时调用"""
     log.debug(f"更新聊天历史，消息数量: {len(messages) if messages else 0}")
     # 直接使用消息列表渲染聊天历史
     return AiChatMessageHistory(messages or [])
 
 # 注册函数，供app.py调用
-
 def register_chat_input_callbacks(flask_app):
     """
     注册聊天输入区域的所有回调函数
@@ -139,4 +198,126 @@ def register_chat_input_callbacks(flask_app):
     log.debug("正在注册聊天输入区域回调函数")
     # 所有回调函数已经通过@app.callback装饰器注册
     # 这里可以添加一些额外的初始化代码（如果需要）
-    pass
+    
+    # 添加SSE状态监控回调
+    app.clientside_callback(
+        """
+        function(status) {
+            console.log('SSE连接状态:', status);
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output('chat-X-sse', 'status', allow_duplicate=True),
+        [
+            Input('chat-X-sse', 'status')
+        ],
+        prevent_initial_call=True,
+        allow_duplicate=True
+    )
+
+# 添加客户端回调来处理SSE流式响应，直接更新DOM并在完成时同步数据
+app.clientside_callback(
+    """
+    function(animation) {
+        if (!animation) {
+            return window.dash_clientside.no_update;
+        }
+        
+        try {
+            //console.log('接收到SSE动画消息:', animation);
+            
+            // 1. 拆分连续的JSON对象
+            let messages = [];
+            let currentMessage = '';
+            let braceCount = 0;
+            
+            for (let i = 0; i < animation.length; i++) {
+                const char = animation[i];
+                currentMessage += char;
+                
+                if (char === '{') braceCount++;
+                if (char === '}') braceCount--;
+                
+                if (braceCount === 0 && currentMessage.trim() !== '') {
+                    try {
+                        messages.push(JSON.parse(currentMessage.trim()));
+                    } catch (e) {
+                        console.warn('解析单条消息失败:', currentMessage, e);
+                    }
+                    currentMessage = '';
+                }
+            }
+            
+            // 2. 处理消息，收集所有内容
+            if (messages.length > 0) {
+                // 获取第一个消息的message_id（所有消息应该有相同的message_id）
+                const message_id = messages[0].message_id;
+                
+                if (message_id) {
+                    // 3. 收集所有消息的content
+                    let fullContent = '';
+                    let finalStatus = 'streaming';
+                    
+                    messages.forEach(msg => {
+                        if (msg.content) {
+                            fullContent += msg.content;
+                        }
+                        if (msg.status) {
+                            finalStatus = msg.status;
+                        }
+                    });
+                    
+                    // 4. 使用message_id查找元素并更新完整内容
+                    const messageElement = document.getElementById(message_id);
+                    if (messageElement) {
+                        // 关键修改：设置完整内容，而不是单条消息的内容
+                        messageElement.textContent = fullContent;
+                        
+                        // 5. 如果状态是completed，更新流式状态
+                        if (finalStatus === 'completed') {
+                            const parentMessage = messageElement.closest('.chat-message');
+                            if (parentMessage) {
+                                parentMessage.setAttribute('data-streaming', 'false');
+                            }
+                            
+                            // 同步数据到消息存储
+                            const event = new CustomEvent('sseCompleted', {
+                                detail: {
+                                    messageId: message_id,
+                                    content: fullContent
+                                }
+                            });
+                            document.dispatchEvent(event);
+                        }
+                    } else {
+                        console.warn('未找到ID为', message_id, '的消息元素');
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('处理SSE消息时出错:', e);
+        }
+        
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('chat-X-sse', 'status', allow_duplicate=True),
+    Input('chat-X-sse', 'animation'),
+    prevent_initial_call=True,
+    allow_duplicate=True
+)
+
+# 添加一个回调来处理流式完成事件，更新消息存储
+@app.callback(
+    Output('ai-chat-x-messages-store', 'data', allow_duplicate=True),
+    [Input('ai-chat-x-messages-store', 'data')],
+    prevent_initial_call=True,
+    allow_duplicate=True
+)
+def sync_streaming_complete(messages):
+    """当流式传输完成时，同步更新消息存储中的数据"""
+    # 这里我们需要使用dash的clientside回调机制来接收自定义事件
+    # 由于Dash的限制，我们需要一个中间组件来传递事件
+    # 实际实现中，应该添加一个隐藏的div组件作为事件接收器
+    # 简化版本中，我们可以依赖现有的消息存储更新机制
+    return no_update

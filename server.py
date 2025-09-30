@@ -1,11 +1,13 @@
 import dash
-from flask import request, Response, stream_with_context
+from flask import request, Response, stream_with_context, jsonify
 from user_agents import parse
 from flask_principal import Principal, Permission, RoleNeed, identity_loaded
 from flask_login import LoginManager, UserMixin, current_user, AnonymousUserMixin
 import json
 import time
 import threading
+
+from utils.log import log
 
 # 应用基础参数
 from models.users import Users
@@ -154,9 +156,11 @@ def check_browser():
 # 添加流式响应端点
 @app.server.post('/stream')
 def stream():
+    log.debug("接收到/stream端点请求")
     try:
         # 获取请求参数（从JSON请求体中）
         data = request.get_json() or {}
+        log.debug(f"/stream端点接收到的请求数据: {data}")
         message_id = data.get('message_id')
         messages_data = data.get('messages', [])
         session_id = data.get('session_id')
@@ -164,8 +168,11 @@ def stream():
         # 从请求参数中获取personality_id，如果未指定则默认为health_assistant
         personality_id = data.get('personality_id', 'health_assistant')
         
+        log.debug(f"/stream端点参数解析完成 - message_id: {message_id}, session_id: {session_id}, personality_id: {personality_id}")
+        
         @stream_with_context
         def generate():
+            log.debug("开始生成SSE流式响应")
             try:
                 # 使用yychat_client进行流式聊天完成
                 # 使用配置中的模型参数，并添加conversation_id和personality_id
