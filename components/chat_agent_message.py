@@ -50,7 +50,6 @@ def ChatAgentMessage(
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     
     return html.Div(
-        id=message_id,
         className='chat-message ai-message',
         **{"data-streaming": str(is_streaming).lower()},
         children=[
@@ -90,7 +89,7 @@ def ChatAgentMessage(
                     ),
                     fac.AntdCol(
                         fuc.FefferyDiv(
-                            fac.AntdText(message, style=style(color=message_text_color)),
+                            fac.AntdText(id=message_id, children=message, style=style(color=message_text_color)),
                             style=style(
                                 backgroundColor=message_bg_color,
                                 borderRadius="0 12px 12px 12px",

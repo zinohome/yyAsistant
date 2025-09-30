@@ -28,6 +28,11 @@ app = DashProxy(
 )
 server = app.server
 
+# 添加SSE相关导入
+from dash_extensions.streaming import sse_message, sse_options
+from utils.yychat_client import yychat_client
+from configs.base_config import BaseConfig  # 导入配置
+
 
 # 设置应用密钥
 app.server.config["SECRET_KEY"] = BaseConfig.app_secret_key
@@ -144,3 +149,64 @@ def check_browser():
                         [rule["browser"] for rule in BaseConfig.min_browser_versions]
                     )
                 )
+
+
+# 添加流式响应端点
+@app.server.route('/stream')
+def stream():
+    try:
+        # 获取请求参数
+        message_id = request.args.get('message_id')
+        messages = request.args.get('messages')
+        session_id = request.args.get('session_id')
+        role = request.args.get('role', 'assistant')
+        # 从请求参数中获取personality_id，如果未指定则默认为health_assistant
+        personality_id = request.args.get('personality_id', 'health_assistant')
+        
+        # 解析消息数据
+        messages_data = json.loads(messages) if messages else []
+        
+        @stream_with_context
+        def generate():
+            try:
+                # 使用yychat_client进行流式聊天完成
+                # 使用配置中的模型参数，并添加conversation_id和personality_id
+                for chunk in yychat_client.chat_completion(
+                    messages=messages_data,
+                    model=BaseConfig.yychat_default_model,
+                    temperature=BaseConfig.yychat_default_temperature,
+                    stream=True,
+                    conversation_id=session_id,
+                    personality_id=personality_id,  # 使用从请求参数中获取的值
+                    use_tools=BaseConfig.yychat_default_use_tools
+                ):
+                    if chunk:
+                        # 发送数据，包含message_id以识别目标消息
+                        # 确保返回的数据格式正确
+                        if isinstance(chunk, dict) and 'choices' in chunk and chunk['choices']:
+                            content = chunk['choices'][0].get('delta', {}).get('content', '')
+                            if content:
+                                yield sse_message({
+                                    'message_id': message_id,
+                                    'content': content,
+                                    'role': role,
+                                    'status': 'streaming'
+                                })
+                # 发送结束标志
+                yield sse_message({
+                    'message_id': message_id,
+                    'status': 'completed',
+                    'role': role
+                })
+            except Exception as e:
+                # 发送错误信息
+                yield sse_message({
+                    'message_id': message_id,
+                    'status': 'error',
+                    'error': str(e),
+                    'role': role
+                })
+        
+        return Response(generate(), mimetype='text/event-stream')
+    except Exception as e:
+        return Response(json.dumps({'status': 'error', 'error': str(e)}), status=500, mimetype='application/json')

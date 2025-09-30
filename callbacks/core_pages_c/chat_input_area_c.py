@@ -12,7 +12,7 @@ import copy
 import threading
 import time
 from flask import Response, stream_with_context
-
+from dash_extensions.streaming import sse_message, sse_options
 from components.ai_chat_message_history import AiChatMessageHistory
 from server import app, server  # 确保同时导入了server
 from utils.log import log
