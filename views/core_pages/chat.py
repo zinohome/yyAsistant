@@ -257,10 +257,14 @@ def _create_state_stores():
     # 添加当前会话ID存储
     current_session_id_store = dcc.Store(id='ai-chat-x-current-session-id', data='')
 
+    # 添加隐藏的div用于接收SSE完成事件
+    sse_completed_event_receiver = html.Div(id='ai-chat-x-sse-completed-receiver', style={'display': 'none'})
+
     return [
         session_collapse_store,
         messages_store,
-        current_session_id_store
+        current_session_id_store,
+        sse_completed_event_receiver
     ]
 
 

@@ -195,7 +195,7 @@ def register_chat_input_callbacks(flask_app):
     注册聊天输入区域的所有回调函数
     这个函数在app.py中被调用以确保所有回调正确注册
     """
-    log.debug("正在注册聊天输入区域回调函数")
+    log.debug("注册聊天输入区域的所有回调函数")
     # 所有回调函数已经通过@app.callback装饰器注册
     # 这里可以添加一些额外的初始化代码（如果需要）
     
@@ -279,7 +279,7 @@ app.clientside_callback(
                             if (parentMessage) {
                                 parentMessage.setAttribute('data-streaming', 'false');
                             }
-                            
+
                             // 同步数据到消息存储
                             const event = new CustomEvent('sseCompleted', {
                                 detail: {
@@ -307,17 +307,74 @@ app.clientside_callback(
     allow_duplicate=True
 )
 
-# 添加一个回调来处理流式完成事件，更新消息存储
+app.clientside_callback(
+    """
+    function() {
+        // 监听sseCompleted事件
+        document.addEventListener('sseCompleted', function(event) {
+            const { messageId, content } = event.detail;
+            
+            // 使用dash_clientside.set_props设置一个特殊的属性而不是children
+            dash_clientside.set_props('ai-chat-x-sse-completed-receiver', {
+                'data-completion-event': JSON.stringify({
+                    messageId: messageId,
+                    content: content
+                })
+            });
+        });
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('ai-chat-x-sse-completed-receiver', 'id'), # 不会实际修改，仅用于触发
+    [Input('ai-chat-x-sse-completed-receiver', 'id')],
+    prevent_initial_call=False
+)
+
+
+
+# 添加回调来处理会话完成事件，记录完整会话日志
 @app.callback(
     Output('ai-chat-x-messages-store', 'data', allow_duplicate=True),
-    [Input('ai-chat-x-messages-store', 'data')],
+    [Input('ai-chat-x-sse-completed-receiver', 'data-completion-event')],
+    [State('ai-chat-x-messages-store', 'data'),
+     State('ai-chat-x-current-session-id', 'data')],
     prevent_initial_call=True,
     allow_duplicate=True
 )
-def sync_streaming_complete(messages):
-    """当流式传输完成时，同步更新消息存储中的数据"""
-    # 这里我们需要使用dash的clientside回调机制来接收自定义事件
-    # 由于Dash的限制，我们需要一个中间组件来传递事件
-    # 实际实现中，应该添加一个隐藏的div组件作为事件接收器
-    # 简化版本中，我们可以依赖现有的消息存储更新机制
+def log_complete_conversation(completion_event_json, messages, current_session_id):
+    """当会话完成时，记录完整的会话日志"""
+    if completion_event_json and messages:
+        try:
+            # 解析JSON字符串
+            completion_event = json.loads(completion_event_json)
+            
+            # 获取会话ID
+            session_id = current_session_id or 'default_session'
+            
+            # 获取消息ID和完整内容
+            message_id = completion_event.get('messageId')
+            full_content = completion_event.get('content')
+            
+            # 创建消息的深拷贝，避免修改原始数据
+            updated_messages = copy.deepcopy(messages)
+            
+            # 查找并更新对应的AI消息
+            for i, message in enumerate(updated_messages):
+                if message.get('id') == message_id:
+                    updated_messages[i]['content'] = full_content
+                    updated_messages[i]['is_streaming'] = False
+                    break
+            
+            # 记录完整会话日志
+            log.debug(f"会话完成 - 会话ID: {session_id}")
+            log.debug(f"更新的消息ID: {message_id}")
+            log.debug(f"完整消息内容: {full_content}")
+            log.debug(f"完整会话内容: {json.dumps(updated_messages, ensure_ascii=False, indent=2)}")
+            
+            # 返回更新后的消息存储
+            return updated_messages
+        except Exception as e:
+            log.error(f"记录会话日志时出错: {str(e)}")
+    
+    # 不修改消息存储
     return no_update
