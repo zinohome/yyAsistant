@@ -152,19 +152,17 @@ def check_browser():
 
 
 # 添加流式响应端点
-@app.server.route('/stream')
+@app.server.post('/stream')
 def stream():
     try:
-        # 获取请求参数
-        message_id = request.args.get('message_id')
-        messages = request.args.get('messages')
-        session_id = request.args.get('session_id')
-        role = request.args.get('role', 'assistant')
+        # 获取请求参数（从JSON请求体中）
+        data = request.get_json() or {}
+        message_id = data.get('message_id')
+        messages_data = data.get('messages', [])
+        session_id = data.get('session_id')
+        role = data.get('role', 'assistant')
         # 从请求参数中获取personality_id，如果未指定则默认为health_assistant
-        personality_id = request.args.get('personality_id', 'health_assistant')
-        
-        # 解析消息数据
-        messages_data = json.loads(messages) if messages else []
+        personality_id = data.get('personality_id', 'health_assistant')
         
         @stream_with_context
         def generate():
@@ -186,27 +184,45 @@ def stream():
                         if isinstance(chunk, dict) and 'choices' in chunk and chunk['choices']:
                             content = chunk['choices'][0].get('delta', {}).get('content', '')
                             if content:
-                                yield sse_message({
-                                    'message_id': message_id,
-                                    'content': content,
-                                    'role': role,
-                                    'status': 'streaming'
-                                })
+                                # 先创建JSON对象，再转换为字符串，避免多线f-string语法问题
+                                response_data = {
+                                    "message_id": message_id,
+                                    "content": content,
+                                    "role": role,
+                                    "status": "streaming"
+                                }
+                                response_str = json.dumps(response_data)
+                                yield f'data: {response_str}\n\n'
                 # 发送结束标志
-                yield sse_message({
-                    'message_id': message_id,
-                    'status': 'completed',
-                    'role': role
-                })
+                end_data = {
+                    "message_id": message_id,
+                    "status": "completed",
+                    "role": role
+                }
+                end_str = json.dumps(end_data)
+                yield f'data: {end_str}\n\n'
             except Exception as e:
                 # 发送错误信息
-                yield sse_message({
-                    'message_id': message_id,
-                    'status': 'error',
-                    'error': str(e),
-                    'role': role
-                })
+                error_message = str(e)
+                log.error(f"流式响应出错: {error_message}")
+                error_data = {
+                    "message_id": message_id,
+                    "status": "error",
+                    "error": error_message,
+                    "role": role
+                }
+                error_str = json.dumps(error_data)
+                yield f'data: {error_str}\n\n'
         
-        return Response(generate(), mimetype='text/event-stream')
+        # 设置响应头，返回SSE格式的数据
+        return Response(
+            generate(),
+            mimetype='text/event-stream',
+            headers={'X-Accel-Buffering': 'no'}
+        )
     except Exception as e:
-        return Response(json.dumps({'status': 'error', 'error': str(e)}), status=500, mimetype='application/json')
+        log.error(f"处理流式请求失败: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
