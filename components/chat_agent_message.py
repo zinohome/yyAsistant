@@ -2,6 +2,7 @@ import dash
 from dash import html, dcc
 import feffery_antd_components as fac
 import feffery_utils_components as fuc  # 导入FefferyDiv所在的模块
+import feffery_markdown_components as fmc  # 导入FefferyMarkdown所在的模块
 from feffery_dash_utils.style_utils import style
 import dash.html as html
 from utils.log import log
@@ -89,7 +90,10 @@ def ChatAgentMessage(
                     ),
                     fac.AntdCol(
                         fuc.FefferyDiv(
-                            fac.AntdText(id=message_id, children=message, style=style(color=message_text_color)),
+                            children=[
+                                fmc.FefferyMarkdown(id=message_id, className="agent-message-markdown-body", markdownStr=message, markdownBaseClassName="theme-pie", style=style(color=message_text_color)),
+                                #fac.AntdText(id=message_id, children=message, style=style(color=message_text_color)),
+                            ],
                             style=style(
                                 backgroundColor=message_bg_color,
                                 borderRadius="0 12px 12px 12px",

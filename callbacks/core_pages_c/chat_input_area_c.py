@@ -270,8 +270,25 @@ app.clientside_callback(
                     // 4. 使用message_id查找元素并更新完整内容
                     const messageElement = document.getElementById(message_id);
                     if (messageElement) {
-                        // 关键修改：设置完整内容，而不是单条消息的内容
-                        messageElement.textContent = fullContent;
+                        // 关键修改：适应FefferyMarkdown组件的更新方式
+                        // 不再直接操作textContent，而是通过设置React属性来更新
+                        if (messageElement.tagName.toLowerCase() === 'div' && messageElement.className.includes('agent-message-markdown-body')) {
+                            // 这是FefferyMarkdown组件，查找内部的p标签
+                            const contentElement = messageElement.querySelector('p');
+                            if (contentElement) {
+                                // 更新p标签的内容
+                                contentElement.textContent = fullContent;
+                            }
+                            
+                            // 更新流式状态标记
+                            const parentMessage = messageElement.closest('.chat-message');
+                            if (parentMessage) {
+                                parentMessage.setAttribute('data-streaming', 'false');
+                            }
+                        } else {
+                            // 对于传统文本元素，保持原有逻辑
+                            messageElement.textContent = fullContent;
+                        }
                         
                         // 5. 如果状态是completed，更新流式状态
                         if (finalStatus === 'completed') {
