@@ -97,7 +97,7 @@ def ChatAgentMessage(
                             style=style(
                                 backgroundColor=message_bg_color,
                                 borderRadius="0 12px 12px 12px",
-                                padding="12px 16px",
+                                #padding="12px 16px",
                                 maxWidth="80%",
                                 width="100%",
                                 shadow="hover-shadow-light",
