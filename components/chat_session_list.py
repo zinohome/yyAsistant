@@ -63,29 +63,6 @@ def render(sessions=None, user_id=None, refresh_timestamp=None):
     # 修复：使用html.Div作为容器包裹所有组件
     return html.Div(
         [
-            # 添加：用于存储当前要改名的会话ID的隐藏组件
-            dash.dcc.Store(id='ai-chat-x-current-rename-conv-id', data=None),
-            
-            # 添加：会话改名对话框
-            fac.AntdModal(
-                [
-                    fac.AntdInput(
-                        id='ai-chat-x-session-rename-input',
-                        placeholder='请输入新的会话名称',
-                        maxLength=50,
-                        style={'marginBottom': '16px'}
-                    )
-                ],
-                id='ai-chat-x-session-rename-modal',
-                key='ai-chat-x-session-rename-modal-key',  # 添加key属性以确保状态一致性
-                title='修改会话名称',
-                width=400,
-                renderFooter=True,
-                visible=False,  # 确保初始状态是隐藏的
-                okText='确定',
-                cancelText='取消'
-            ),
-
             # 新建会话按钮 - 使用html.Div实现
             html.Div(
                 id='ai-chat-x-session-new',  # 设置指定的ID

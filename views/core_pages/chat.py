@@ -260,11 +260,40 @@ def _create_state_stores():
     # 添加隐藏的div用于接收SSE完成事件
     sse_completed_event_receiver = html.Div(id='ai-chat-x-sse-completed-receiver', style={'display': 'none'})
 
+    # 添加会话列表刷新触发器
+    session_refresh_trigger = dcc.Store(id='ai-chat-x-session-refresh-trigger', data=None)
+
+    # 添加：用于存储当前要改名的会话ID的隐藏组件
+    current_rename_conv_id_store = dcc.Store(id='ai-chat-x-current-rename-conv-id', data=None)
+
+    # 添加：会话改名对话框
+    session_rename_modal = fac.AntdModal(
+        [
+            fac.AntdInput(
+                id='ai-chat-x-session-rename-input',
+                placeholder='请输入新的会话名称',
+                maxLength=50,
+                style={'marginBottom': '16px'}
+            )
+        ],
+        id='ai-chat-x-session-rename-modal',
+        key='ai-chat-x-session-rename-modal-key',
+        title='修改会话名称',
+        width=400,
+        renderFooter=True,
+        visible=False,  # 确保初始状态是隐藏的
+        okText='确定',
+        cancelText='取消'
+    )
+
     return [
         session_collapse_store,
         messages_store,
         current_session_id_store,
-        sse_completed_event_receiver
+        sse_completed_event_receiver,
+        session_refresh_trigger,
+        current_rename_conv_id_store,
+        session_rename_modal
     ]
 
 
