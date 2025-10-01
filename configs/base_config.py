@@ -1,8 +1,15 @@
+# 添加类型导入
 from typing import List, Union, Callable
 
 
 class BaseConfig:
     """应用基础配置参数"""
+
+    # 添加SSE配置参数
+    # 每次动画显示的字符数
+    sse_animate_chunk: int = 15
+    # 动画显示的延迟时间(毫秒)
+    sse_animate_delay: int = 1
 
     # 应用基础标题
     app_title: str = "智能助手"

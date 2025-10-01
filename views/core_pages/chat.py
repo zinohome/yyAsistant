@@ -224,7 +224,12 @@ def _create_content_area():
     return fuc.FefferyDiv(
         [chat_header,
         # 添加SSE组件到布局
-        SSE(id="chat-X-sse", concat=True, animate_chunk=10, animate_delay=2), 
+        SSE(
+            id="chat-X-sse", 
+            concat=True, 
+            animate_chunk=BaseConfig.sse_animate_chunk, 
+            animate_delay=BaseConfig.sse_animate_delay
+        ), 
         chat_history],
         style=style(
             height="100%",

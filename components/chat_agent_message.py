@@ -92,6 +92,7 @@ def ChatAgentMessage(
                         fuc.FefferyDiv(
                             children=[
                                 fmc.FefferyMarkdown(id=message_id, className="agent-message-markdown-body", markdownStr=message, markdownBaseClassName="theme-pie", style=style(color=message_text_color)),
+                                #dcc.Markdown(id=message_id, children=message, style=style(color=message_text_color)),
                                 #fac.AntdText(id=message_id, children=message, style=style(color=message_text_color)),
                             ],
                             style=style(
