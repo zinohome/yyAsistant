@@ -7,7 +7,7 @@ class BaseConfig:
 
     # 添加SSE配置参数
     # 每次动画显示的字符数
-    sse_animate_chunk: int = 15
+    sse_animate_chunk: int = 50
     # 动画显示的延迟时间(毫秒)
     sse_animate_delay: int = 1
 
@@ -22,7 +22,7 @@ class BaseConfig:
 
     # 日志配置参数
     app_log_filename: str = 'app.log'
-    app_log_level: str = 'INFO'
+    app_log_level: str = 'DEBUG'
     app_peewee_debug_log: bool = False
 
     # 应用会话cookie名称
