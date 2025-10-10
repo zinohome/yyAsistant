@@ -214,62 +214,44 @@ def register_chat_input_callbacks(flask_app):
         allow_duplicate=True
     )
 
-    # 绑定回车/换行行为（捕获阶段 + IME 兼容）：Enter 提交、Shift+Enter 换行
+    # 绑定回车/换行行为：Enter 提交、Shift+Enter 换行（使用全局监听，更可靠）
     app.clientside_callback(
         """
         function(_) {
-            try {
-                const bindHandler = () => {
-                    const root = document.getElementById('ai-chat-x-input');
-                    if (!root) { return; }
+            // 全局回车监听器，避免时机问题
+            if (window.__chatEnterHandler) {
+                return window.dash_clientside.no_update;
+            }
 
-                    // 优先寻找真实输入元素
-                    let inputEl = root.querySelector('textarea, input');
-                    // 找不到则退化到根节点监听
-                    const target = inputEl || root;
+            window.__chatEnterHandler = function(e) {
+                // 检查是否在聊天输入框内
+                const container = document.getElementById('ai-chat-x-input');
+                if (!container || !container.contains(e.target)) {
+                    return;
+                }
 
-                    if (target.dataset && target.dataset.enterHooked === 'true') {
+                // 只处理 textarea 的 keydown 事件
+                if (e.target.tagName !== 'TEXTAREA') {
+                    return;
+                }
+
+                if (e.key === 'Enter') {
+                    if (e.shiftKey) {
+                        // Shift+Enter：允许换行
                         return;
                     }
-
-                    const handler = function(e) {
-                        // 忽略输入法组合状态
-                        if (e.isComposing || e.keyCode === 229) {
-                            return;
-                        }
-                        if (e.key === 'Enter') {
-                            if (e.shiftKey) {
-                                // Shift+Enter：允许换行
-                                return;
-                            }
-                            // Enter：提交
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const btn = document.getElementById('ai-chat-x-send-btn');
-                            if (btn) { btn.click(); }
-                        }
-                    };
-
-                    // 在捕获阶段监听，优先于内部默认处理
-                    target.addEventListener('keydown', handler, { passive: false, capture: true });
-                    if (target.dataset) {
-                        target.dataset.enterHooked = 'true';
+                    // Enter：提交
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const btn = document.getElementById('ai-chat-x-send-btn');
+                    if (btn) { 
+                        btn.click(); 
                     }
-                };
-
-                // 立即尝试绑定
-                bindHandler();
-
-                // 监听后续渲染变化，确保 textarea 出现后也能绑定
-                const container = document.getElementById('ai-chat-x-input');
-                if (container && !container.__enterObserver) {
-                    const mo = new MutationObserver(() => bindHandler());
-                    mo.observe(container, { childList: true, subtree: true });
-                    container.__enterObserver = mo;
                 }
-            } catch (e) {
-                console.warn('绑定回车提交失败:', e);
-            }
+            };
+
+            // 在 document 上监听，确保捕获所有事件
+            document.addEventListener('keydown', window.__chatEnterHandler, { passive: false, capture: true });
 
             return window.dash_clientside.no_update;
         }
