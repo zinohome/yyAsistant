@@ -65,7 +65,14 @@ def ChatUserMessage(
                     ),
                     fac.AntdCol(
                         fuc.FefferyDiv(
-                            fac.AntdText(id=message_id, children=message, style=style(color=message_text_color)),
+                            fac.AntdText(
+                                id=message_id,
+                                children=message,
+                                style=style(
+                                    color=message_text_color,
+                                    whiteSpace="pre-wrap"  # 保留换行与空白
+                                )
+                            ),
                             style=style(
                                 backgroundColor=message_bg_color,
                                 borderRadius="12px 0 12px 12px",

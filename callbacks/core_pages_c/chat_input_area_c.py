@@ -29,9 +29,8 @@ active_sse_connections = {}
         Input(f'chat-topic-1', 'nClicks'),
         Input(f'chat-topic-2', 'nClicks'),
         Input(f'chat-topic-3', 'nClicks'),
-        # 消息发送输入
-        Input('ai-chat-x-send-btn', 'nClicks'),
-        Input('ai-chat-x-input', 'n_submit')
+        # 消息发送输入（仅按钮点击；Enter 由前端触发按钮点击）
+        Input('ai-chat-x-send-btn', 'nClicks')
     ],
     [
         State('ai-chat-x-input', 'value'),
@@ -41,7 +40,7 @@ active_sse_connections = {}
     prevent_initial_call=True
 )
 def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, topic_3_clicks, 
-                           send_button_clicks, input_submit, 
+                           send_button_clicks,
                            message_content, messages_store, current_session_id):
     # 获取触发回调的元素ID
     triggered_id = ctx.triggered_id if ctx.triggered else None
@@ -76,7 +75,7 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
         return messages, message_content
     
     # 处理消息发送
-    elif triggered_id in ['ai-chat-x-send-btn', 'ai-chat-x-input'] and message_content:
+    elif triggered_id in ['ai-chat-x-send-btn'] and message_content:
         # 去除消息前后空格
         message_content = message_content.strip()
         
@@ -212,6 +211,72 @@ def register_chat_input_callbacks(flask_app):
             Input('chat-X-sse', 'status')
         ],
         prevent_initial_call=True,
+        allow_duplicate=True
+    )
+
+    # 绑定回车/换行行为（捕获阶段 + IME 兼容）：Enter 提交、Shift+Enter 换行
+    app.clientside_callback(
+        """
+        function(_) {
+            try {
+                const bindHandler = () => {
+                    const root = document.getElementById('ai-chat-x-input');
+                    if (!root) { return; }
+
+                    // 优先寻找真实输入元素
+                    let inputEl = root.querySelector('textarea, input');
+                    // 找不到则退化到根节点监听
+                    const target = inputEl || root;
+
+                    if (target.dataset && target.dataset.enterHooked === 'true') {
+                        return;
+                    }
+
+                    const handler = function(e) {
+                        // 忽略输入法组合状态
+                        if (e.isComposing || e.keyCode === 229) {
+                            return;
+                        }
+                        if (e.key === 'Enter') {
+                            if (e.shiftKey) {
+                                // Shift+Enter：允许换行
+                                return;
+                            }
+                            // Enter：提交
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const btn = document.getElementById('ai-chat-x-send-btn');
+                            if (btn) { btn.click(); }
+                        }
+                    };
+
+                    // 在捕获阶段监听，优先于内部默认处理
+                    target.addEventListener('keydown', handler, { passive: false, capture: true });
+                    if (target.dataset) {
+                        target.dataset.enterHooked = 'true';
+                    }
+                };
+
+                // 立即尝试绑定
+                bindHandler();
+
+                // 监听后续渲染变化，确保 textarea 出现后也能绑定
+                const container = document.getElementById('ai-chat-x-input');
+                if (container && !container.__enterObserver) {
+                    const mo = new MutationObserver(() => bindHandler());
+                    mo.observe(container, { childList: true, subtree: true });
+                    container.__enterObserver = mo;
+                }
+            } catch (e) {
+                console.warn('绑定回车提交失败:', e);
+            }
+
+            return window.dash_clientside.no_update;
+        }
+        """,
+        Output('ai-chat-x-input', 'placeholder', allow_duplicate=True),
+        Input('ai-chat-x-input', 'id'),
+        prevent_initial_call=False,
         allow_duplicate=True
     )
 

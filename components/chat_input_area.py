@@ -105,11 +105,19 @@ def render(
                                 flex="auto",
                                 children=fac.AntdInput(
                                     id="ai-chat-x-input",
+                                    mode="text-area",
                                     placeholder=placeholder,
-                                    autoSize={"minRows": 3, "maxRows": 6},
+                                    autoSize={"minRows": 1, "maxRows": 6},
                                     showCount=True,
                                     maxLength=max_length,
                                     variant='borderless',
+                                    styles={
+                                        'textarea': {
+                                            'transition': 'none',
+                                            'animation': 'none',
+                                            'resize': 'none'
+                                        }
+                                    },
                                     style=style(
                                         border=None,  # 移除输入框自身的边框
                                         display="flex",
