@@ -793,7 +793,7 @@ def handle_regenerate_message(regenerate_clicks, messages, current_session_id):
 # 复制消息的客户端回调
 app.clientside_callback(
     """
-    function(copy_clicks, messages) {
+    function(ai_copy_clicks, user_copy_clicks, messages) {
         if (!window.dash_clientside) {
             return window.dash_clientside.no_update;
         }
@@ -811,7 +811,7 @@ app.clientside_callback(
         // console.log('复制回调被触发:', triggered);
         
         // 处理复制按钮点击
-        if (triggered.prop_id.includes('ai-chat-x-copy')) {
+        if (triggered.prop_id.includes('ai-chat-x-copy') || triggered.prop_id.includes('user-chat-x-copy')) {
             // console.log('处理复制按钮点击');
             try {
                 // 解析消息ID
@@ -821,7 +821,7 @@ app.clientside_callback(
                 const messageId = idDict.index;
                 // console.log('消息ID:', messageId);
                 
-                // 从消息存储中获取原始Markdown内容
+                // 从消息存储中获取原始内容
                 if (messages) {
                     const targetMessage = messages.find(msg => msg.id === messageId);
                     if (targetMessage && targetMessage.content) {
@@ -877,8 +877,69 @@ app.clientside_callback(
     """,
     Output('ai-chat-x-copy-result', 'data', allow_duplicate=True),
     [
-        Input({'type': 'ai-chat-x-copy', 'index': dash.ALL}, 'nClicks')
+        Input({'type': 'ai-chat-x-copy', 'index': dash.ALL}, 'nClicks'),
+        Input({'type': 'user-chat-x-copy', 'index': dash.ALL}, 'nClicks')
     ],
     State('ai-chat-x-messages-store', 'data'),
     prevent_initial_call=True
 )
+
+# 用户消息重新生成的回调
+@app.callback(
+    [
+        Output('ai-chat-x-input', 'value', allow_duplicate=True),
+        Output('ai-chat-x-send-btn', 'nClicks', allow_duplicate=True),
+        Output('global-message', 'children', allow_duplicate=True)
+    ],
+    [
+        Input({'type': 'user-chat-x-regenerate', 'index': dash.ALL}, 'nClicks')
+    ],
+    [
+        State('ai-chat-x-messages-store', 'data'),
+        State('ai-chat-x-send-btn', 'nClicks')
+    ],
+    prevent_initial_call=True
+)
+def handle_user_message_regenerate(regenerate_clicks, messages, send_btn_clicks):
+    """处理用户消息重新生成"""
+    if not ctx.triggered:
+        return dash.no_update, dash.no_update, dash.no_update
+    
+    triggered = ctx.triggered[0]
+    if not triggered:
+        return dash.no_update, dash.no_update, dash.no_update
+    
+    # 检查被触发的按钮是否有点击
+    if triggered.get('value', 0) <= 0:
+        return dash.no_update, dash.no_update, dash.no_update
+    
+    try:
+        # 解析被点击的消息ID
+        import json
+        prop_id = triggered['prop_id']
+        if '"type":"user-chat-x-regenerate"' in prop_id:
+            id_part = prop_id.split('.')[0]
+            id_dict = json.loads(id_part)
+            target_message_id = id_dict['index']
+        else:
+            return dash.no_update, dash.no_update, dash.no_update
+        
+        if not messages:
+            return dash.no_update, dash.no_update, dash.no_update
+        
+        # 找到目标用户消息
+        target_message = None
+        for message in messages:
+            if message.get('id') == target_message_id and message.get('role') == 'user':
+                target_message = message
+                break
+        
+        if not target_message or not target_message.get('content'):
+            return dash.no_update, dash.no_update, fac.AntdMessage(type="error", content="无法重新生成：未找到用户消息")
+        
+        # 将消息内容设置到输入框并自动触发提交
+        return target_message['content'], (send_btn_clicks or 0) + 1, dash.no_update
+        
+    except Exception as e:
+        log.error(f"重新生成用户消息失败: {e}")
+        return dash.no_update, dash.no_update, fac.AntdMessage(type="error", content="重新生成失败")

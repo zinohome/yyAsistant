@@ -137,8 +137,7 @@ def ChatAgentMessage(
                                         color='rgba(0,0,0,0.75)',
                                         padding='4px 8px',
                                         minWidth='auto',
-                                        height='auto',
-                                        backgroundColor='rgba(0,0,0,0.05)'
+                                        height='auto'
                                     )
                                 ),
                                 fac.AntdButton(
@@ -152,8 +151,7 @@ def ChatAgentMessage(
                                         color='rgba(0,0,0,0.75)',
                                         padding='4px 8px',
                                         minWidth='auto',
-                                        height='auto',
-                                        backgroundColor='rgba(0,0,0,0.05)'
+                                        height='auto'
                                     )
                                 ),
                                 DashIconify(icon="mingcute:thumb-up-2-line",
@@ -171,9 +169,9 @@ def ChatAgentMessage(
                             ],
                             size=16
                         ),
-                        style=style(paddingLeft="4px")
-                    ),
                         className="message-actions"
+                        ),
+                        style=style(paddingLeft="4px")
                     )
                 ],
                 justify="start"

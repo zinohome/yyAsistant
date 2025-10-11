@@ -53,6 +53,7 @@ def AiChatMessageHistory(messages=None):
                     message_bg_color="#1890ff",
                     message_text_color="white",
                     message_id=msg.get('id'),  # 传递消息ID
+                    original_content=msg.get('content', '')  # 传递原始消息内容
                 ))
             elif msg.get('role') == 'system':
                 # 系统消息处理

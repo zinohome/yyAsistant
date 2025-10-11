@@ -17,18 +17,20 @@
 
 /* 消息操作按钮样式 */
 .message-actions {
-    display: flex;
+    display: flex !important;
     gap: 8px;
     margin-top: 8px;
-    opacity: 0.8;
+    opacity: 1 !important;
+    visibility: visible !important;
     transition: opacity 0.2s ease;
 }
 
 .chat-message:hover .message-actions {
-    opacity: 1;
+    opacity: 1 !important;
 }
 
-.message-actions .ant-btn {
+/* AI消息按钮样式 */
+.ai-message .message-actions .ant-btn {
     border: none !important;
     box-shadow: none !important;
     background: transparent !important;
@@ -37,14 +39,43 @@
     height: auto !important;
     border-radius: 4px !important;
     transition: all 0.2s ease !important;
-}
-
-.message-actions .ant-btn:hover {
-    background-color: rgba(0, 0, 0, 0.06) !important;
     color: rgba(0, 0, 0, 0.75) !important;
 }
 
-.message-actions .ant-btn:active {
+.ai-message .message-actions .ant-btn:hover {
+    background-color: rgba(0, 0, 0, 0.06) !important;
+    color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.ai-message .message-actions .ant-btn:active {
+    background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 用户消息操作按钮样式 - 与AI消息相同，因为都在白色背景上 */
+.user-message .message-actions {
+    opacity: 1 !important;
+    display: flex !important;
+    visibility: visible !important;
+}
+
+.user-message .message-actions .ant-btn {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 4px 8px !important;
+    min-width: auto !important;
+    height: auto !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease !important;
+    color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.user-message .message-actions .ant-btn:hover {
+    background-color: rgba(0, 0, 0, 0.06) !important;
+    color: rgba(0, 0, 0, 0.85) !important;
+}
+
+.user-message .message-actions .ant-btn:active {
     background-color: rgba(0, 0, 0, 0.1) !important;
 }
 
