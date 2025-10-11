@@ -380,7 +380,47 @@ app.clientside_callback(
     function(animation, status) {
         // 处理SSE状态变化
         if (status !== undefined) {
-            console.log('SSE连接状态:', status);
+            // console.log('SSE连接状态:', status);
+            
+            // 新增：处理SSE连接错误状态
+            if (status === 'error' || status === 'closed' || status === 'timeout') {
+                // console.log('SSE连接出现错误、关闭或超时，尝试自动重连');
+                
+                // 获取当前会话和消息信息
+                const sessionIdEl = document.getElementById('ai-chat-x-current-session-id');
+                const sessionId = sessionIdEl?.value || '';
+                
+                let messages = [];
+                try {
+                    const messagesStore = document.getElementById('ai-chat-x-messages-store');
+                    if (messagesStore) {
+                        messages = JSON.parse(messagesStore.value || '[]');
+                    }
+                } catch (e) {
+                    console.error('获取消息列表失败:', e);
+                }
+                
+                // 查找最后一条正在流式传输的消息
+                let lastStreamingMessage = null;
+                for (let i = messages.length - 1; i >= 0; i--) {
+                    if (messages[i].is_streaming) {
+                        lastStreamingMessage = messages[i];
+                        break;
+                    }
+                }
+                
+                if (lastStreamingMessage && lastStreamingMessage.id) {
+                    // 调用自动重连管理函数
+                    if (window.dash_clientside && window.dash_clientside.clientside_basic && window.dash_clientside.clientside_basic.manageSSEReconnection) {
+                        window.dash_clientside.clientside_basic.manageSSEReconnection(
+                            lastStreamingMessage.id, 
+                            sessionId, 
+                            messages, 
+                            3 // 最大重试3次
+                        );
+                    }
+                }
+            }
         }
         
         // 处理SSE动画数据
@@ -432,6 +472,12 @@ app.clientside_callback(
                         }
                     });
                     
+                    // 新增：处理超时状态
+                    if (finalStatus === 'timeout') {
+                        fullContent = '响应超时，请重试';
+                        console.warn('SSE响应超时:', message_id);
+                    }
+                    
                     // 4. 使用message_id查找元素并更新完整内容
                     const messageElement = document.getElementById(message_id);
                     if (messageElement) {
@@ -452,6 +498,11 @@ app.clientside_callback(
                                 
                                 // 更新p标签的内容
                                 contentElement.textContent = processedContent;
+                                
+                                // 新增：在流式传输过程中自动滚动
+                                if (window.dash_clientside && window.dash_clientside.clientside_basic && window.dash_clientside.clientside_basic.autoScrollToBottom) {
+                                    window.dash_clientside.clientside_basic.autoScrollToBottom();
+                                }
                             }
                             
                             // 更新流式状态标记
@@ -471,6 +522,18 @@ app.clientside_callback(
                                 parentMessage.setAttribute('data-streaming', 'false');
                             }
 
+                            // 清理重连信息和超时检测器
+                            const sessionIdEl = document.getElementById('ai-chat-x-current-session-id');
+                            const sessionId = sessionIdEl?.value || '';
+                            if (window.dash_clientside && window.dash_clientside.clientside_basic) {
+                                if (window.dash_clientside.clientside_basic.clearSSEReconnectInfo) {
+                                    window.dash_clientside.clientside_basic.clearSSEReconnectInfo(message_id, sessionId);
+                                }
+                                if (window.dash_clientside.clientside_basic.clearSSETimeoutMonitor) {
+                                    window.dash_clientside.clientside_basic.clearSSETimeoutMonitor(message_id);
+                                }
+                            }
+
                             // 同步数据到消息存储
                             const event = new CustomEvent('sseCompleted', {
                                 detail: {
@@ -479,6 +542,26 @@ app.clientside_callback(
                                 }
                             });
                             document.dispatchEvent(event);
+                            
+                            // 新增：SSE完成时强制滚动到底部
+                            if (window.dash_clientside && window.dash_clientside.clientside_basic && window.dash_clientside.clientside_basic.forceScrollToBottom) {
+                                setTimeout(() => {
+                                    window.dash_clientside.clientside_basic.forceScrollToBottom();
+                                }, 100); // 延迟100ms确保DOM更新完成
+                            }
+                        }
+                        
+                        // 新增：处理超时状态
+                        if (finalStatus === 'timeout') {
+                            const parentMessage = messageElement.closest('.chat-message');
+                            if (parentMessage) {
+                                parentMessage.setAttribute('data-streaming', 'false');
+                            }
+                            
+                            // 清理超时检测器
+                            if (window.dash_clientside && window.dash_clientside.clientside_basic && window.dash_clientside.clientside_basic.clearSSETimeoutMonitor) {
+                                window.dash_clientside.clientside_basic.clearSSETimeoutMonitor(message_id);
+                            }
                         }
                     } else {
                         console.warn('未找到ID为', message_id, '的消息元素');
@@ -551,6 +634,26 @@ def manage_connection_status(sse_url, completion_event, tag_clicks):
     
     # SSE连接开始
     if triggered_id == 'chat-X-sse.url' and sse_url:
+        # 启动超时检测
+        try:
+            # 获取当前消息存储
+            from dash import callback_context
+            current_messages = callback_context.states.get('ai-chat-x-messages-store.data', [])
+            if current_messages:
+                last_message = current_messages[-1]
+                if last_message.get('is_streaming', False):
+                    message_id = last_message.get('id')
+                    if message_id:
+                        # 在客户端启动超时检测
+                        set_props("chat-X-sse", {
+                            "url": sse_url,
+                            "options": {
+                                "onOpen": f"if(window.dash_clientside && window.dash_clientside.clientside_basic && window.dash_clientside.clientside_basic.startSSETimeoutMonitor) {{ window.dash_clientside.clientside_basic.startSSETimeoutMonitor('{message_id}', 30); }}"
+                            }
+                        })
+        except Exception as e:
+            log.error(f"启动SSE超时检测失败: {e}")
+        
         return (
             "blue",  # 蓝色表示连接中
             fac.AntdIcon(icon="antd-loading", style=style(fontSize="12px")),
@@ -590,104 +693,57 @@ def manage_connection_status(sse_url, completion_event, tag_clicks):
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 
-# 自动滚动到聊天历史底部的客户端回调
+# 合并的自动滚动和初始化回调
 app.clientside_callback(
     """
-    function(messages) {
+    function(messages, historyId) {
         // 安全检查：确保 dash_clientside 对象存在
         if (typeof window.dash_clientside === 'undefined' || !window.dash_clientside) {
             console.warn('dash_clientside not ready, skipping auto scroll');
             return null;
         }
         
-        // 当消息更新时，自动滚动到底部
-        if (messages && messages.length > 0) {
-            // console.log('开始自动滚动，消息数量:', messages.length);
-            
-            // 滚动到底部的函数
-            function scrollToBottom(container) {
-                if (!container) return false;
-                const maxScroll = container.scrollHeight - container.clientHeight;
-                if (maxScroll > 0) {
-                    // console.log('执行滚动，maxScroll:', maxScroll);
-                    container.scrollTop = maxScroll;
-                    // console.log('滚动后 - scrollTop:', container.scrollTop);
-                    return true;
-                }
-                return false;
-            }
-            
-            // 使用 MutationObserver 监听DOM变化
-            function waitForDOMWithObserver(container, callback) {
-                if (!container) {
-                    callback();
-                    return;
-                }
-                
-                // 先尝试立即滚动
-                if (scrollToBottom(container)) {
-                    callback();
-                    return;
-                }
-                
-                // 如果无法滚动，使用 MutationObserver 监听变化
-                const observer = new MutationObserver(function(mutations) {
-                    // console.log('检测到DOM变化，尝试滚动');
-                    if (scrollToBottom(container)) {
-                        observer.disconnect(); // 停止监听
-                        callback();
-                    }
-                });
-                
-                // 开始监听
-                observer.observe(container, {
-                    childList: true,
-                    subtree: true,
-                    attributes: true,
-                    characterData: true
-                });
-                
-                // 设置超时，避免无限等待
-                setTimeout(function() {
-                    // console.log('超时，停止监听并使用scrollIntoView');
-                    observer.disconnect();
-                    
-                    // 使用scrollIntoView作为备选方案
-                    const messageElements = document.querySelectorAll('[id*="message-"]');
-                    if (messageElements.length > 0) {
-                        const lastMessage = messageElements[messageElements.length - 1];
-                        lastMessage.scrollIntoView({ 
-                            behavior: 'smooth', 
-                            block: 'end',
-                            inline: 'nearest'
-                        });
-                    }
-                    callback();
-                }, 2000); // 2秒超时
-            }
-            
-            // 使用 requestAnimationFrame 确保在下一帧渲染后执行
-            requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                    const historyContainer = document.getElementById('ai-chat-x-history');
-                    
-                    if (historyContainer) {
-                        // console.log('初始检查 - scrollTop:', historyContainer.scrollTop, 'scrollHeight:', historyContainer.scrollHeight, 'clientHeight:', historyContainer.clientHeight);
-                        
-                        // 使用 MutationObserver 等待DOM更新
-                        waitForDOMWithObserver(historyContainer, function() {
-                            // console.log('滚动完成');
-                        });
-                    }
-                });
-            });
+        // 检查触发源
+        const triggered = window.dash_clientside.callback_context.triggered[0];
+        if (!triggered) {
+            return window.dash_clientside.no_update;
         }
+        
+        const triggeredId = triggered.prop_id;
+        
+        // 如果是页面加载时触发（historyId输入）
+        if (triggeredId === 'ai-chat-x-history.id') {
+            // console.log('页面加载，初始化滚动监听器');
+            // 初始化滚动监听器
+            if (window.dash_clientside.clientside_basic && window.dash_clientside.clientside_basic.initScrollListener) {
+                // 延迟初始化，确保DOM完全加载
+                setTimeout(() => {
+                    window.dash_clientside.clientside_basic.initScrollListener();
+                }, 500);
+            }
+        }
+        // 如果是消息存储更新触发
+        else if (triggeredId === 'ai-chat-x-messages-store.data' && messages && messages.length > 0) {
+            // console.log('消息存储更新，触发自动滚动，消息数量:', messages.length);
+            
+            // 使用优化的自动滚动函数
+            if (window.dash_clientside.clientside_basic && window.dash_clientside.clientside_basic.autoScrollToBottom) {
+                // 延迟执行，确保DOM更新完成
+                setTimeout(() => {
+                    window.dash_clientside.clientside_basic.autoScrollToBottom(true); // 强制滚动
+                }, 100);
+            }
+        }
+        
         return window.dash_clientside.no_update;
     }
     """,
     Output('ai-chat-x-history', 'id'),  # 虚拟输出，仅用于触发回调
-    Input('ai-chat-x-messages-store', 'data'),
-    prevent_initial_call=True
+    [
+        Input('ai-chat-x-messages-store', 'data'),
+        Input('ai-chat-x-history', 'id')  # 页面加载时触发
+    ],
+    prevent_initial_call=False
 )
 
 # 重新生成AI消息的回调
@@ -943,3 +999,92 @@ def handle_user_message_regenerate(regenerate_clicks, messages, send_btn_clicks)
     except Exception as e:
         log.error(f"重新生成用户消息失败: {e}")
         return dash.no_update, dash.no_update, fac.AntdMessage(type="error", content="重新生成失败")
+
+# 新增：取消发送消息的回调
+@app.callback(
+    [
+        Output('ai-chat-x-messages-store', 'data', allow_duplicate=True),
+        Output('chat-X-sse', 'url', allow_duplicate=True),
+        Output('global-message', 'children', allow_duplicate=True)
+    ],
+    [
+        Input({'type': 'ai-chat-x-cancel', 'index': dash.ALL}, 'nClicks')
+    ],
+    [
+        State('ai-chat-x-messages-store', 'data'),
+        State('ai-chat-x-current-session-id', 'data')
+    ],
+    prevent_initial_call=True
+)
+def handle_cancel_message(cancel_clicks, messages, current_session_id):
+    """处理取消发送消息"""
+    if not ctx.triggered:
+        return dash.no_update, dash.no_update, dash.no_update
+    
+    triggered = ctx.triggered[0]
+    if not triggered:
+        return dash.no_update, dash.no_update, dash.no_update
+    
+    # 检查被触发的按钮是否有点击
+    if triggered.get('value', 0) <= 0:
+        return dash.no_update, dash.no_update, dash.no_update
+    
+    try:
+        # 解析被点击的消息ID
+        import json
+        prop_id = triggered['prop_id']
+        if '"type":"ai-chat-x-cancel"' in prop_id:
+            id_part = prop_id.split('.')[0]
+            id_dict = json.loads(id_part)
+            target_message_id = id_dict['index']
+        else:
+            return dash.no_update, dash.no_update, dash.no_update
+        
+        if not messages:
+            return dash.no_update, dash.no_update, dash.no_update
+        
+        # 创建消息的深拷贝
+        updated_messages = copy.deepcopy(messages)
+        
+        # 找到并删除目标消息
+        target_message_index = None
+        for i, message in enumerate(updated_messages):
+            if message.get('id') == target_message_id and message.get('is_streaming', False):
+                target_message_index = i
+                break
+        
+        if target_message_index is not None:
+            # 删除正在流式传输的消息
+            del updated_messages[target_message_index]
+            
+            # 清理活跃的SSE连接
+            if target_message_id in active_sse_connections:
+                del active_sse_connections[target_message_id]
+                log.debug(f"取消发送，清理SSE连接: {target_message_id}")
+            
+            # 停止SSE连接
+            set_props("chat-X-sse", {"url": None})
+            
+            # 显示取消成功的消息
+            success_message = fac.AntdMessage(
+                type="info", 
+                content="消息发送已取消"
+            )
+            
+            log.debug(f"取消发送消息: {target_message_id}")
+            return updated_messages, None, success_message
+        else:
+            # 未找到目标消息
+            error_message = fac.AntdMessage(
+                type="warning", 
+                content="无法取消：未找到正在发送的消息"
+            )
+            return dash.no_update, dash.no_update, error_message
+        
+    except Exception as e:
+        log.error(f"取消发送消息失败: {e}")
+        error_message = fac.AntdMessage(
+            type="error", 
+            content=f"取消发送失败: {str(e)}"
+        )
+        return dash.no_update, dash.no_update, error_message

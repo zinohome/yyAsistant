@@ -154,6 +154,23 @@ def ChatAgentMessage(
                                         height='auto'
                                     )
                                 ),
+                                # 新增：取消发送按钮（仅在流式传输时显示）
+                                *( [
+                                    fac.AntdButton(
+                                        icon=fac.AntdIcon(icon='antd-close'),
+                                        id={'type': 'ai-chat-x-cancel', 'index': message_id},
+                                        type="text",
+                                        size="small",
+                                        nClicks=0,
+                                        style=style(
+                                            fontSize=16, 
+                                            color='#ff4d4f',
+                                            padding='4px 8px',
+                                            minWidth='auto',
+                                            height='auto'
+                                        )
+                                    )
+                                ] if is_streaming else [] ),
                                 DashIconify(icon="mingcute:thumb-up-2-line",
                                     width=20,
                                     height=20,

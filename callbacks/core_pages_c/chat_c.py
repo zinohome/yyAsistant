@@ -7,12 +7,13 @@ from feffery_dash_utils.style_utils import style
 import dash.html as html
 import time  # 确保导入了time模块
 from datetime import datetime
-from server import app
 from components.chat_session_list import render as render_session_list
 from components.mobile_session_list import render_mobile_session_list
 from models.conversations import Conversations
 from utils.log import log as log
 # 导入Conversations模型
+# 导入active_sse_connections用于会话切换时的SSE连接清理
+# 注意：这个导入可能会在模块加载时失败，所以在使用时需要动态导入
 
 def register_chat_callbacks(app):
     # 添加自定义折叠按钮的客户端回调函数 - 支持切换本地SVG图标
@@ -84,16 +85,24 @@ def register_chat_callbacks(app):
                                    ids_list, current_rename_conv_id, new_name):
         """处理所有会话相关操作：新建会话、删除会话和修改会话名称"""
         
-        # 首先检查是否有任何有效点击
-        if not any(trigger['prop_id'].endswith('nClicks') or trigger['prop_id'].endswith('n_clicks') 
-                  or trigger['prop_id'].endswith('okCounts') or trigger['prop_id'].endswith('cancelCounts') 
-                  or trigger['prop_id'].endswith('closeCounts') for trigger in ctx.triggered):
-            # 没有有效点击时，确保对话框是隐藏的
+        try:
+            # 检查是否有触发
+            if not ctx.triggered:
+                return [dash.no_update, dash.no_update, False, '', dash.no_update, dash.no_update]
+            
+            # 获取触发回调的组件ID
+            triggered_id = ctx.triggered_id
+            triggered_prop_id = ctx.triggered[0]['prop_id']
+            
+            # 检查是否有有效点击
+            if not any(trigger['prop_id'].endswith('nClicks') or trigger['prop_id'].endswith('n_clicks') 
+                      or trigger['prop_id'].endswith('okCounts') or trigger['prop_id'].endswith('cancelCounts') 
+                      or trigger['prop_id'].endswith('closeCounts') for trigger in ctx.triggered):
+                # 没有有效点击时，确保对话框是隐藏的
+                return [dash.no_update, dash.no_update, False, '', dash.no_update, dash.no_update]
+        except Exception as e:
+            log.error(f"会话操作回调初始化失败: {e}")
             return [dash.no_update, dash.no_update, False, '', dash.no_update, dash.no_update]
-        
-        # 获取触发回调的组件ID
-        triggered_id = ctx.triggered_id
-        triggered_prop_id = ctx.triggered[0]['prop_id']
         
         # 处理新建会话按钮点击
         if triggered_id == 'ai-chat-x-session-new':
@@ -312,6 +321,17 @@ def register_chat_callbacks(app):
                 # log.debug(f"=== 会话切换开始 ===")
                 # log.debug(f"点击的会话ID: {clicked_session_id}")
                 # log.debug(f"当前会话ID: {current_session_id}")
+                
+                # 新增：如果切换到不同会话，清理当前SSE连接
+                if current_session_id != clicked_session_id:
+                    try:
+                        # 停止当前SSE连接
+                        set_props("chat-X-sse", {"url": None})
+                        log.debug(f"停止当前SSE连接，切换到会话: {clicked_session_id}")
+                    except Exception as e:
+                        # 其他错误，记录日志但不影响会话切换
+                        log.error(f"停止SSE连接时出错: {e}")
+                        # 继续执行，不中断会话切换
                 
                 # 从数据库加载该会话的历史消息
                 conv = Conversations.get_conversation_by_conv_id(clicked_session_id)

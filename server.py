@@ -173,6 +173,11 @@ def stream():
         @stream_with_context
         def generate():
             log.debug("开始生成SSE流式响应")
+            import time
+            start_time = time.time()
+            timeout_seconds = 30  # 30秒超时
+            last_activity_time = start_time
+            
             try:
                 # 使用yychat_client进行流式聊天完成
                 # 使用配置中的模型参数，并添加conversation_id和personality_id
@@ -185,7 +190,22 @@ def stream():
                     personality_id=personality_id,  # 使用从请求参数中获取的值
                     use_tools=BaseConfig.yychat_default_use_tools
                 ):
+                    # 检查超时
+                    current_time = time.time()
+                    if current_time - start_time > timeout_seconds:
+                        log.warning(f"SSE流式响应超时: {message_id}")
+                        timeout_data = {
+                            "message_id": message_id,
+                            "status": "timeout",
+                            "error": "响应超时，请重试",
+                            "role": role
+                        }
+                        timeout_str = json.dumps(timeout_data)
+                        yield f'data: {timeout_str}\n\n'
+                        break
+                    
                     if chunk:
+                        last_activity_time = current_time
                         # 发送数据，包含message_id以识别目标消息
                         # 确保返回的数据格式正确
                         if isinstance(chunk, dict) and 'choices' in chunk and chunk['choices']:
@@ -200,14 +220,18 @@ def stream():
                                 }
                                 response_str = json.dumps(response_data)
                                 yield f'data: {response_str}\n\n'
-                # 发送结束标志
-                end_data = {
-                    "message_id": message_id,
-                    "status": "completed",
-                    "role": role
-                }
-                end_str = json.dumps(end_data)
-                yield f'data: {end_str}\n\n'
+                
+                # 检查是否因为超时而退出
+                if time.time() - start_time <= timeout_seconds:
+                    # 发送结束标志
+                    end_data = {
+                        "message_id": message_id,
+                        "status": "completed",
+                        "role": role
+                    }
+                    end_str = json.dumps(end_data)
+                    yield f'data: {end_str}\n\n'
+                    
             except Exception as e:
                 # 发送错误信息
                 error_message = str(e)
