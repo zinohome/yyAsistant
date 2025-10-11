@@ -310,7 +310,7 @@ def trigger_sse(messages, current_session_id):
 )
 def update_chat_history(messages):
     """更新聊天历史显示 - 只在消息存储初始化或非流式更新时调用"""
-    log.debug(f"更新聊天历史，消息数量: {len(messages) if messages else 0}")
+    #log.debug(f"更新聊天历史，消息数量: {len(messages) if messages else 0}")
     # 直接使用消息列表渲染聊天历史
     return AiChatMessageHistory(messages or [])
 
@@ -320,7 +320,7 @@ def register_chat_input_callbacks(flask_app):
     注册聊天输入区域的所有回调函数
     这个函数在app.py中被调用以确保所有回调正确注册
     """
-    log.debug("注册聊天输入区域的所有回调函数")
+    #log.debug("注册聊天输入区域的所有回调函数")
     # 所有回调函数已经通过@app.callback装饰器注册
     # 这里可以添加一些额外的初始化代码（如果需要）
     
@@ -585,12 +585,19 @@ def manage_connection_status(sse_url, completion_event, tag_clicks):
 app.clientside_callback(
     """
     function(messages) {
+        // 安全检查：确保 dash_clientside 对象存在
+        if (typeof window.dash_clientside === 'undefined' || !window.dash_clientside) {
+            console.warn('dash_clientside not ready, skipping auto scroll');
+            return null;
+        }
+        
         // 当消息更新时，自动滚动到底部
         if (messages && messages.length > 0) {
             // console.log('开始自动滚动，消息数量:', messages.length);
             
             // 滚动到底部的函数
             function scrollToBottom(container) {
+                if (!container) return false;
                 const maxScroll = container.scrollHeight - container.clientHeight;
                 if (maxScroll > 0) {
                     // console.log('执行滚动，maxScroll:', maxScroll);
@@ -603,6 +610,11 @@ app.clientside_callback(
             
             // 使用 MutationObserver 监听DOM变化
             function waitForDOMWithObserver(container, callback) {
+                if (!container) {
+                    callback();
+                    return;
+                }
+                
                 // 先尝试立即滚动
                 if (scrollToBottom(container)) {
                     callback();

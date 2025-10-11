@@ -200,8 +200,18 @@ def register_chat_callbacks(app):
                     return [dash.no_update, dash.no_update, False, '', dash.no_update, dash.no_update]
             # 如果点击的是改名按钮
             elif clicked_key == "rename":
-                # 存储当前要改名的会话ID并显示改名对话框
-                return [dash.no_update, conv_id, True, '', dash.no_update, dash.no_update]
+                # 获取当前会话的名称
+                current_conv_name = ""
+                try:
+                    conv = Conversations.get_conversation_by_conv_id(conv_id)
+                    if conv:
+                        current_conv_name = conv.conv_name
+                except Exception as e:
+                    # 如果获取失败，使用空字符串
+                    current_conv_name = ""
+                
+                # 存储当前要改名的会话ID并显示改名对话框，同时显示当前会话名称
+                return [dash.no_update, conv_id, True, current_conv_name, dash.no_update, dash.no_update]
         
         # 处理会话改名对话框的确定按钮点击
         elif triggered_id == 'ai-chat-x-session-rename-modal' and 'okCounts' in triggered_prop_id:

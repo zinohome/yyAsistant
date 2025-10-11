@@ -29,11 +29,11 @@ def render(sessions=None, user_id=None, refresh_timestamp=None, selected_session
     # print(f"selected_session_id: {selected_session_id}")
     # print(f"user_id: {user_id}")
     
-    # 默认会话数据 - 只保留key和title
+    # 默认会话数据 - 保留key、title和full_title
     default_sessions = [
-        {"key": "1", "title": "新会话1"},
-        {"key": "2", "title": "新会话2"},
-        {"key": "3", "title": "新会话3"}
+        {"key": "1", "title": "新会话1", "full_title": "新会话1"},
+        {"key": "2", "title": "新会话2", "full_title": "新会话2"},
+        {"key": "3", "title": "新会话3", "full_title": "新会话3"}
     ]
     
     # 从数据库获取会话数据
@@ -52,7 +52,11 @@ def render(sessions=None, user_id=None, refresh_timestamp=None, selected_session
                     return text
                     
                 session_data = [
-                    {"key": session["conv_id"], "title": truncate_chinese_text(session["conv_name"])}
+                    {
+                        "key": session["conv_id"], 
+                        "title": truncate_chinese_text(session["conv_name"]),
+                        "full_title": session["conv_name"]  # 保存完整的会话名称用于Tooltip
+                    }
                     for session in db_sessions
                 ]
         except Exception as e:
@@ -115,8 +119,36 @@ def render(sessions=None, user_id=None, refresh_timestamp=None, selected_session
                             # 使用html.Div替代FefferyDiv以支持nClicks
                             html.Div(
                                 [
-                                    # 会话标题部分 - 可点击
+                                    # 会话标题部分 - 可点击，只有被截断时才显示Tooltip
                                     html.Div(
+                                        # 判断是否需要显示Tooltip（名称被截断时）
+                                        fac.AntdTooltip(
+                                            fac.AntdText(
+                                                item["title"],
+                                                strong=True,
+                                                ellipsis=True,
+                                                style=style(padding="12px 0")
+                                            ),
+                                            title=item.get("full_title", item["title"]),  # 显示完整的会话名称
+                                            placement="right",  # 在右侧显示
+                                            mouseEnterDelay=0.5,  # 延迟0.5秒显示
+                                            mouseLeaveDelay=0.1,  # 快速隐藏
+                                            styles={
+                                                "body": {
+                                                    "backgroundColor": "#ffffff",  # 白色背景，与页面主色调一致
+                                                    "color": "#333333",  # 深灰色字体，与页面文字色一致
+                                                    "fontWeight": "normal",  # 不加粗
+                                                    "fontSize": "12px",  # 字体大小
+                                                    "borderRadius": "6px",  # 圆角
+                                                    "padding": "8px 12px",  # 内边距
+                                                    "boxShadow": "0 3px 12px rgba(0, 0, 0, 0.15)",  # 阴影
+                                                    "border": "1px solid #d9d9d9",  # 浅灰色边框
+                                                    "whiteSpace": "nowrap",  # 防止换行
+                                                    "maxWidth": "none",  # 不限制最大宽度
+                                                }
+                                            }
+                                        ) if item.get("full_title", item["title"]) != item["title"] else
+                                        # 如果名称没有被截断，直接显示文本，不包裹Tooltip
                                         fac.AntdText(
                                             item["title"],
                                             strong=True,
