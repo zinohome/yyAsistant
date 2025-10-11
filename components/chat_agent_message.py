@@ -20,6 +20,7 @@ def ChatAgentMessage(
     message_bg_color="#f5f5f5",
     message_text_color="#000000",
     is_streaming=False,
+    original_markdown=None,
 ):
     """
     AI代理消息组件
@@ -54,6 +55,11 @@ def ChatAgentMessage(
         className='chat-message ai-message',
         **{"data-streaming": str(is_streaming).lower()},
         children=[
+            # 隐藏存储原始Markdown内容
+            dcc.Store(
+                id={'type': 'ai-chat-x-original-markdown', 'index': message_id},
+                data=original_markdown or message
+            ),
             # 第一行：头像、发送者名称和时间戳（纵向居中对齐）
             fac.AntdRow(
                 [
@@ -117,15 +123,36 @@ def ChatAgentMessage(
                         style=style(width="48px", height="0")  # 用于与头像对齐的占位符
                     ),
                     fac.AntdCol(
-                        fac.AntdSpace(
-                            [
-                                fac.AntdIcon(
-                                    icon='antd-reload',
-                                    style=style(fontSize=16, color='rgba(0,0,0,0.45)')
+                        html.Div(
+                            fac.AntdSpace(
+                                [
+                                fac.AntdButton(
+                                    icon=fac.AntdIcon(icon='antd-reload'),
+                                    id={'type': 'ai-chat-x-regenerate', 'index': message_id},
+                                    type="text",
+                                    size="small",
+                                    nClicks=0,
+                                    style=style(
+                                        fontSize=16, 
+                                        color='rgba(0,0,0,0.45)',
+                                        padding='4px 8px',
+                                        minWidth='auto',
+                                        height='auto'
+                                    )
                                 ),
-                                fac.AntdIcon(
-                                    icon='antd-copy',
-                                    style=style(fontSize=16, color='rgba(0,0,0,0.45)')
+                                fac.AntdButton(
+                                    icon=fac.AntdIcon(icon='antd-copy'),
+                                    id={'type': 'ai-chat-x-copy', 'index': message_id},
+                                    type="text",
+                                    size="small",
+                                    nClicks=0,
+                                    style=style(
+                                        fontSize=16, 
+                                        color='rgba(0,0,0,0.45)',
+                                        padding='4px 8px',
+                                        minWidth='auto',
+                                        height='auto'
+                                    )
                                 ),
                                 DashIconify(icon="mingcute:thumb-up-2-line",
                                     width=20,
@@ -143,6 +170,8 @@ def ChatAgentMessage(
                             size=16
                         ),
                         style=style(paddingLeft="4px")
+                    ),
+                        className="message-actions"
                     )
                 ],
                 justify="start"

@@ -689,3 +689,144 @@ app.clientside_callback(
     Input('ai-chat-x-messages-store', 'data'),
     prevent_initial_call=True
 )
+
+# 重新生成AI消息的回调
+@app.callback(
+    [
+        Output('ai-chat-x-messages-store', 'data', allow_duplicate=True),
+        Output('ai-chat-x-sse-trigger', 'data', allow_duplicate=True),
+        Output('global-message', 'children', allow_duplicate=True)
+    ],
+    [
+        Input({'type': 'ai-chat-x-regenerate', 'index': dash.ALL}, 'nClicks')
+    ],
+    [
+        State('ai-chat-x-messages-store', 'data'),
+        State('ai-chat-x-current-session-id', 'data')
+    ],
+    prevent_initial_call=True
+)
+def handle_regenerate_message(regenerate_clicks, messages, current_session_id):
+    """处理重新生成AI消息"""
+    if not ctx.triggered:
+        return dash.no_update, dash.no_update, dash.no_update
+    
+    triggered = ctx.triggered[0]
+    if not triggered or not regenerate_clicks or not any(click > 0 for click in regenerate_clicks):
+        return dash.no_update, dash.no_update, dash.no_update
+    
+    try:
+        # 解析被点击的消息ID
+        import json
+        prop_id = triggered['prop_id']
+        if '{"type":"ai-chat-x-regenerate"' in prop_id:
+            id_part = prop_id.split('.')[0]
+            id_dict = json.loads(id_part)
+            target_message_id = id_dict['index']
+        else:
+            return dash.no_update, dash.no_update, dash.no_update
+        
+        if not messages:
+            return dash.no_update, dash.no_update, dash.no_update
+        
+        # 找到目标消息和上一条用户消息
+        target_message_index = None
+        previous_user_message = None
+        
+        for i, message in enumerate(messages):
+            if message.get('id') == target_message_id:
+                target_message_index = i
+                # 查找上一条用户消息
+                for j in range(i-1, -1, -1):
+                    if messages[j].get('role') == 'user':
+                        previous_user_message = messages[j]
+                        break
+                break
+        
+        if target_message_index is None or previous_user_message is None:
+            return dash.no_update, dash.no_update, dash.no_update
+        
+        # 创建消息的深拷贝
+        updated_messages = copy.deepcopy(messages)
+        
+        # 删除目标AI消息
+        del updated_messages[target_message_index]
+        
+        # 创建新的AI消息（正在思考中...）
+        new_ai_message = {
+            'role': 'assistant',
+            'content': '正在思考中...',
+            'timestamp': time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+            'id': f"ai-message-{int(time.time() * 1000)}",
+            'is_streaming': True
+        }
+        
+        # 添加新的AI消息
+        updated_messages.append(new_ai_message)
+        
+        # 准备SSE触发数据
+        sse_trigger_data = {
+            'message_id': new_ai_message['id'],
+            'session_id': current_session_id,
+            'messages': [msg for msg in updated_messages if msg.get('role') in ['user', 'assistant', 'agent', 'system'] and not (msg.get('role') in ['assistant', 'agent'] and msg.get('is_streaming', False))],
+            'personality_id': 'health_assistant',
+            'role': 'assistant'
+        }
+        
+        return updated_messages, sse_trigger_data, dash.no_update
+        
+    except Exception as e:
+        log.error(f"重新生成消息失败: {e}")
+        return dash.no_update, dash.no_update, dash.no_update
+
+# 复制消息的客户端回调
+app.clientside_callback(
+    """
+    function(copy_clicks, messages) {
+        if (!window.dash_clientside) {
+            return window.dash_clientside.no_update;
+        }
+        
+        const triggered = window.dash_clientside.callback_context.triggered[0];
+        if (!triggered) {
+            return window.dash_clientside.no_update;
+        }
+        
+        // 处理复制按钮点击
+        if (triggered.prop_id.includes('ai-chat-x-copy')) {
+            try {
+                // 解析消息ID
+                const propId = triggered.prop_id;
+                const idPart = propId.split('.')[0];
+                const idDict = JSON.parse(idPart);
+                const messageId = idDict.index;
+                
+                // 从消息存储中获取原始Markdown内容
+                if (messages) {
+                    const targetMessage = messages.find(msg => msg.id === messageId);
+                    if (targetMessage && targetMessage.content) {
+                        // 复制到剪贴板
+                        navigator.clipboard.writeText(targetMessage.content).then(() => {
+                            // 显示成功提示
+                            console.log('复制成功');
+                        }).catch(() => {
+                            // 显示失败提示
+                            console.log('复制失败');
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('复制消息失败:', error);
+            }
+        }
+        
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('ai-chat-x-copy-result', 'data', allow_duplicate=True),
+    [
+        Input({'type': 'ai-chat-x-copy', 'index': dash.ALL}, 'nClicks')
+    ],
+    State('ai-chat-x-messages-store', 'data'),
+    prevent_initial_call=True
+)

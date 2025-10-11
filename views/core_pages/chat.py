@@ -291,6 +291,9 @@ def _create_state_stores():
 
     # 添加：用于存储当前要改名的会话ID的隐藏组件
     current_rename_conv_id_store = dcc.Store(id='ai-chat-x-current-rename-conv-id', data=None)
+    
+    # 添加：复制结果的虚拟输出组件
+    copy_result_store = dcc.Store(id='ai-chat-x-copy-result', data=None)
 
     # 添加：会话改名对话框
     session_rename_modal = fac.AntdModal(
@@ -319,8 +322,10 @@ def _create_state_stores():
         current_session_id_store,
         sse_completed_event_receiver,
         session_refresh_trigger,
+        copy_result_store,
         current_rename_conv_id_store,
-        session_rename_modal
+        session_rename_modal,
+        html.Div(id="global-message")  # 全局消息提示组件
     ]
 
 

@@ -15,6 +15,39 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* 消息操作按钮样式 */
+.message-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.chat-message:hover .message-actions {
+    opacity: 1;
+}
+
+.message-actions .ant-btn {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 4px 8px !important;
+    min-width: auto !important;
+    height: auto !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease !important;
+}
+
+.message-actions .ant-btn:hover {
+    background-color: rgba(0, 0, 0, 0.06) !important;
+    color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.message-actions .ant-btn:active {
+    background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
 /* 输入区域样式 */
 #ai-chat-x-input {
     resize: none;

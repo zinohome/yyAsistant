@@ -39,7 +39,8 @@ def AiChatMessageHistory(messages=None):
                     message_bg_color="#f5f5f5",
                     message_text_color="#000000",
                     message_id=msg.get('id'),  # 传递消息ID
-                    is_streaming=msg.get('is_streaming', False)  # 传递流式状态,
+                    is_streaming=msg.get('is_streaming', False),  # 传递流式状态
+                    original_markdown=msg.get('content', '')  # 传递原始Markdown内容
                 ))
             elif msg.get('role') == 'user':
                 # 传递所有必要参数给 render_user_message
