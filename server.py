@@ -160,7 +160,7 @@ def stream():
     try:
         # 获取请求参数（从JSON请求体中）
         data = request.get_json() or {}
-        log.debug(f"/stream端点接收到的请求数据: {data}")
+        #log.debug(f"/stream端点接收到的请求数据: {data}")
         message_id = data.get('message_id')
         messages_data = data.get('messages', [])
         session_id = data.get('session_id')

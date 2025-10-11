@@ -51,7 +51,7 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
     triggered_id = ctx.triggered_id if ctx.triggered else None
     
     # 添加调试日志
-    log.debug(f"回调被触发: {triggered_id}")
+    # log.debug(f"回调被触发: {triggered_id}")
     
     # 初始化消息存储（如果为空）
     messages = messages_store or []
@@ -74,18 +74,18 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
         
         if 0 <= topic_index < len(topics):
             # 返回话题内容到输入框
-            log.debug(f"话题点击: {topic_index}, 内容: {topics[topic_index]}")
+            # log.debug(f"话题点击: {topic_index}, 内容: {topics[topic_index]}")
             return messages, topics[topic_index], False, False
         # 如果索引无效，返回默认值
         return messages, message_content, False, False
     
     # 处理SSE完成事件
     elif triggered_id == 'ai-chat-x-sse-completed-receiver.data-completion-event' or 'sse-completed-receiver' in str(triggered_id):
-        log.debug(f"=== SSE完成事件处理 ===")
-        log.debug(f"触发ID: {triggered_id}")
-        log.debug(f"completion_event_json: {completion_event_json}")
-        log.debug(f"messages: {messages}")
-        log.debug(f"current_session_id: {current_session_id}")
+        # log.debug(f"=== SSE完成事件处理 ===")
+        # log.debug(f"触发ID: {triggered_id}")
+        # log.debug(f"completion_event_json: {completion_event_json}")
+        # log.debug(f"messages: {messages}")
+        # log.debug(f"current_session_id: {current_session_id}")
         
         # 即使completion_event_json为空，也要处理，因为可能是客户端回调触发的
         if messages:
@@ -98,7 +98,7 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
                     message_id = completion_event.get('messageId')
                     full_content = completion_event.get('content')
                     
-                    log.debug(f"解析的完成事件: message_id={message_id}, content={full_content}")
+                    #log.debug(f"解析的完成事件: message_id={message_id}, content={full_content}")
                 else:
                     # 如果没有completion_event_json，尝试从最后一条AI消息获取信息
                     last_message = messages[-1] if messages else None
@@ -106,9 +106,9 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
                         message_id = last_message.get('id')
                         # 从DOM中获取完整内容（这里暂时使用占位符）
                         full_content = "SSE完成，但内容需要从DOM获取"
-                        log.debug(f"从最后一条消息获取: message_id={message_id}")
+                        # log.debug(f"从最后一条消息获取: message_id={message_id}")
                     else:
-                        log.debug("没有找到需要完成的流式消息")
+                        # log.debug("没有找到需要完成的流式消息")
                         return messages, message_content, False, False
                 
                 # 创建消息的深拷贝，避免修改原始数据
@@ -119,7 +119,7 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
                     if message.get('id') == message_id:
                         updated_messages[i]['content'] = full_content
                         updated_messages[i]['is_streaming'] = False
-                        log.debug(f"更新AI消息: {message_id} -> {full_content}")
+                        # log.debug(f"更新AI消息: {message_id} -> {full_content}")
                         break
                 
                 # 保存AI消息到数据库
@@ -141,14 +141,14 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
                                 current_session_id,
                                 conv_memory={'messages': existing_messages}
                             )
-                            log.debug(f"AI消息已保存到数据库: {current_session_id}")
+                            # log.debug(f"AI消息已保存到数据库: {current_session_id}")
                     except Exception as e:
                         log.error(f"保存AI消息到数据库失败: {e}")
                 
                 # 清理活跃的SSE连接
                 if message_id in active_sse_connections:
                     del active_sse_connections[message_id]
-                    log.debug(f"清理SSE连接: {message_id}")
+                    # log.debug(f"清理SSE连接: {message_id}")
                 
                 # 返回更新后的消息存储和恢复按钮状态
                 return updated_messages, message_content, False, False
@@ -156,7 +156,7 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
                 log.error(f"处理SSE完成事件时出错: {e}")
                 return messages, message_content, False, False
         else:
-            log.debug("SSE完成事件数据不完整，跳过处理")
+            # log.debug("SSE完成事件数据不完整，跳过处理")
             return messages, message_content, False, False
     
     # 处理消息发送
@@ -218,11 +218,11 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
                             current_session_id,
                             conv_memory={'messages': existing_messages}
                         )
-                        log.debug(f"用户消息和AI消息已保存到数据库: {current_session_id}")
+                        # log.debug(f"用户消息和AI消息已保存到数据库: {current_session_id}")
                 except Exception as e:
                     log.error(f"保存用户消息到数据库失败: {e}")
             
-            log.debug(f"创建用户消息和AI消息: {user_message}, {ai_message}")
+            # log.debug(f"创建用户消息和AI消息: {user_message}, {ai_message}")
             
             return updated_messages, '', True, True  # 发送时禁用按钮并显示loading
         # 如果消息内容为空，返回默认值
@@ -251,7 +251,7 @@ def trigger_sse(messages, current_session_id):
             message_id = last_message.get('id')
             # 检查是否已经存在相同message_id的SSE连接，避免重复触发
             if message_id in active_sse_connections:
-                log.debug(f"SSE连接已存在，跳过重复触发: {message_id}")
+                # log.debug(f"SSE连接已存在，跳过重复触发: {message_id}")
                 return no_update, no_update
             role = last_message.get('role', 'assistant')
             
@@ -278,8 +278,8 @@ def trigger_sse(messages, current_session_id):
                 'role': role
             }
             
-            log.debug(f"触发SSE连接，消息ID: {message_id}, 会话ID: {session_id}")
-            log.debug(f"SSE请求数据: {request_data}")
+            # log.debug(f"触发SSE连接，消息ID: {message_id}, 会话ID: {session_id}")
+            # log.debug(f"SSE请求数据: {request_data}")
             
             # 记录活跃的SSE连接
             active_sse_connections[message_id] = {

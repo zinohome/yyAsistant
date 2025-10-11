@@ -114,38 +114,29 @@ class YYChatClient:
         
         # 分别记录不同部分的日志，避免单行过长被截断
         log.debug(f"调用YYChat API: {url}")
-        log.debug(f"请求参数概览 - model: {payload.get('model')}, stream: {payload.get('stream')}")
+        log.debug(f"请求参数概览 - model: {payload.get('model')}, personality_id: {payload.get('personality_id')}, conversation_id: {payload.get('conversation_id')}, use_tools: {payload.get('use_tools')}, stream: {payload.get('stream')}")
         
         # 额外添加调试日志，直接打印原始消息列表和修复后的消息列表
-        log.debug(f"原始消息列表: {messages}")
-        log.debug(f"修复后消息列表: {validated_messages}")
+        #log.debug(f"原始消息列表: {messages}")
+        #log.debug(f"修复后消息列表: {validated_messages}")
         
         # 详细记录payload，但避免单行过长
+        '''
         try:
             # 将payload拆分成多行记录，避免被截断
-            payload_str = json.dumps(payload, ensure_ascii=False, indent=2)
+            #payload_str = json.dumps(payload, ensure_ascii=False, indent=2)
             # 由于loguru可能仍会截断长消息，我们可以只记录关键部分
-            log.debug(f"Payload结构 (关键部分):")
-            log.debug(f"- model: {payload.get('model')}")
-            log.debug(f"- stream: {payload.get('stream')}")
+            #log.debug(f"Payload结构 (关键部分):")
+            #log.debug(f"- model: {payload.get('model')}")
+            #log.debug(f"- stream: {payload.get('stream')}")
             log.debug(f"- conversation_id: {payload.get('conversation_id')}")
             
             # 获取消息列表
-            messages_list = payload.get('messages', [])
-            log.debug(f"- 消息数量: {len(messages_list)}")
-            
-            # 打印每条消息的详细内容
-            for i, message in enumerate(messages_list):
-                if isinstance(message, dict):
-                    role = message.get('role', 'unknown')
-                    content = message.get('content', '')
-                    # 限制内容长度，避免日志过长
-                    content_preview = content[:100] + ('...' if len(content) > 100 else '')
-                    log.debug(f"  消息 {i+1} [角色: {role}]: {content_preview}")
-                else:
-                    log.debug(f"  消息 {i+1} (非字典格式): {str(message)[:100]}...")
+            #messages_list = payload.get('messages', [])
+            #log.debug(f"- 消息数量: {len(messages_list)}")
         except Exception as e:
             log.warning(f"记录Payload详情失败: {str(e)}")
+        '''
         
         try:
             # 发送请求

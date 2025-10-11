@@ -430,10 +430,10 @@ def register_chat_callbacks(app):
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
         # 添加调试信息
-        log.debug(f"移动端弹出框回调被触发: {triggered['prop_id']}")
-        log.debug(f"delete_clicks: {delete_clicks}")
-        log.debug(f"session_clicks: {session_clicks}")
-        log.debug(f"create_btn_clicks: {create_btn_clicks}")
+        # log.debug(f"移动端弹出框回调被触发: {triggered['prop_id']}")
+        # log.debug(f"delete_clicks: {delete_clicks}")
+        # log.debug(f"session_clicks: {session_clicks}")
+        # log.debug(f"create_btn_clicks: {create_btn_clicks}")
         
         # 处理新建会话
         if triggered['prop_id'] == 'ai-chat-x-create-alternative-btn.nClicks' and create_btn_clicks > 0:
@@ -444,7 +444,7 @@ def register_chat_callbacks(app):
                     # 调用Conversations模型的add_conversation方法创建新会话
                     conv_id = Conversations.add_conversation(user_id=user_id)
                     
-                    log.debug(f"移动端创建新会话: {conv_id}")
+                    # log.debug(f"移动端创建新会话: {conv_id}")
                     
                     # 显示创建成功的消息
                     set_props(
@@ -499,38 +499,40 @@ def register_chat_callbacks(app):
                 return mobile_content, dash.no_update, clicked_index, history_messages
         
         # 处理会话删除
-        log.debug(f"检查删除条件: {triggered['prop_id']}")
+        # log.debug(f"检查删除条件: {triggered['prop_id']}")
         delete_pattern = '"type":"ai-chat-x-mobile-session-delete"'
-        log.debug(f"包含检查结果: {delete_pattern in triggered['prop_id']}")
+        # log.debug(f"包含检查结果: {delete_pattern in triggered['prop_id']}")
         if delete_pattern in triggered['prop_id']:
-            log.debug(f"删除按钮被点击: {triggered['prop_id']}")
-            log.debug(f"delete_clicks类型: {type(delete_clicks)}")
-            log.debug(f"delete_clicks值: {delete_clicks}")
+            # log.debug(f"删除按钮被点击: {triggered['prop_id']}")
+            # log.debug(f"delete_clicks类型: {type(delete_clicks)}")
+            # log.debug(f"delete_clicks值: {delete_clicks}")
             if delete_clicks:
-                log.debug(f"any(click > 0): {any(click > 0 for click in delete_clicks)}")
+                # log.debug(f"any(click > 0): {any(click > 0 for click in delete_clicks)}")
+                pass
             else:
-                log.debug("delete_clicks为None或空")
+                # log.debug("delete_clicks为None或空")
+                pass
             
             if delete_clicks and any(click > 0 for click in delete_clicks):
-                log.debug("进入删除逻辑")
+                # log.debug("进入删除逻辑")
                 # 获取被删除的会话ID
                 import json
                 prop_id = triggered['prop_id']
-                log.debug(f"尝试解析prop_id: {prop_id}")
+                # log.debug(f"尝试解析prop_id: {prop_id}")
                 if '"type":"ai-chat-x-mobile-session-delete"' in prop_id:
                     # 解析JSON格式的ID
                     id_part = prop_id.split('.')[0]  # 获取ID部分
-                    log.debug(f"ID部分: {id_part}")
+                    # log.debug(f"ID部分: {id_part}")
                     try:
                         id_dict = json.loads(id_part)
                         deleted_index = id_dict['index']
-                        log.debug(f"解析到删除的会话ID: {deleted_index}")
+                        # log.debug(f"解析到删除的会话ID: {deleted_index}")
                     except json.JSONDecodeError as e:
                         log.error(f"JSON解析错误: {e}")
                         deleted_index = None
                 else:
                     deleted_index = None
-                    log.debug("无法解析删除的会话ID")
+                    # log.debug("无法解析删除的会话ID")
                 
                 try:
                     # 删除会话
