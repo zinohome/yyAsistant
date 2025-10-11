@@ -747,104 +747,180 @@ app.clientside_callback(
 )
 
 # 重新生成AI消息的回调
+# 合并的消息操作回调函数
 @app.callback(
     [
         Output('ai-chat-x-messages-store', 'data', allow_duplicate=True),
+        Output('ai-chat-x-input', 'value', allow_duplicate=True),
+        Output('ai-chat-x-send-btn', 'nClicks', allow_duplicate=True),
+        Output('chat-X-sse', 'url', allow_duplicate=True),
         Output('global-message', 'children', allow_duplicate=True)
     ],
     [
-        Input({'type': 'ai-chat-x-regenerate', 'index': dash.ALL}, 'nClicks')
+        Input({'type': 'ai-chat-x-regenerate', 'index': dash.ALL}, 'nClicks'),
+        Input({'type': 'user-chat-x-regenerate', 'index': dash.ALL}, 'nClicks'),
+        Input({'type': 'ai-chat-x-cancel', 'index': dash.ALL}, 'nClicks')
     ],
     [
         State('ai-chat-x-messages-store', 'data'),
-        State('ai-chat-x-current-session-id', 'data')
+        State('ai-chat-x-current-session-id', 'data'),
+        State('ai-chat-x-send-btn', 'nClicks')
     ],
     prevent_initial_call=True
 )
-def handle_regenerate_message(regenerate_clicks, messages, current_session_id):
-    """处理重新生成AI消息"""
+def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, cancel_clicks, 
+                             messages, current_session_id, send_btn_clicks):
+    """处理所有消息相关操作：重新生成、取消发送"""
+    
     if not ctx.triggered:
-        return dash.no_update, dash.no_update
+        return [dash.no_update] * 5
     
     triggered = ctx.triggered[0]
     if not triggered:
-        return dash.no_update, dash.no_update
+        return [dash.no_update] * 5
     
     # 检查被触发的按钮是否有点击
     if triggered.get('value', 0) <= 0:
-        return dash.no_update, dash.no_update
-    
-    # log.debug(f"重新生成回调被触发: {ctx.triggered}")
+        return [dash.no_update] * 5
     
     try:
         # 解析被点击的消息ID
         import json
         prop_id = triggered['prop_id']
-        # log.debug(f"解析prop_id: {prop_id}")
+        
+        # 处理AI消息重新生成
         if '"type":"ai-chat-x-regenerate"' in prop_id:
             id_part = prop_id.split('.')[0]
             id_dict = json.loads(id_part)
             target_message_id = id_dict['index']
-            # log.debug(f"目标消息ID: {target_message_id}")
+            
+            if not messages:
+                return [dash.no_update] * 4 + [fac.AntdMessage(type="error", content="消息列表为空")]
+            
+            # 找到目标消息和上一条用户消息
+            target_message_index = None
+            previous_user_message = None
+            
+            for i, message in enumerate(messages):
+                if message.get('id') == target_message_id:
+                    target_message_index = i
+                    # 查找上一条用户消息
+                    for j in range(i-1, -1, -1):
+                        if messages[j].get('role') == 'user':
+                            previous_user_message = messages[j]
+                            break
+                    break
+            
+            if target_message_index is None:
+                return [dash.no_update] * 4 + [fac.AntdMessage(type="error", content="无法重新生成：未找到目标消息")]
+            
+            if previous_user_message is None:
+                return [dash.no_update] * 4 + [fac.AntdMessage(type="error", content="无法重新生成：未找到上一条用户消息")]
+            
+            # 创建消息的深拷贝
+            updated_messages = copy.deepcopy(messages)
+            
+            # 删除目标AI消息
+            del updated_messages[target_message_index]
+            
+            # 创建新的AI消息（正在思考中...）
+            new_ai_message = {
+                'role': 'assistant',
+                'content': '正在思考中...',
+                'timestamp': time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                'id': f"ai-message-{int(time.time() * 1000)}",
+                'is_streaming': True
+            }
+            
+            # 添加新的AI消息
+            updated_messages.append(new_ai_message)
+            
+            # 返回更新后的消息，SSE会自动通过trigger_sse回调触发
+            return updated_messages, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        
+        # 处理用户消息重新生成
+        elif '"type":"user-chat-x-regenerate"' in prop_id:
+            id_part = prop_id.split('.')[0]
+            id_dict = json.loads(id_part)
+            target_message_id = id_dict['index']
+            
+            if not messages:
+                return [dash.no_update] * 5
+            
+            # 找到目标用户消息
+            target_message = None
+            for message in messages:
+                if message.get('id') == target_message_id and message.get('role') == 'user':
+                    target_message = message
+                    break
+            
+            if target_message:
+                # 将用户消息内容填入输入框
+                user_content = target_message.get('content', '')
+                # 触发发送按钮点击
+                new_send_clicks = send_btn_clicks + 1 if send_btn_clicks else 1
+                
+                return dash.no_update, user_content, new_send_clicks, dash.no_update, dash.no_update
+            else:
+                return [dash.no_update] * 4 + [fac.AntdMessage(type="error", content="无法重新生成：未找到目标用户消息")]
+        
+        # 处理取消发送消息
+        elif '"type":"ai-chat-x-cancel"' in prop_id:
+            id_part = prop_id.split('.')[0]
+            id_dict = json.loads(id_part)
+            target_message_id = id_dict['index']
+            
+            if not messages:
+                return [dash.no_update] * 5
+            
+            # 创建消息的深拷贝
+            updated_messages = copy.deepcopy(messages)
+            
+            # 找到并删除目标消息
+            target_message_index = None
+            for i, message in enumerate(updated_messages):
+                if message.get('id') == target_message_id and message.get('is_streaming', False):
+                    target_message_index = i
+                    break
+            
+            if target_message_index is not None:
+                # 删除正在流式传输的消息
+                del updated_messages[target_message_index]
+                
+                # 清理活跃的SSE连接
+                if target_message_id in active_sse_connections:
+                    del active_sse_connections[target_message_id]
+                    log.debug(f"取消发送，清理SSE连接: {target_message_id}")
+                
+                # 停止SSE连接
+                set_props("chat-X-sse", {"url": None})
+                
+                # 显示取消成功的消息
+                success_message = fac.AntdMessage(
+                    type="info", 
+                    content="消息发送已取消"
+                )
+                
+                log.debug(f"取消发送消息: {target_message_id}")
+                return updated_messages, dash.no_update, dash.no_update, None, success_message
+            else:
+                # 未找到目标消息
+                error_message = fac.AntdMessage(
+                    type="warning", 
+                    content="无法取消：未找到正在发送的消息"
+                )
+                return [dash.no_update] * 4 + [error_message]
+        
         else:
-            # log.debug("不是重新生成按钮")
-            return dash.no_update, dash.no_update
-        
-        if not messages:
-            # log.debug("消息列表为空")
-            return dash.no_update, dash.no_update
-        
-        # log.debug(f"消息列表长度: {len(messages)}")
-        
-        # 找到目标消息和上一条用户消息
-        target_message_index = None
-        previous_user_message = None
-        
-        for i, message in enumerate(messages):
-            # log.debug(f"检查消息 {i}: id={message.get('id')}, role={message.get('role')}")
-            if message.get('id') == target_message_id:
-                target_message_index = i
-                # log.debug(f"找到目标消息，索引: {target_message_index}")
-                # 查找上一条用户消息
-                for j in range(i-1, -1, -1):
-                    if messages[j].get('role') == 'user':
-                        previous_user_message = messages[j]
-                        # log.debug(f"找到上一条用户消息: {previous_user_message.get('content', '')[:50]}...")
-                        break
-                break
-        
-        if target_message_index is None:
-            # log.debug("未找到目标消息")
-            return dash.no_update, fac.AntdMessage(type="error", content="无法重新生成：未找到目标消息")
-        
-        if previous_user_message is None:
-            # log.debug("未找到上一条用户消息")
-            return dash.no_update, fac.AntdMessage(type="error", content="无法重新生成：未找到上一条用户消息")
-        
-        # 创建消息的深拷贝
-        updated_messages = copy.deepcopy(messages)
-        
-        # 删除目标AI消息
-        del updated_messages[target_message_index]
-        
-        # 创建新的AI消息（正在思考中...）
-        new_ai_message = {
-            'role': 'assistant',
-            'content': '正在思考中...',
-            'timestamp': time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-            'id': f"ai-message-{int(time.time() * 1000)}",
-            'is_streaming': True
-        }
-        
-        # 添加新的AI消息
-        updated_messages.append(new_ai_message)
-        
-        # 返回更新后的消息，SSE会自动通过trigger_sse回调触发
-        return updated_messages, dash.no_update
+            return [dash.no_update] * 5
         
     except Exception as e:
-        log.error(f"重新生成消息失败: {e}")
-        return dash.no_update, dash.no_update
+        log.error(f"消息操作失败: {e}")
+        error_message = fac.AntdMessage(
+            type="error", 
+            content=f"操作失败: {str(e)}"
+        )
+        return [dash.no_update] * 4 + [error_message]
 
 # 复制消息的客户端回调
 app.clientside_callback(
@@ -940,151 +1016,4 @@ app.clientside_callback(
     prevent_initial_call=True
 )
 
-# 用户消息重新生成的回调
-@app.callback(
-    [
-        Output('ai-chat-x-input', 'value', allow_duplicate=True),
-        Output('ai-chat-x-send-btn', 'nClicks', allow_duplicate=True),
-        Output('global-message', 'children', allow_duplicate=True)
-    ],
-    [
-        Input({'type': 'user-chat-x-regenerate', 'index': dash.ALL}, 'nClicks')
-    ],
-    [
-        State('ai-chat-x-messages-store', 'data'),
-        State('ai-chat-x-send-btn', 'nClicks')
-    ],
-    prevent_initial_call=True
-)
-def handle_user_message_regenerate(regenerate_clicks, messages, send_btn_clicks):
-    """处理用户消息重新生成"""
-    if not ctx.triggered:
-        return dash.no_update, dash.no_update, dash.no_update
-    
-    triggered = ctx.triggered[0]
-    if not triggered:
-        return dash.no_update, dash.no_update, dash.no_update
-    
-    # 检查被触发的按钮是否有点击
-    if triggered.get('value', 0) <= 0:
-        return dash.no_update, dash.no_update, dash.no_update
-    
-    try:
-        # 解析被点击的消息ID
-        import json
-        prop_id = triggered['prop_id']
-        if '"type":"user-chat-x-regenerate"' in prop_id:
-            id_part = prop_id.split('.')[0]
-            id_dict = json.loads(id_part)
-            target_message_id = id_dict['index']
-        else:
-            return dash.no_update, dash.no_update, dash.no_update
-        
-        if not messages:
-            return dash.no_update, dash.no_update, dash.no_update
-        
-        # 找到目标用户消息
-        target_message = None
-        for message in messages:
-            if message.get('id') == target_message_id and message.get('role') == 'user':
-                target_message = message
-                break
-        
-        if not target_message or not target_message.get('content'):
-            return dash.no_update, dash.no_update, fac.AntdMessage(type="error", content="无法重新生成：未找到用户消息")
-        
-        # 将消息内容设置到输入框并自动触发提交
-        return target_message['content'], (send_btn_clicks or 0) + 1, dash.no_update
-        
-    except Exception as e:
-        log.error(f"重新生成用户消息失败: {e}")
-        return dash.no_update, dash.no_update, fac.AntdMessage(type="error", content="重新生成失败")
 
-# 新增：取消发送消息的回调
-@app.callback(
-    [
-        Output('ai-chat-x-messages-store', 'data', allow_duplicate=True),
-        Output('chat-X-sse', 'url', allow_duplicate=True),
-        Output('global-message', 'children', allow_duplicate=True)
-    ],
-    [
-        Input({'type': 'ai-chat-x-cancel', 'index': dash.ALL}, 'nClicks')
-    ],
-    [
-        State('ai-chat-x-messages-store', 'data'),
-        State('ai-chat-x-current-session-id', 'data')
-    ],
-    prevent_initial_call=True
-)
-def handle_cancel_message(cancel_clicks, messages, current_session_id):
-    """处理取消发送消息"""
-    if not ctx.triggered:
-        return dash.no_update, dash.no_update, dash.no_update
-    
-    triggered = ctx.triggered[0]
-    if not triggered:
-        return dash.no_update, dash.no_update, dash.no_update
-    
-    # 检查被触发的按钮是否有点击
-    if triggered.get('value', 0) <= 0:
-        return dash.no_update, dash.no_update, dash.no_update
-    
-    try:
-        # 解析被点击的消息ID
-        import json
-        prop_id = triggered['prop_id']
-        if '"type":"ai-chat-x-cancel"' in prop_id:
-            id_part = prop_id.split('.')[0]
-            id_dict = json.loads(id_part)
-            target_message_id = id_dict['index']
-        else:
-            return dash.no_update, dash.no_update, dash.no_update
-        
-        if not messages:
-            return dash.no_update, dash.no_update, dash.no_update
-        
-        # 创建消息的深拷贝
-        updated_messages = copy.deepcopy(messages)
-        
-        # 找到并删除目标消息
-        target_message_index = None
-        for i, message in enumerate(updated_messages):
-            if message.get('id') == target_message_id and message.get('is_streaming', False):
-                target_message_index = i
-                break
-        
-        if target_message_index is not None:
-            # 删除正在流式传输的消息
-            del updated_messages[target_message_index]
-            
-            # 清理活跃的SSE连接
-            if target_message_id in active_sse_connections:
-                del active_sse_connections[target_message_id]
-                log.debug(f"取消发送，清理SSE连接: {target_message_id}")
-            
-            # 停止SSE连接
-            set_props("chat-X-sse", {"url": None})
-            
-            # 显示取消成功的消息
-            success_message = fac.AntdMessage(
-                type="info", 
-                content="消息发送已取消"
-            )
-            
-            log.debug(f"取消发送消息: {target_message_id}")
-            return updated_messages, None, success_message
-        else:
-            # 未找到目标消息
-            error_message = fac.AntdMessage(
-                type="warning", 
-                content="无法取消：未找到正在发送的消息"
-            )
-            return dash.no_update, dash.no_update, error_message
-        
-    except Exception as e:
-        log.error(f"取消发送消息失败: {e}")
-        error_message = fac.AntdMessage(
-            type="error", 
-            content=f"取消发送失败: {str(e)}"
-        )
-        return dash.no_update, dash.no_update, error_message
