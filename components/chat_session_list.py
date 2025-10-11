@@ -2,26 +2,32 @@
 import feffery_utils_components as fuc
 import feffery_antd_components as fac
 import dash
-from dash import html
+from dash import html, dcc
 from feffery_dash_utils.style_utils import style
 
 # 导入conversations模型
 from models.conversations import Conversations
 
 
-def render(sessions=None, user_id=None, refresh_timestamp=None):
+def render(sessions=None, user_id=None, refresh_timestamp=None, selected_session_id=None):
     """渲染聊天会话列表组件
     
     参数:
         sessions (list, optional): 会话数据列表，每个会话包含key, title字段
         user_id (str, optional): 用户ID，用于从数据库获取会话数据
         refresh_timestamp (float, optional): 刷新时间戳，用于触发重新渲染
+        selected_session_id (str, optional): 当前选中的会话ID，用于高亮显示
         search_placeholder (str, optional): 搜索框占位符文本
         collapsed (bool, optional): 是否折叠会话列表，默认为False
     
     返回:
         Dash组件对象
     """
+    
+    # 添加调试日志
+    print(f"=== 渲染会话列表 ===")
+    print(f"selected_session_id: {selected_session_id}")
+    print(f"user_id: {user_id}")
     
     # 默认会话数据 - 只保留key和title
     default_sessions = [
@@ -63,6 +69,8 @@ def render(sessions=None, user_id=None, refresh_timestamp=None):
     # 修复：使用html.Div作为容器包裹所有组件
     return html.Div(
         [
+            # 隐藏的Store用于跟踪点击事件
+            dcc.Store(id="session-click-tracker", data=None),
             # 新建会话按钮 - 使用html.Div实现
             html.Div(
                 id='ai-chat-x-session-new',  # 设置指定的ID
@@ -104,63 +112,73 @@ def render(sessions=None, user_id=None, refresh_timestamp=None):
                 [
                     fac.AntdSpace(
                         [
-                            # 将AntdCard替换为FefferyDiv
-                            fuc.FefferyDiv(
-                                fac.AntdRow(
-                                    [
-                                        fac.AntdCol(
-                                            fac.AntdText(
-                                                item["title"],
-                                                strong=True,
-                                                ellipsis=True,
-                                                style=style(padding="12px 0")
-                                            ),
-                                            flex="auto"
+                            # 使用html.Div替代FefferyDiv以支持nClicks
+                            html.Div(
+                                [
+                                    # 会话标题部分 - 可点击
+                                    html.Div(
+                                        fac.AntdText(
+                                            item["title"],
+                                            strong=True,
+                                            ellipsis=True,
+                                            style=style(padding="12px 0")
                                         ),
-                                        fac.AntdCol(
-                                            # 添加下拉菜单
-                                            fac.AntdDropdown(
-                                                fac.AntdButton(
-                                                    icon=fac.AntdIcon(
-                                                        icon="antd-more",
-                                                        className="global-help-text",
-                                                    ),
-                                                    type="text",
-                                                    size="small",
-                                                    style=style(color="#8c8c8c")  # 设置按钮颜色为灰色
+                                        id={"type": "ai-chat-x-session-item", "index": item["key"]},
+                                        n_clicks=0,  # 使用n_clicks而不是nClicks
+                                        className="session-item-clickable",  # 添加CSS类名
+                                        style={
+                                            "flex": "1",
+                                            "cursor": "pointer",
+                                            "padding": "0 12px",
+                                            "minWidth": "0",
+                                            "overflow": "hidden"
+                                        }
+                                    ),
+                                    # 下拉菜单部分 - 不拦截点击事件
+                                    html.Div(
+                                        fac.AntdDropdown(
+                                            fac.AntdButton(
+                                                icon=fac.AntdIcon(
+                                                    icon="antd-more",
+                                                    className="global-help-text",
                                                 ),
-                                                id={"type": "ai-chat-x-session-dropdown", "index": item["key"]},
-                                                menuItems=[
-                                                    {
-                                                        "title": "改名",
-                                                        "key": "rename",
-                                                        "icon": "antd-edit"  # 添加改名图标
-                                                    },
-                                                    {
-                                                        "title": "删除",
-                                                        "key": "delete",
-                                                        "icon": "antd-delete"  # 添加删除图标
-                                                    }
-                                                ],
-                                                trigger="click",
+                                                type="text",
+                                                size="small",
+                                                style=style(color="#8c8c8c")  # 设置按钮颜色为灰色
                                             ),
-                                            flex="none"
-                                        )
-                                    ],
-                                    align="middle"
-                                ),
-                                id={"type": "ai-chat-x-session-item", "index": item["key"]},
-                                style=style(
-                                    # border="1px solid #f0f0f0",
-                                    borderRadius="6px",
-                                    padding="0 12px",
-                                    marginBottom="4px",  # 将间距从8px改为4px
-                                    cursor="pointer",
-                                    backgroundColor="#fafafa"  # 设置浅灰色背景
-                                    # **({"backgroundColor": "#e6f7ff", "borderColor": "#bae7ff"} if item["key"] == "1" else {})
-                                ),
-                                enableEvents=['click', 'hover'],
-                                shadow="hover-shadow"
+                                            id={"type": "ai-chat-x-session-dropdown", "index": item["key"]},
+                                            menuItems=[
+                                                {
+                                                    "title": "改名",
+                                                    "key": "rename",
+                                                    "icon": "antd-edit"  # 添加改名图标
+                                                },
+                                                {
+                                                    "title": "删除",
+                                                    "key": "delete",
+                                                    "icon": "antd-delete"  # 添加删除图标
+                                                }
+                                            ],
+                                            trigger="click",
+                                        ),
+                                        style={
+                                            "flex": "none",
+                                            "padding": "0 12px"
+                                        }
+                                    )
+                                ],
+                                style={
+                                    "display": "flex",
+                                    "alignItems": "center",
+                                    "borderRadius": "6px",
+                                    "marginBottom": "4px",
+                                    "cursor": "pointer",
+                                    "width": "100%",
+                                    "boxSizing": "border-box",
+                                    "backgroundColor": "#e6f7ff" if item["key"] == selected_session_id else "#fafafa",
+                                    "borderLeft": "3px solid #1890ff" if item["key"] == selected_session_id else "3px solid transparent",
+                                    "transition": "all 0.3s ease"
+                                }
                             )
                             for item in session_data
                         ],

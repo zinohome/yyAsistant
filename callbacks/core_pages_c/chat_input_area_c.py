@@ -1,5 +1,5 @@
 import dash
-from dash import ctx, Input, Output, State, callback, no_update, html, ClientsideFunction, ALL
+from dash import ctx, Input, Output, State, callback, no_update, html, ClientsideFunction, ALL, set_props
 import feffery_antd_components as fac
 import json
 from datetime import datetime
@@ -13,6 +13,7 @@ import threading
 import time
 from flask import Response, stream_with_context
 from dash_extensions.streaming import sse_message, sse_options
+from feffery_dash_utils.style_utils import style
 
 # 添加用于SSE连接的存储
 active_sse_connections = {}
@@ -21,7 +22,9 @@ active_sse_connections = {}
 @app.callback(
     [
         Output('ai-chat-x-messages-store', 'data'),
-        Output('ai-chat-x-input', 'value')
+        Output('ai-chat-x-input', 'value'),
+        Output('ai-chat-x-send-btn', 'loading'),
+        Output('ai-chat-x-send-btn', 'disabled')
     ],
     [
         # 话题提示点击输入
@@ -30,7 +33,9 @@ active_sse_connections = {}
         Input(f'chat-topic-2', 'nClicks'),
         Input(f'chat-topic-3', 'nClicks'),
         # 消息发送输入（仅按钮点击；Enter 由前端触发按钮点击）
-        Input('ai-chat-x-send-btn', 'nClicks')
+        Input('ai-chat-x-send-btn', 'nClicks'),
+        # SSE完成事件
+        Input('ai-chat-x-sse-completed-receiver', 'data-completion-event')
     ],
     [
         State('ai-chat-x-input', 'value'),
@@ -40,7 +45,7 @@ active_sse_connections = {}
     prevent_initial_call=True
 )
 def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, topic_3_clicks, 
-                           send_button_clicks,
+                           send_button_clicks, completion_event_json,
                            message_content, messages_store, current_session_id):
     # 获取触发回调的元素ID
     triggered_id = ctx.triggered_id if ctx.triggered else None
@@ -53,7 +58,7 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
     
     # 确保ctx.triggered不为空
     if not ctx.triggered:
-        return messages, message_content
+        return messages, message_content, False, False
     
     # 处理话题点击
     if triggered_id and triggered_id.startswith('chat-topic-'):
@@ -70,9 +75,89 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
         if 0 <= topic_index < len(topics):
             # 返回话题内容到输入框
             log.debug(f"话题点击: {topic_index}, 内容: {topics[topic_index]}")
-            return messages, topics[topic_index]
+            return messages, topics[topic_index], False, False
         # 如果索引无效，返回默认值
-        return messages, message_content
+        return messages, message_content, False, False
+    
+    # 处理SSE完成事件
+    elif triggered_id == 'ai-chat-x-sse-completed-receiver.data-completion-event' or 'sse-completed-receiver' in str(triggered_id):
+        log.debug(f"=== SSE完成事件处理 ===")
+        log.debug(f"触发ID: {triggered_id}")
+        log.debug(f"completion_event_json: {completion_event_json}")
+        log.debug(f"messages: {messages}")
+        log.debug(f"current_session_id: {current_session_id}")
+        
+        # 即使completion_event_json为空，也要处理，因为可能是客户端回调触发的
+        if messages:
+            try:
+                if completion_event_json:
+                    # 解析JSON字符串
+                    completion_event = json.loads(completion_event_json)
+                    
+                    # 获取消息ID和完整内容
+                    message_id = completion_event.get('messageId')
+                    full_content = completion_event.get('content')
+                    
+                    log.debug(f"解析的完成事件: message_id={message_id}, content={full_content}")
+                else:
+                    # 如果没有completion_event_json，尝试从最后一条AI消息获取信息
+                    last_message = messages[-1] if messages else None
+                    if last_message and last_message.get('role') in ['assistant', 'agent'] and last_message.get('is_streaming', False):
+                        message_id = last_message.get('id')
+                        # 从DOM中获取完整内容（这里暂时使用占位符）
+                        full_content = "SSE完成，但内容需要从DOM获取"
+                        log.debug(f"从最后一条消息获取: message_id={message_id}")
+                    else:
+                        log.debug("没有找到需要完成的流式消息")
+                        return messages, message_content, False, False
+                
+                # 创建消息的深拷贝，避免修改原始数据
+                updated_messages = copy.deepcopy(messages)
+                
+                # 查找并更新对应的AI消息
+                for i, message in enumerate(updated_messages):
+                    if message.get('id') == message_id:
+                        updated_messages[i]['content'] = full_content
+                        updated_messages[i]['is_streaming'] = False
+                        log.debug(f"更新AI消息: {message_id} -> {full_content}")
+                        break
+                
+                # 保存AI消息到数据库
+                if current_session_id:
+                    try:
+                        from models.conversations import Conversations
+                        conv = Conversations.get_conversation_by_conv_id(current_session_id)
+                        if conv:
+                            # 获取现有消息
+                            existing_messages = conv.conv_memory.get('messages', []) if conv.conv_memory else []
+                            # 查找并更新AI消息
+                            for i, msg in enumerate(existing_messages):
+                                if msg.get('id') == message_id:
+                                    existing_messages[i]['content'] = full_content
+                                    existing_messages[i]['is_streaming'] = False
+                                    break
+                            # 更新数据库
+                            Conversations.update_conversation_by_conv_id(
+                                current_session_id,
+                                conv_memory={'messages': existing_messages}
+                            )
+                            log.debug(f"AI消息已保存到数据库: {current_session_id}")
+                    except Exception as e:
+                        log.error(f"保存AI消息到数据库失败: {e}")
+                
+                # 清理活跃的SSE连接
+                if message_id in active_sse_connections:
+                    del active_sse_connections[message_id]
+                    log.debug(f"清理SSE连接: {message_id}")
+                
+                # 返回更新后的消息存储和恢复按钮状态
+                return updated_messages, message_content, False, False
+            except Exception as e:
+                log.error(f"处理SSE完成事件时出错: {e}")
+                return messages, message_content, False, False
+        else:
+            log.debug("SSE完成事件数据不完整，跳过处理")
+            return messages, message_content, False, False
     
     # 处理消息发送
     elif triggered_id in ['ai-chat-x-send-btn'] and message_content:
@@ -106,14 +191,45 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
             # 添加空白AI消息到消息列表
             updated_messages.append(ai_message)
             
+            # 保存用户消息到数据库
+            if current_session_id:
+                try:
+                    from models.conversations import Conversations
+                    conv = Conversations.get_conversation_by_conv_id(current_session_id)
+                    if conv:
+                        # 获取现有消息
+                        existing_messages = conv.conv_memory.get('messages', []) if conv.conv_memory else []
+                        # 添加用户消息和AI消息
+                        existing_messages.append({
+                            'role': 'user',
+                            'content': message_content,
+                            'timestamp': user_message['timestamp'],
+                            'id': usr_message_id
+                        })
+                        existing_messages.append({
+                            'role': 'assistant',
+                            'content': '正在思考中...',
+                            'timestamp': ai_message['timestamp'],
+                            'id': ai_message_id,
+                            'is_streaming': True
+                        })
+                        # 更新数据库
+                        Conversations.update_conversation_by_conv_id(
+                            current_session_id,
+                            conv_memory={'messages': existing_messages}
+                        )
+                        log.debug(f"用户消息和AI消息已保存到数据库: {current_session_id}")
+                except Exception as e:
+                    log.error(f"保存用户消息到数据库失败: {e}")
+            
             log.debug(f"创建用户消息和AI消息: {user_message}, {ai_message}")
             
-            return updated_messages, ''
+            return updated_messages, '', True, True  # 发送时禁用按钮并显示loading
         # 如果消息内容为空，返回默认值
-        return messages, message_content
+        return messages, message_content, False, False
     
     # 默认返回当前状态
-    return messages, message_content
+    return messages, message_content, False, False
 
 # SSE触发回调 - 用于启动SSE连接
 @app.callback(
@@ -133,6 +249,10 @@ def trigger_sse(messages, current_session_id):
         if last_message.get('role') in ['assistant', 'agent'] and last_message.get('is_streaming', False):
             # 获取消息ID
             message_id = last_message.get('id')
+            # 检查是否已经存在相同message_id的SSE连接，避免重复触发
+            if message_id in active_sse_connections:
+                log.debug(f"SSE连接已存在，跳过重复触发: {message_id}")
+                return no_update, no_update
             role = last_message.get('role', 'assistant')
             
             # 准备要发送给/stream端点的消息
@@ -160,6 +280,12 @@ def trigger_sse(messages, current_session_id):
             
             log.debug(f"触发SSE连接，消息ID: {message_id}, 会话ID: {session_id}")
             log.debug(f"SSE请求数据: {request_data}")
+            
+            # 记录活跃的SSE连接
+            active_sse_connections[message_id] = {
+                'session_id': session_id,
+                'start_time': time.time()
+            }
             
             # 使用sse_options函数正确配置SSE连接
             # 注意：这里需要传入正确的请求参数
@@ -198,21 +324,7 @@ def register_chat_input_callbacks(flask_app):
     # 所有回调函数已经通过@app.callback装饰器注册
     # 这里可以添加一些额外的初始化代码（如果需要）
     
-    # 添加SSE状态监控回调
-    app.clientside_callback(
-        """
-        function(status) {
-            console.log('SSE连接状态:', status);
-            return window.dash_clientside.no_update;
-        }
-        """,
-        Output('chat-X-sse', 'status', allow_duplicate=True),
-        [
-            Input('chat-X-sse', 'status')
-        ],
-        prevent_initial_call=True,
-        allow_duplicate=True
-    )
+    # SSE状态监控已合并到下面的回调中
 
     # 绑定回车/换行行为：Enter 提交、Shift+Enter 换行（使用全局监听，更可靠）
     app.clientside_callback(
@@ -265,7 +377,13 @@ def register_chat_input_callbacks(flask_app):
 # 添加客户端回调来处理SSE流式响应，直接更新DOM并在完成时同步数据
 app.clientside_callback(
     """
-    function(animation) {
+    function(animation, status) {
+        // 处理SSE状态变化
+        if (status !== undefined) {
+            console.log('SSE连接状态:', status);
+        }
+        
+        // 处理SSE动画数据
         if (!animation) {
             return window.dash_clientside.no_update;
         }
@@ -365,10 +483,9 @@ app.clientside_callback(
         return window.dash_clientside.no_update;
     }
     """,
-    Output('chat-X-sse', 'status', allow_duplicate=True),
-    Input('chat-X-sse', 'animation'),
-    prevent_initial_call=True,
-    allow_duplicate=True
+    Output('chat-X-sse', 'status'),
+    [Input('chat-X-sse', 'animation'), Input('chat-X-sse', 'status')],
+    prevent_initial_call=True
 )
 
 app.clientside_callback(
@@ -396,49 +513,69 @@ app.clientside_callback(
 
 
 
-# 添加回调来处理会话完成事件，记录完整会话日志
+# SSE完成事件处理已合并到 handle_chat_interactions 回调中
+
+# 添加SSE连接状态管理回调
 @app.callback(
-    Output('ai-chat-x-messages-store', 'data', allow_duplicate=True),
-    [Input('ai-chat-x-sse-completed-receiver', 'data-completion-event')],
-    [State('ai-chat-x-messages-store', 'data'),
-     State('ai-chat-x-current-session-id', 'data')],
+    [
+        Output('ai-chat-x-current-session', 'color'),
+        Output('ai-chat-x-current-session', 'icon'),
+        Output('ai-chat-x-connection-status', 'children'),
+        Output('ai-chat-x-connection-status', 'style')
+    ],
+    [
+        Input('chat-X-sse', 'url'),
+        Input('ai-chat-x-sse-completed-receiver', 'data-completion-event'),
+        Input('ai-chat-x-current-session', 'nClicks')
+    ],
     prevent_initial_call=True,
     allow_duplicate=True
 )
-def log_complete_conversation(completion_event_json, messages, current_session_id):
-    """当会话完成时，记录完整的会话日志"""
-    if completion_event_json and messages:
-        try:
-            # 解析JSON字符串
-            completion_event = json.loads(completion_event_json)
-            
-            # 获取会话ID
-            session_id = current_session_id or 'default_session'
-            
-            # 获取消息ID和完整内容
-            message_id = completion_event.get('messageId')
-            full_content = completion_event.get('content')
-            
-            # 创建消息的深拷贝，避免修改原始数据
-            updated_messages = copy.deepcopy(messages)
-            
-            # 查找并更新对应的AI消息
-            for i, message in enumerate(updated_messages):
-                if message.get('id') == message_id:
-                    updated_messages[i]['content'] = full_content
-                    updated_messages[i]['is_streaming'] = False
-                    break
-            
-            # 记录完整会话日志
-            log.debug(f"会话完成 - 会话ID: {session_id}")
-            log.debug(f"更新的消息ID: {message_id}")
-            log.debug(f"完整消息内容: {full_content}")
-            log.debug(f"完整会话内容: {json.dumps(updated_messages, ensure_ascii=False, indent=2)}")
-            
-            # 返回更新后的消息存储
-            return updated_messages
-        except Exception as e:
-            log.error(f"记录会话日志时出错: {str(e)}")
+def manage_connection_status(sse_url, completion_event, tag_clicks):
+    """管理SSE连接状态显示"""
+    ctx_triggered = ctx.triggered
     
-    # 不修改消息存储
-    return no_update
+    if not ctx_triggered:
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    
+    triggered_id = ctx_triggered[0]['prop_id']
+    
+    # SSE连接开始
+    if triggered_id == 'chat-X-sse.url' and sse_url:
+        return (
+            "blue",  # 蓝色表示连接中
+            fac.AntdIcon(icon="antd-loading", style=style(fontSize="12px")),
+            "连接中...",
+            style(fontSize="12px", color="#1890ff", marginLeft="8px")
+        )
+    
+    # SSE连接完成
+    elif triggered_id == 'ai-chat-x-sse-completed-receiver.data-completion-event' and completion_event:
+        return (
+            "green",  # 绿色表示正常
+            fac.AntdIcon(icon="antd-check-circle", style=style(fontSize="12px")),
+            "状态正常",
+            style(fontSize="12px", color="#52c41a", marginLeft="8px")
+        )
+    
+    # 点击重试
+    elif triggered_id == 'ai-chat-x-current-session.nClicks':
+        # 触发重试：重新发送当前消息
+        try:
+            # 获取当前消息存储
+            from dash import callback_context
+            current_messages = callback_context.states.get('ai-chat-x-messages-store.data', [])
+            if current_messages:
+                # 重新触发SSE连接
+                set_props("chat-X-sse", {"url": "/stream"})
+        except Exception as e:
+            log.error(f"重试SSE连接失败: {e}")
+        
+        return (
+            "orange",  # 橙色表示重试中
+            fac.AntdIcon(icon="antd-reload", style=style(fontSize="12px")),
+            "重试中...",
+            style(fontSize="12px", color="#fa8c16", marginLeft="8px")
+        )
+    
+    return dash.no_update, dash.no_update, dash.no_update, dash.no_update

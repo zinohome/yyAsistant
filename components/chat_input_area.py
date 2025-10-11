@@ -171,6 +171,8 @@ def render(
                                                 id="ai-chat-x-send-btn",
                                                 type="primary",
                                                 shape="circle",
+                                                loading=False,
+                                                disabled=False,
                                                 style=style(
                                                     padding="0"
                                                 )

@@ -51,7 +51,7 @@ def get_db():
         )
 
     # 默认返回sqlite类型连接对象
-    return SqliteDatabase("magic_dash_pro.db")
+    return SqliteDatabase("yyAsistant.db")
 
 
 # 创建数据库连接对象

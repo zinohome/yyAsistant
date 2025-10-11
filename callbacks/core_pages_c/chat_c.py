@@ -59,7 +59,9 @@ def register_chat_callbacks(app):
             Output('ai-chat-x-session-refresh-trigger', 'data'),
             Output('ai-chat-x-current-rename-conv-id', 'data'),
             Output('ai-chat-x-session-rename-modal', 'visible'),
-            Output('ai-chat-x-session-rename-input', 'value')
+            Output('ai-chat-x-session-rename-input', 'value'),
+            Output('ai-chat-x-current-session-id', 'data', allow_duplicate=True),
+            Output('ai-chat-x-messages-store', 'data', allow_duplicate=True)
         ],
         [
             Input({'type': 'ai-chat-x-session-dropdown', 'index': dash.ALL}, 'nClicks'),
@@ -86,7 +88,7 @@ def register_chat_callbacks(app):
                   or trigger['prop_id'].endswith('okCounts') or trigger['prop_id'].endswith('cancelCounts') 
                   or trigger['prop_id'].endswith('closeCounts') for trigger in ctx.triggered):
             # 没有有效点击时，确保对话框是隐藏的
-            return [dash.no_update, dash.no_update, False, '']
+            return [dash.no_update, dash.no_update, False, '', dash.no_update, dash.no_update]
         
         # 获取触发回调的组件ID
         triggered_id = ctx.triggered_id
@@ -105,6 +107,10 @@ def register_chat_callbacks(app):
                         # 调用Conversations模型的add_conversation方法创建新会话
                         conv_id = Conversations.add_conversation(user_id=user_id)
                         
+                        log.debug(f"=== 创建新会话 ===")
+                        log.debug(f"新会话ID: {conv_id}")
+                        log.debug(f"用户ID: {user_id}")
+                        
                         # 显示创建成功的消息
                         set_props(
                             "global-message",
@@ -116,8 +122,9 @@ def register_chat_callbacks(app):
                             },
                         )
                         
-                        # 返回新的时间戳以触发会话列表刷新
-                        return [{'timestamp': time.time()}, dash.no_update, False, '']
+                        # 返回新的时间戳以触发会话列表刷新，同时设置当前会话ID和清空消息列表
+                        log.debug(f"=== 新建会话完成，设置当前会话ID: {conv_id} ===")
+                        return [{'timestamp': time.time()}, dash.no_update, False, '', conv_id, []]
                     else:
                         # 用户未登录或无法获取用户ID
                         set_props(
@@ -129,7 +136,7 @@ def register_chat_callbacks(app):
                                 )
                             },
                         )
-                        return [dash.no_update, dash.no_update, False, '']
+                        return [dash.no_update, dash.no_update, False, '', dash.no_update, dash.no_update]
                 except Exception as e:
                     # 显示创建失败的消息
                     set_props(
@@ -141,7 +148,7 @@ def register_chat_callbacks(app):
                             )
                         },
                     )
-                    return [dash.no_update, dash.no_update, False, '']
+                    return [dash.no_update, dash.no_update, False, '', dash.no_update, dash.no_update]
         
         # 处理会话下拉菜单点击
         elif isinstance(triggered_id, dict) and triggered_id.get('type') == 'ai-chat-x-session-dropdown':
@@ -157,8 +164,11 @@ def register_chat_callbacks(app):
             # 如果点击的是删除按钮
             if clicked_key == "delete":
                 try:
+                    log.debug(f"=== 开始删除会话 ===")
+                    log.debug(f"要删除的会话ID: {conv_id}")
                     # 调用Conversations模型的delete_conversation_by_conv_id方法删除会话
                     Conversations.delete_conversation_by_conv_id(conv_id)
+                    log.debug(f"会话删除成功: {conv_id}")
                     
                     # 显示删除成功的消息
                     set_props(
@@ -171,8 +181,10 @@ def register_chat_callbacks(app):
                         },
                     )
                     
-                    # 返回新的时间戳以触发会话列表刷新
-                    return [{'timestamp': time.time()}, dash.no_update, False, '']
+                    # 返回新的时间戳以触发会话列表刷新，不保持当前会话ID（让刷新逻辑智能选择）
+                    refresh_timestamp = {'timestamp': time.time()}
+                    log.debug(f"删除会话后触发刷新，时间戳: {refresh_timestamp}")
+                    return [refresh_timestamp, dash.no_update, False, '', None, []]
                 except Exception as e:
                     # 显示删除失败的消息
                     set_props(
@@ -185,11 +197,11 @@ def register_chat_callbacks(app):
                         },
                     )
                     # 删除失败时不刷新列表
-                    return [dash.no_update, dash.no_update, False, '']
+                    return [dash.no_update, dash.no_update, False, '', dash.no_update, dash.no_update]
             # 如果点击的是改名按钮
             elif clicked_key == "rename":
                 # 存储当前要改名的会话ID并显示改名对话框
-                return [dash.no_update, conv_id, True, '']
+                return [dash.no_update, conv_id, True, '', dash.no_update, dash.no_update]
         
         # 处理会话改名对话框的确定按钮点击
         elif triggered_id == 'ai-chat-x-session-rename-modal' and 'okCounts' in triggered_prop_id:
@@ -210,8 +222,8 @@ def register_chat_callbacks(app):
                         },
                     )
                     
-                    # 返回新的时间戳以触发会话列表刷新，并清空输入框和关闭对话框
-                    return [{'timestamp': time.time()}, None, False, '']
+                    # 返回新的时间戳以触发会话列表刷新，保持当前会话ID，并清空输入框和关闭对话框
+                    return [{'timestamp': time.time()}, None, False, '', dash.no_update, dash.no_update]
                 except Exception as e:
                     # 显示改名失败的消息
                     set_props(
@@ -224,7 +236,7 @@ def register_chat_callbacks(app):
                         },
                     )
                     # 改名失败时不刷新列表，但清空输入框和关闭对话框
-                    return [dash.no_update, None, False, '']
+                    return [dash.no_update, None, False, '', dash.no_update, dash.no_update]
             else:
                 # 新名称不能为空
                 set_props(
@@ -237,33 +249,144 @@ def register_chat_callbacks(app):
                     },
                 )
                 # 名称为空时不刷新列表，但清空输入框
-                return [dash.no_update, current_rename_conv_id, True, '']
+                return [dash.no_update, current_rename_conv_id, True, '', dash.no_update, dash.no_update]
         
         # 处理会话改名对话框的取消或关闭按钮点击
         elif triggered_id == 'ai-chat-x-session-rename-modal' and ('cancelCounts' in triggered_prop_id or 'closeCounts' in triggered_prop_id):
             # 清空输入框和关闭对话框，但不刷新列表
-            return [dash.no_update, None, False, '']
+            return [dash.no_update, None, False, '', dash.no_update, dash.no_update]
         
         # 其他情况不刷新列表，不显示对话框，清空输入框
-        return [dash.no_update, dash.no_update, False, '']
+        return [dash.no_update, dash.no_update, False, '', dash.no_update, dash.no_update]
 
-    # 添加：会话列表刷新回调
+    # 添加：会话项点击回调 - 处理会话切换
     @app.callback(
-        Output('ai-chat-x-session-list-container', 'children'),
-        Input('ai-chat-x-session-refresh-trigger', 'data'),
+        [
+            Output('ai-chat-x-current-session-id', 'data'),
+            Output('ai-chat-x-messages-store', 'data', allow_duplicate=True),
+            Output('ai-chat-x-session-list-container', 'children')
+        ],
+        [
+            Input({'type': 'ai-chat-x-session-item', 'index': dash.ALL}, 'n_clicks'),
+            Input('ai-chat-x-session-refresh-trigger', 'data')
+        ],
+        [
+            State('ai-chat-x-current-session-id', 'data'),
+            State('ai-chat-x-session-list-container', 'children')
+        ],
         prevent_initial_call=True,
     )
-    def refresh_session_list(trigger_data):
-        """响应刷新触发器，重新渲染会话列表"""
-        # 获取当前用户ID
-        from flask_login import current_user
+    def handle_session_switch(session_clicks, refresh_trigger, current_session_id, current_children):
+        """处理会话切换和列表刷新"""
+        ctx_triggered = ctx.triggered
         
-        if hasattr(current_user, 'id'):
-            # 重新调用render_session_list函数渲染会话列表
-            return render_session_list(user_id=current_user.id)
-        else:
-            # 如果无法获取用户ID，返回默认会话列表
-            return render_session_list()
+        # 添加调试信息
+        if ctx_triggered:
+            log.debug(f"=== 会话切换回调触发 ===")
+            log.debug(f"触发ID: {ctx_triggered[0]['prop_id']}")
+            log.debug(f"触发值: {ctx_triggered[0]['value']}")
+        
+        # 处理会话项点击
+        if ctx_triggered and 'ai-chat-x-session-item' in ctx_triggered[0]['prop_id'] and 'n_clicks' in ctx_triggered[0]['prop_id']:
+            try:
+                # 获取点击的会话ID
+                triggered_id = ctx_triggered[0]['prop_id']
+                # 解析JSON获取index
+                import json
+                id_dict = json.loads(triggered_id.split('.')[0])
+                clicked_session_id = id_dict['index']
+                
+                # 添加详细日志
+                log.debug(f"=== 会话切换开始 ===")
+                log.debug(f"点击的会话ID: {clicked_session_id}")
+                log.debug(f"当前会话ID: {current_session_id}")
+                
+                # 从数据库加载该会话的历史消息
+                conv = Conversations.get_conversation_by_conv_id(clicked_session_id)
+                if conv:
+                    log.debug(f"找到会话记录: conversation_id={conv.conversation_id}, conv_id={conv.conv_id}")
+                    log.debug(f"会话名称: {conv.conv_name}")
+                    log.debug(f"conv_memory类型: {type(conv.conv_memory)}")
+                    log.debug(f"conv_memory内容: {conv.conv_memory}")
+                    
+                    if conv.conv_memory and isinstance(conv.conv_memory, dict):
+                        # 加载历史消息
+                        history_messages = conv.conv_memory.get('messages', [])
+                        log.debug(f"加载会话历史消息: {clicked_session_id}, 消息数量: {len(history_messages)}")
+                        log.debug(f"历史消息内容: {history_messages}")
+                    else:
+                        # 如果没有历史消息，返回空列表
+                        history_messages = []
+                        log.debug(f"会话无历史消息或conv_memory格式错误: {clicked_session_id}")
+                else:
+                    # 如果没有找到会话，返回空列表
+                    history_messages = []
+                    log.debug(f"未找到会话记录: {clicked_session_id}")
+                
+                # 重新渲染会话列表（更新选中状态）
+                from flask_login import current_user
+                if hasattr(current_user, 'id'):
+                    updated_children = render_session_list(user_id=current_user.id, selected_session_id=clicked_session_id)
+                else:
+                    updated_children = render_session_list(selected_session_id=clicked_session_id)
+                
+                log.debug(f"=== 会话切换完成，返回会话ID: {clicked_session_id} ===")
+                return clicked_session_id, history_messages, updated_children
+                
+            except Exception as e:
+                log.error(f"处理会话切换失败: {e}")
+                return dash.no_update, dash.no_update, dash.no_update
+        
+        # 处理列表刷新
+        elif ctx_triggered and ctx_triggered[0]['prop_id'] == 'ai-chat-x-session-refresh-trigger.data':
+            from flask_login import current_user
+            log.debug(f"=== 会话列表刷新 ===")
+            log.debug(f"当前会话ID: {current_session_id}")
+            log.debug(f"触发原因: {ctx_triggered[0]}")
+            
+            # 智能选择会话ID
+            new_session_id = current_session_id
+            history_messages = []
+            
+            if hasattr(current_user, 'id'):
+                # 获取用户的所有会话
+                user_sessions = Conversations.get_user_conversations(current_user.id)
+                log.debug(f"用户会话列表: {user_sessions}")
+                log.debug(f"会话数量: {len(user_sessions) if user_sessions else 0}")
+                if user_sessions:
+                    # 如果当前会话ID仍然存在，保持它
+                    if current_session_id and any(session['conv_id'] == current_session_id for session in user_sessions):
+                        new_session_id = current_session_id
+                        # 加载当前会话的历史消息
+                        conv = Conversations.get_conversation_by_conv_id(current_session_id)
+                        if conv and conv.conv_memory:
+                            history_messages = conv.conv_memory.get('messages', [])
+                    else:
+                        # 当前会话不存在，选择第一个会话（最新的）
+                        new_session_id = user_sessions[0]['conv_id']
+                        conv = Conversations.get_conversation_by_conv_id(new_session_id)
+                        if conv and conv.conv_memory:
+                            history_messages = conv.conv_memory.get('messages', [])
+                        log.debug(f"当前会话不存在，选择第一个会话（最新的）: {new_session_id}")
+                else:
+                    # 没有会话，创建新会话
+                    new_session_id = Conversations.add_conversation(user_id=current_user.id)
+                    history_messages = []
+                    log.debug(f"没有会话，创建新会话: {new_session_id}")
+                
+                updated_children = render_session_list(user_id=current_user.id, selected_session_id=new_session_id)
+            else:
+                updated_children = render_session_list(selected_session_id=new_session_id)
+            
+            log.debug(f"=== 会话列表刷新完成 ===")
+            log.debug(f"新会话ID: {new_session_id}")
+            log.debug(f"历史消息数量: {len(history_messages)}")
+            
+            return new_session_id, history_messages, updated_children
+        
+        return dash.no_update, dash.no_update, dash.no_update
+
+    # 会话列表刷新功能已合并到 handle_session_switch 回调中
 
 # 注册回调函数
 register_chat_callbacks(app)

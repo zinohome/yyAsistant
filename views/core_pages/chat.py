@@ -171,6 +171,11 @@ def _create_content_area():
                         "ai-chat-x-current-session",
                         color="green",
                         icon=fac.AntdIcon(icon="antd-check-circle", style=style(fontSize="12px"))
+                    ),
+                    fac.AntdText(
+                        "状态正常",
+                        id="ai-chat-x-connection-status",
+                        style=style(fontSize="12px", color="#52c41a", marginLeft="8px")
                     )
                 ],
                 flex="auto"
