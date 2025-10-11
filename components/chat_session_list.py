@@ -25,9 +25,9 @@ def render(sessions=None, user_id=None, refresh_timestamp=None, selected_session
     """
     
     # 添加调试日志
-    print(f"=== 渲染会话列表 ===")
-    print(f"selected_session_id: {selected_session_id}")
-    print(f"user_id: {user_id}")
+    # print(f"=== 渲染会话列表 ===")
+    # print(f"selected_session_id: {selected_session_id}")
+    # print(f"user_id: {user_id}")
     
     # 默认会话数据 - 只保留key和title
     default_sessions = [
@@ -56,7 +56,7 @@ def render(sessions=None, user_id=None, refresh_timestamp=None, selected_session
                     for session in db_sessions
                 ]
         except Exception as e:
-            print(f"获取会话数据失败: {e}")
+            # print(f"获取会话数据失败: {e}")
             # 发生错误时使用默认数据
             session_data = default_sessions
     elif sessions:

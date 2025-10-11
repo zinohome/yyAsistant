@@ -579,3 +579,92 @@ def manage_connection_status(sse_url, completion_event, tag_clicks):
         )
     
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+
+
+# 自动滚动到聊天历史底部的客户端回调
+app.clientside_callback(
+    """
+    function(messages) {
+        // 当消息更新时，自动滚动到底部
+        if (messages && messages.length > 0) {
+            // console.log('开始自动滚动，消息数量:', messages.length);
+            
+            // 滚动到底部的函数
+            function scrollToBottom(container) {
+                const maxScroll = container.scrollHeight - container.clientHeight;
+                if (maxScroll > 0) {
+                    // console.log('执行滚动，maxScroll:', maxScroll);
+                    container.scrollTop = maxScroll;
+                    // console.log('滚动后 - scrollTop:', container.scrollTop);
+                    return true;
+                }
+                return false;
+            }
+            
+            // 使用 MutationObserver 监听DOM变化
+            function waitForDOMWithObserver(container, callback) {
+                // 先尝试立即滚动
+                if (scrollToBottom(container)) {
+                    callback();
+                    return;
+                }
+                
+                // 如果无法滚动，使用 MutationObserver 监听变化
+                const observer = new MutationObserver(function(mutations) {
+                    // console.log('检测到DOM变化，尝试滚动');
+                    if (scrollToBottom(container)) {
+                        observer.disconnect(); // 停止监听
+                        callback();
+                    }
+                });
+                
+                // 开始监听
+                observer.observe(container, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    characterData: true
+                });
+                
+                // 设置超时，避免无限等待
+                setTimeout(function() {
+                    // console.log('超时，停止监听并使用scrollIntoView');
+                    observer.disconnect();
+                    
+                    // 使用scrollIntoView作为备选方案
+                    const messageElements = document.querySelectorAll('[id*="message-"]');
+                    if (messageElements.length > 0) {
+                        const lastMessage = messageElements[messageElements.length - 1];
+                        lastMessage.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'end',
+                            inline: 'nearest'
+                        });
+                    }
+                    callback();
+                }, 2000); // 2秒超时
+            }
+            
+            // 使用 requestAnimationFrame 确保在下一帧渲染后执行
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    const historyContainer = document.getElementById('ai-chat-x-history');
+                    
+                    if (historyContainer) {
+                        // console.log('初始检查 - scrollTop:', historyContainer.scrollTop, 'scrollHeight:', historyContainer.scrollHeight, 'clientHeight:', historyContainer.clientHeight);
+                        
+                        // 使用 MutationObserver 等待DOM更新
+                        waitForDOMWithObserver(historyContainer, function() {
+                            // console.log('滚动完成');
+                        });
+                    }
+                });
+            });
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('ai-chat-x-history', 'id'),  # 虚拟输出，仅用于触发回调
+    Input('ai-chat-x-messages-store', 'data'),
+    prevent_initial_call=True
+)

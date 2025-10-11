@@ -107,8 +107,8 @@ def register_chat_callbacks(app):
                         # 调用Conversations模型的add_conversation方法创建新会话
                         conv_id = Conversations.add_conversation(user_id=user_id)
                         
-                        log.debug(f"=== 创建新会话 ===")
-                        log.debug(f"新会话ID: {conv_id}")
+                        # log.debug(f"=== 创建新会话 ===")
+                        # log.debug(f"新会话ID: {conv_id}")
                         log.debug(f"用户ID: {user_id}")
                         
                         # 显示创建成功的消息
@@ -123,7 +123,7 @@ def register_chat_callbacks(app):
                         )
                         
                         # 返回新的时间戳以触发会话列表刷新，同时设置当前会话ID和清空消息列表
-                        log.debug(f"=== 新建会话完成，设置当前会话ID: {conv_id} ===")
+                        # log.debug(f"=== 新建会话完成，设置当前会话ID: {conv_id} ===")
                         return [{'timestamp': time.time()}, dash.no_update, False, '', conv_id, []]
                     else:
                         # 用户未登录或无法获取用户ID
@@ -164,11 +164,11 @@ def register_chat_callbacks(app):
             # 如果点击的是删除按钮
             if clicked_key == "delete":
                 try:
-                    log.debug(f"=== 开始删除会话 ===")
-                    log.debug(f"要删除的会话ID: {conv_id}")
+                    # log.debug(f"=== 开始删除会话 ===")
+                    # log.debug(f"要删除的会话ID: {conv_id}")
                     # 调用Conversations模型的delete_conversation_by_conv_id方法删除会话
                     Conversations.delete_conversation_by_conv_id(conv_id)
-                    log.debug(f"会话删除成功: {conv_id}")
+                    # log.debug(f"会话删除成功: {conv_id}")
                     
                     # 显示删除成功的消息
                     set_props(
@@ -183,7 +183,7 @@ def register_chat_callbacks(app):
                     
                     # 返回新的时间戳以触发会话列表刷新，不保持当前会话ID（让刷新逻辑智能选择）
                     refresh_timestamp = {'timestamp': time.time()}
-                    log.debug(f"删除会话后触发刷新，时间戳: {refresh_timestamp}")
+                    # log.debug(f"删除会话后触发刷新，时间戳: {refresh_timestamp}")
                     return [refresh_timestamp, dash.no_update, False, '', None, []]
                 except Exception as e:
                     # 显示删除失败的消息
@@ -282,9 +282,10 @@ def register_chat_callbacks(app):
         
         # 添加调试信息
         if ctx_triggered:
-            log.debug(f"=== 会话切换回调触发 ===")
-            log.debug(f"触发ID: {ctx_triggered[0]['prop_id']}")
-            log.debug(f"触发值: {ctx_triggered[0]['value']}")
+            # log.debug(f"=== 会话切换回调触发 ===")
+            # log.debug(f"触发ID: {ctx_triggered[0]['prop_id']}")
+            # log.debug(f"触发值: {ctx_triggered[0]['value']}")
+            pass
         
         # 处理会话项点击
         if ctx_triggered and 'ai-chat-x-session-item' in ctx_triggered[0]['prop_id'] and 'n_clicks' in ctx_triggered[0]['prop_id']:
@@ -297,31 +298,31 @@ def register_chat_callbacks(app):
                 clicked_session_id = id_dict['index']
                 
                 # 添加详细日志
-                log.debug(f"=== 会话切换开始 ===")
-                log.debug(f"点击的会话ID: {clicked_session_id}")
-                log.debug(f"当前会话ID: {current_session_id}")
+                # log.debug(f"=== 会话切换开始 ===")
+                # log.debug(f"点击的会话ID: {clicked_session_id}")
+                # log.debug(f"当前会话ID: {current_session_id}")
                 
                 # 从数据库加载该会话的历史消息
                 conv = Conversations.get_conversation_by_conv_id(clicked_session_id)
                 if conv:
-                    log.debug(f"找到会话记录: conversation_id={conv.conversation_id}, conv_id={conv.conv_id}")
-                    log.debug(f"会话名称: {conv.conv_name}")
-                    log.debug(f"conv_memory类型: {type(conv.conv_memory)}")
-                    log.debug(f"conv_memory内容: {conv.conv_memory}")
+                    # log.debug(f"找到会话记录: conversation_id={conv.conversation_id}, conv_id={conv.conv_id}")
+                    # log.debug(f"会话名称: {conv.conv_name}")
+                    # log.debug(f"conv_memory类型: {type(conv.conv_memory)}")
+                    # log.debug(f"conv_memory内容: {conv.conv_memory}")
                     
                     if conv.conv_memory and isinstance(conv.conv_memory, dict):
                         # 加载历史消息
                         history_messages = conv.conv_memory.get('messages', [])
-                        log.debug(f"加载会话历史消息: {clicked_session_id}, 消息数量: {len(history_messages)}")
-                        log.debug(f"历史消息内容: {history_messages}")
+                        # log.debug(f"加载会话历史消息: {clicked_session_id}, 消息数量: {len(history_messages)}")
+                        # log.debug(f"历史消息内容: {history_messages}")
                     else:
                         # 如果没有历史消息，返回空列表
                         history_messages = []
-                        log.debug(f"会话无历史消息或conv_memory格式错误: {clicked_session_id}")
+                        # log.debug(f"会话无历史消息或conv_memory格式错误: {clicked_session_id}")
                 else:
                     # 如果没有找到会话，返回空列表
                     history_messages = []
-                    log.debug(f"未找到会话记录: {clicked_session_id}")
+                    # log.debug(f"未找到会话记录: {clicked_session_id}")
                 
                 # 重新渲染会话列表（更新选中状态）
                 from flask_login import current_user
@@ -330,7 +331,7 @@ def register_chat_callbacks(app):
                 else:
                     updated_children = render_session_list(selected_session_id=clicked_session_id)
                 
-                log.debug(f"=== 会话切换完成，返回会话ID: {clicked_session_id} ===")
+                # log.debug(f"=== 会话切换完成，返回会话ID: {clicked_session_id} ===")
                 return clicked_session_id, history_messages, updated_children
                 
             except Exception as e:
@@ -340,9 +341,9 @@ def register_chat_callbacks(app):
         # 处理列表刷新
         elif ctx_triggered and ctx_triggered[0]['prop_id'] == 'ai-chat-x-session-refresh-trigger.data':
             from flask_login import current_user
-            log.debug(f"=== 会话列表刷新 ===")
-            log.debug(f"当前会话ID: {current_session_id}")
-            log.debug(f"触发原因: {ctx_triggered[0]}")
+            # log.debug(f"=== 会话列表刷新 ===")
+            # log.debug(f"当前会话ID: {current_session_id}")
+            # log.debug(f"触发原因: {ctx_triggered[0]}")
             
             # 智能选择会话ID
             new_session_id = current_session_id
@@ -351,8 +352,8 @@ def register_chat_callbacks(app):
             if hasattr(current_user, 'id'):
                 # 获取用户的所有会话
                 user_sessions = Conversations.get_user_conversations(current_user.id)
-                log.debug(f"用户会话列表: {user_sessions}")
-                log.debug(f"会话数量: {len(user_sessions) if user_sessions else 0}")
+                # log.debug(f"用户会话列表: {user_sessions}")
+                # log.debug(f"会话数量: {len(user_sessions) if user_sessions else 0}")
                 if user_sessions:
                     # 如果当前会话ID仍然存在，保持它
                     if current_session_id and any(session['conv_id'] == current_session_id for session in user_sessions):
@@ -367,20 +368,20 @@ def register_chat_callbacks(app):
                         conv = Conversations.get_conversation_by_conv_id(new_session_id)
                         if conv and conv.conv_memory:
                             history_messages = conv.conv_memory.get('messages', [])
-                        log.debug(f"当前会话不存在，选择第一个会话（最新的）: {new_session_id}")
+                        # log.debug(f"当前会话不存在，选择第一个会话（最新的）: {new_session_id}")
                 else:
                     # 没有会话，创建新会话
                     new_session_id = Conversations.add_conversation(user_id=current_user.id)
                     history_messages = []
-                    log.debug(f"没有会话，创建新会话: {new_session_id}")
+                    # log.debug(f"没有会话，创建新会话: {new_session_id}")
                 
                 updated_children = render_session_list(user_id=current_user.id, selected_session_id=new_session_id)
             else:
                 updated_children = render_session_list(selected_session_id=new_session_id)
             
-            log.debug(f"=== 会话列表刷新完成 ===")
-            log.debug(f"新会话ID: {new_session_id}")
-            log.debug(f"历史消息数量: {len(history_messages)}")
+            # log.debug(f"=== 会话列表刷新完成 ===")
+            # log.debug(f"新会话ID: {new_session_id}")
+            # log.debug(f"历史消息数量: {len(history_messages)}")
             
             return new_session_id, history_messages, updated_children
         

@@ -28,7 +28,7 @@ def AiChatMessageHistory(messages=None):
             # 统一处理assistant和agent角色
             if msg.get('role') == 'assistant' or msg.get('role') == 'agent':
                 # 添加调试日志
-                print(f"渲染AI消息 - ID: {msg.get('id')}, 内容: {msg.get('content')}")
+                #print(f"渲染AI消息 - ID: {msg.get('id')}, 内容: {msg.get('content')}")
                 # 传递所有必要参数给 render_agent_message，使用正确的message参数
                 children.append(render_agent_message(
                     message=msg.get('content', ''),  # 修改为message参数

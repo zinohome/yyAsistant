@@ -40,7 +40,7 @@ def ChatAgentMessage(
     """
     
     # 添加调试日志
-    log.debug(f"渲染AI消息组件: ID={message_id}, 内容={message[:20]}..., is_streaming={is_streaming}")
+    #log.debug(f"渲染AI消息组件: ID={message_id}, 内容={message[:20]}..., is_streaming={is_streaming}")
     
     # 确保message_id不为None
     if message_id is None:
