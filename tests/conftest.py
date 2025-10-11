@@ -5,17 +5,24 @@ import pytest
 import os
 import tempfile
 import shutil
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 from peewee import SqliteDatabase
+import sys
+from pathlib import Path
+
+# 添加项目根目录到Python路径
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 # 设置测试环境
 os.environ['TESTING'] = 'true'
+os.environ['FLASK_ENV'] = 'testing'
 
 @pytest.fixture(scope="session")
 def test_db():
     """创建测试数据库"""
     # 创建临时数据库文件
-    db_fd, db_path = tempfile.mkstemp()
+    db_fd, db_path = tempfile.mkstemp(suffix='.db')
     
     # 创建测试数据库
     test_database = SqliteDatabase(db_path)
@@ -24,7 +31,8 @@ def test_db():
     
     # 清理
     os.close(db_fd)
-    os.unlink(db_path)
+    if os.path.exists(db_path):
+        os.unlink(db_path)
 
 @pytest.fixture(scope="function")
 def clean_db(test_db):
@@ -41,7 +49,8 @@ def mock_yychat_client():
         mock.chat_completion.return_value = {
             "choices": [{
                 "message": {
-                    "content": "这是一个测试回复"
+                    "content": "这是一个测试回复",
+                    "role": "assistant"
                 }
             }]
         }
@@ -60,6 +69,8 @@ def mock_flask_login():
         mock_user.id = "test_user"
         mock_user.is_authenticated = True
         mock_user.is_anonymous = False
+        mock_user.user_role = "normal"
+        mock_user.user_name = "testuser"
         yield mock_user
 
 @pytest.fixture
@@ -68,7 +79,7 @@ def sample_user_data():
     return {
         "user_id": "test_user_001",
         "user_name": "testuser",
-        "password": "testpassword123",
+        "password_hash": "hashed_password_123",
         "user_role": "normal"
     }
 
@@ -96,33 +107,26 @@ def sample_messages():
     ]
 
 @pytest.fixture
-def mock_sse_response():
-    """模拟SSE响应数据"""
-    return [
-        {"content": "这是", "status": "streaming"},
-        {"content": "一个", "status": "streaming"},
-        {"content": "测试", "status": "streaming"},
-        {"content": "回复", "status": "end"}
-    ]
-
-@pytest.fixture
 def test_app():
     """创建测试应用实例"""
-    from server import app
-    app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
+    # 由于Dash应用的特殊性，我们需要模拟应用
+    from unittest.mock import MagicMock
     
-    with app.test_client() as client:
-        yield client
+    mock_app = MagicMock()
+    mock_app.server = MagicMock()
+    mock_app.server.test_client.return_value = MagicMock()
+    
+    return mock_app
 
 @pytest.fixture
 def authenticated_client(test_app, mock_flask_login):
     """已认证的测试客户端"""
-    with test_app.session_transaction() as sess:
-        sess['user_id'] = 'test_user_001'
-        sess['_fresh'] = True
-    
-    return test_app
+    mock_client = test_app.server.test_client.return_value
+    mock_client.session_transaction.return_value.__enter__.return_value = {
+        'user_id': 'test_user_001',
+        '_fresh': True
+    }
+    return mock_client
 
 @pytest.fixture(autouse=True)
 def setup_test_environment():
@@ -169,7 +173,7 @@ class TestDataFactory:
         default_data = {
             "user_id": user_id or f"user_{pytest.current_test_id()}",
             "user_name": f"testuser_{pytest.current_test_id()}",
-            "password": "testpassword123",
+            "password_hash": "hashed_password_123",
             "user_role": "normal"
         }
         default_data.update(kwargs)
