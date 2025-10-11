@@ -134,10 +134,11 @@ def ChatAgentMessage(
                                     nClicks=0,
                                     style=style(
                                         fontSize=16, 
-                                        color='rgba(0,0,0,0.45)',
+                                        color='rgba(0,0,0,0.75)',
                                         padding='4px 8px',
                                         minWidth='auto',
-                                        height='auto'
+                                        height='auto',
+                                        backgroundColor='rgba(0,0,0,0.05)'
                                     )
                                 ),
                                 fac.AntdButton(
@@ -148,10 +149,11 @@ def ChatAgentMessage(
                                     nClicks=0,
                                     style=style(
                                         fontSize=16, 
-                                        color='rgba(0,0,0,0.45)',
+                                        color='rgba(0,0,0,0.75)',
                                         padding='4px 8px',
                                         minWidth='auto',
-                                        height='auto'
+                                        height='auto',
+                                        backgroundColor='rgba(0,0,0,0.05)'
                                     )
                                 ),
                                 DashIconify(icon="mingcute:thumb-up-2-line",

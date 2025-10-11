@@ -694,7 +694,6 @@ app.clientside_callback(
 @app.callback(
     [
         Output('ai-chat-x-messages-store', 'data', allow_duplicate=True),
-        Output('ai-chat-x-sse-trigger', 'data', allow_duplicate=True),
         Output('global-message', 'children', allow_duplicate=True)
     ],
     [
@@ -709,42 +708,62 @@ app.clientside_callback(
 def handle_regenerate_message(regenerate_clicks, messages, current_session_id):
     """处理重新生成AI消息"""
     if not ctx.triggered:
-        return dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update
     
     triggered = ctx.triggered[0]
-    if not triggered or not regenerate_clicks or not any(click > 0 for click in regenerate_clicks):
-        return dash.no_update, dash.no_update, dash.no_update
+    if not triggered:
+        return dash.no_update, dash.no_update
+    
+    # 检查被触发的按钮是否有点击
+    if triggered.get('value', 0) <= 0:
+        return dash.no_update, dash.no_update
+    
+    # log.debug(f"重新生成回调被触发: {ctx.triggered}")
     
     try:
         # 解析被点击的消息ID
         import json
         prop_id = triggered['prop_id']
-        if '{"type":"ai-chat-x-regenerate"' in prop_id:
+        # log.debug(f"解析prop_id: {prop_id}")
+        if '"type":"ai-chat-x-regenerate"' in prop_id:
             id_part = prop_id.split('.')[0]
             id_dict = json.loads(id_part)
             target_message_id = id_dict['index']
+            # log.debug(f"目标消息ID: {target_message_id}")
         else:
-            return dash.no_update, dash.no_update, dash.no_update
+            # log.debug("不是重新生成按钮")
+            return dash.no_update, dash.no_update
         
         if not messages:
-            return dash.no_update, dash.no_update, dash.no_update
+            # log.debug("消息列表为空")
+            return dash.no_update, dash.no_update
+        
+        # log.debug(f"消息列表长度: {len(messages)}")
         
         # 找到目标消息和上一条用户消息
         target_message_index = None
         previous_user_message = None
         
         for i, message in enumerate(messages):
+            # log.debug(f"检查消息 {i}: id={message.get('id')}, role={message.get('role')}")
             if message.get('id') == target_message_id:
                 target_message_index = i
+                # log.debug(f"找到目标消息，索引: {target_message_index}")
                 # 查找上一条用户消息
                 for j in range(i-1, -1, -1):
                     if messages[j].get('role') == 'user':
                         previous_user_message = messages[j]
+                        # log.debug(f"找到上一条用户消息: {previous_user_message.get('content', '')[:50]}...")
                         break
                 break
         
-        if target_message_index is None or previous_user_message is None:
-            return dash.no_update, dash.no_update, dash.no_update
+        if target_message_index is None:
+            # log.debug("未找到目标消息")
+            return dash.no_update, fac.AntdMessage(type="error", content="无法重新生成：未找到目标消息")
+        
+        if previous_user_message is None:
+            # log.debug("未找到上一条用户消息")
+            return dash.no_update, fac.AntdMessage(type="error", content="无法重新生成：未找到上一条用户消息")
         
         # 创建消息的深拷贝
         updated_messages = copy.deepcopy(messages)
@@ -764,20 +783,12 @@ def handle_regenerate_message(regenerate_clicks, messages, current_session_id):
         # 添加新的AI消息
         updated_messages.append(new_ai_message)
         
-        # 准备SSE触发数据
-        sse_trigger_data = {
-            'message_id': new_ai_message['id'],
-            'session_id': current_session_id,
-            'messages': [msg for msg in updated_messages if msg.get('role') in ['user', 'assistant', 'agent', 'system'] and not (msg.get('role') in ['assistant', 'agent'] and msg.get('is_streaming', False))],
-            'personality_id': 'health_assistant',
-            'role': 'assistant'
-        }
-        
-        return updated_messages, sse_trigger_data, dash.no_update
+        # 返回更新后的消息，SSE会自动通过trigger_sse回调触发
+        return updated_messages, dash.no_update
         
     except Exception as e:
         log.error(f"重新生成消息失败: {e}")
-        return dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update
 
 # 复制消息的客户端回调
 app.clientside_callback(
@@ -792,31 +803,72 @@ app.clientside_callback(
             return window.dash_clientside.no_update;
         }
         
+        // 检查被触发的按钮是否有点击（严格检查，避免初始化时触发）
+        if (!triggered.value || triggered.value <= 0) {
+            return window.dash_clientside.no_update;
+        }
+        
+        // console.log('复制回调被触发:', triggered);
+        
         // 处理复制按钮点击
         if (triggered.prop_id.includes('ai-chat-x-copy')) {
+            // console.log('处理复制按钮点击');
             try {
                 // 解析消息ID
                 const propId = triggered.prop_id;
                 const idPart = propId.split('.')[0];
                 const idDict = JSON.parse(idPart);
                 const messageId = idDict.index;
+                // console.log('消息ID:', messageId);
                 
                 // 从消息存储中获取原始Markdown内容
                 if (messages) {
                     const targetMessage = messages.find(msg => msg.id === messageId);
                     if (targetMessage && targetMessage.content) {
-                        // 复制到剪贴板
-                        navigator.clipboard.writeText(targetMessage.content).then(() => {
-                            // 显示成功提示
-                            console.log('复制成功');
-                        }).catch(() => {
-                            // 显示失败提示
-                            console.log('复制失败');
-                        });
+                        // 复制到剪贴板 - 使用fallback方案
+                        const content = targetMessage.content;
+                        
+                        // 尝试使用现代clipboard API
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(content).then(() => {
+                                // console.log('复制成功');
+                            }).catch(() => {
+                                // 如果现代API失败，使用fallback
+                                fallbackCopyToClipboard(content);
+                            });
+                        } else {
+                            // 使用fallback方案
+                            fallbackCopyToClipboard(content);
+                        }
+                    }
+                    
+                    // Fallback复制函数
+                    function fallbackCopyToClipboard(text) {
+                        const textArea = document.createElement('textarea');
+                        textArea.value = text;
+                        textArea.style.position = 'fixed';
+                        textArea.style.left = '-999999px';
+                        textArea.style.top = '-999999px';
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        
+                        try {
+                            const successful = document.execCommand('copy');
+                            if (successful) {
+                                // console.log('复制成功 (fallback)');
+                            } else {
+                                // console.log('复制失败 (fallback)');
+                            }
+                        } catch (err) {
+                            // console.log('复制失败 (fallback):', err);
+                        }
+                        
+                        document.body.removeChild(textArea);
                     }
                 }
             } catch (error) {
-                console.error('复制消息失败:', error);
+                // console.error('复制消息失败:', error);
             }
         }
         
