@@ -9,6 +9,7 @@ import time  # 确保导入了time模块
 from datetime import datetime
 from server import app
 from components.chat_session_list import render as render_session_list
+from components.mobile_session_list import render_mobile_session_list
 from models.conversations import Conversations
 from utils.log import log as log
 # 导入Conversations模型
@@ -398,6 +399,199 @@ def register_chat_callbacks(app):
         return dash.no_update, dash.no_update, dash.no_update
 
     # 会话列表刷新功能已合并到 handle_session_switch 回调中
+
+    # 添加：移动端会话弹出框的回调函数
+    @app.callback(
+        [
+            Output('ai-chat-x-mobile-session-content', 'children'),
+            Output('ai-chat-x-session-refresh-trigger', 'data', allow_duplicate=True),
+            Output('ai-chat-x-current-session-id', 'data', allow_duplicate=True),
+            Output('ai-chat-x-messages-store', 'data', allow_duplicate=True)
+        ],
+        [
+            Input('ai-chat-x-create-alternative-btn', 'nClicks'),
+            Input({'type': 'ai-chat-x-mobile-session-item', 'index': dash.ALL}, 'n_clicks'),
+            Input({'type': 'ai-chat-x-mobile-session-delete', 'index': dash.ALL}, 'nClicks'),
+            Input('ai-chat-x-session-refresh-trigger', 'data')
+        ],
+        [
+            State('ai-chat-x-current-session-id', 'data')
+        ],
+        prevent_initial_call=True,
+    )
+    def handle_mobile_session_popup(create_btn_clicks, session_clicks, delete_clicks, 
+                                   refresh_trigger, current_session_id):
+        """处理移动端会话弹出框的会话管理"""
+        
+        # 获取触发回调的组件
+        triggered = ctx.triggered[0] if ctx.triggered else None
+        
+        if not triggered:
+            return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        
+        # 添加调试信息
+        log.debug(f"移动端弹出框回调被触发: {triggered['prop_id']}")
+        log.debug(f"delete_clicks: {delete_clicks}")
+        log.debug(f"session_clicks: {session_clicks}")
+        log.debug(f"create_btn_clicks: {create_btn_clicks}")
+        
+        # 处理新建会话
+        if triggered['prop_id'] == 'ai-chat-x-create-alternative-btn.nClicks' and create_btn_clicks > 0:
+            try:
+                from flask_login import current_user
+                if hasattr(current_user, 'id'):
+                    user_id = current_user.id
+                    # 调用Conversations模型的add_conversation方法创建新会话
+                    conv_id = Conversations.add_conversation(user_id=user_id)
+                    
+                    log.debug(f"移动端创建新会话: {conv_id}")
+                    
+                    # 显示创建成功的消息
+                    set_props(
+                        "global-message",
+                        {
+                            "children": fac.AntdMessage(
+                                type="success", 
+                                content="新会话创建成功"
+                            )
+                        },
+                    )
+                    
+                    # 刷新弹出框内容并设置当前会话
+                    mobile_content = render_mobile_session_list(user_id=user_id, selected_session_id=conv_id)
+                    return mobile_content, {'timestamp': time.time()}, conv_id, []
+                else:
+                    return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+            except Exception as e:
+                log.error(f"创建会话失败: {e}")
+                return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        
+        # 处理会话切换
+        if triggered['prop_id'].startswith('{"type":"ai-chat-x-mobile-session-item"'):
+            if session_clicks and any(click > 0 for click in session_clicks):
+                # 获取被点击的会话ID
+                import json
+                prop_id = triggered['prop_id']
+                if '{"type":"ai-chat-x-mobile-session-item"' in prop_id:
+                    # 解析JSON格式的ID
+                    id_part = prop_id.split('.')[0]  # 获取ID部分
+                    id_dict = json.loads(id_part)
+                    clicked_index = id_dict['index']
+                else:
+                    clicked_index = None
+                
+                # 加载会话历史消息
+                history_messages = []
+                try:
+                    conv = Conversations.get_conversation_by_conv_id(clicked_index)
+                    if conv and conv.conv_memory:
+                        history_messages = conv.conv_memory.get('messages', [])
+                except Exception as e:
+                    log.error(f"加载会话历史失败: {e}")
+                
+                # 刷新弹出框内容
+                from flask_login import current_user
+                if hasattr(current_user, 'id'):
+                    mobile_content = render_mobile_session_list(user_id=current_user.id, selected_session_id=clicked_index)
+                else:
+                    mobile_content = render_mobile_session_list(selected_session_id=clicked_index)
+                
+                return mobile_content, dash.no_update, clicked_index, history_messages
+        
+        # 处理会话删除
+        log.debug(f"检查删除条件: {triggered['prop_id']}")
+        delete_pattern = '"type":"ai-chat-x-mobile-session-delete"'
+        log.debug(f"包含检查结果: {delete_pattern in triggered['prop_id']}")
+        if delete_pattern in triggered['prop_id']:
+            log.debug(f"删除按钮被点击: {triggered['prop_id']}")
+            log.debug(f"delete_clicks类型: {type(delete_clicks)}")
+            log.debug(f"delete_clicks值: {delete_clicks}")
+            if delete_clicks:
+                log.debug(f"any(click > 0): {any(click > 0 for click in delete_clicks)}")
+            else:
+                log.debug("delete_clicks为None或空")
+            
+            if delete_clicks and any(click > 0 for click in delete_clicks):
+                log.debug("进入删除逻辑")
+                # 获取被删除的会话ID
+                import json
+                prop_id = triggered['prop_id']
+                log.debug(f"尝试解析prop_id: {prop_id}")
+                if '"type":"ai-chat-x-mobile-session-delete"' in prop_id:
+                    # 解析JSON格式的ID
+                    id_part = prop_id.split('.')[0]  # 获取ID部分
+                    log.debug(f"ID部分: {id_part}")
+                    try:
+                        id_dict = json.loads(id_part)
+                        deleted_index = id_dict['index']
+                        log.debug(f"解析到删除的会话ID: {deleted_index}")
+                    except json.JSONDecodeError as e:
+                        log.error(f"JSON解析错误: {e}")
+                        deleted_index = None
+                else:
+                    deleted_index = None
+                    log.debug("无法解析删除的会话ID")
+                
+                try:
+                    # 删除会话
+                    Conversations.delete_conversation_by_conv_id(deleted_index)
+                    
+                    # 如果删除的是当前会话，需要切换到其他会话
+                    new_session_id = current_session_id
+                    if deleted_index == current_session_id:
+                        from flask_login import current_user
+                        if hasattr(current_user, 'id'):
+                            user_sessions = Conversations.get_user_conversations(current_user.id)
+                            if user_sessions:
+                                new_session_id = user_sessions[0]['conv_id']
+                                # 加载新会话的历史消息
+                                conv = Conversations.get_conversation_by_conv_id(new_session_id)
+                                history_messages = conv.conv_memory.get('messages', []) if conv and conv.conv_memory else []
+                            else:
+                                # 没有会话了，创建新会话
+                                new_session_id = Conversations.add_conversation(user_id=current_user.id)
+                                history_messages = []
+                        else:
+                            new_session_id = ''
+                            history_messages = []
+                    else:
+                        history_messages = dash.no_update
+                    
+                    # 刷新弹出框内容
+                    from flask_login import current_user
+                    if hasattr(current_user, 'id'):
+                        mobile_content = render_mobile_session_list(user_id=current_user.id, selected_session_id=new_session_id)
+                    else:
+                        mobile_content = render_mobile_session_list(selected_session_id=new_session_id)
+                    
+                    # 显示删除成功的消息
+                    set_props(
+                        "global-message",
+                        {
+                            "children": fac.AntdMessage(
+                                type="success", 
+                                content="会话删除成功"
+                            )
+                        },
+                    )
+                    
+                    return mobile_content, {'timestamp': time.time()}, new_session_id, history_messages
+                    
+                except Exception as e:
+                    log.error(f"删除会话失败: {e}")
+                    return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        
+        # 处理刷新触发器
+        if triggered['prop_id'] == 'ai-chat-x-session-refresh-trigger.data' and refresh_trigger:
+            # 刷新弹出框内容
+            from flask_login import current_user
+            if hasattr(current_user, 'id'):
+                mobile_content = render_mobile_session_list(user_id=current_user.id, selected_session_id=current_session_id)
+            else:
+                mobile_content = render_mobile_session_list(selected_session_id=current_session_id)
+            return mobile_content, dash.no_update, dash.no_update, dash.no_update
+        
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
 # 注册回调函数
 register_chat_callbacks(app)

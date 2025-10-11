@@ -11,6 +11,7 @@ from components.chat_agent_message import ChatAgentMessage as render_agent_messa
 from components.chat_feature_hints import ChatFeatureHints as render_feature_hints
 from components.chat_user_message import ChatUserMessage as render_user_message
 from components.chat_session_list import render as render_session_list
+from components.mobile_session_list import render_mobile_session_list
 from components.chat_input_area import render as render_chat_input_area
 from components.ai_chat_message_history import AiChatMessageHistory
 from components.my_info import render_my_info_drawer
@@ -183,14 +184,29 @@ def _create_content_area():
             fac.AntdCol(
                 fac.AntdSpace(
                     [
-                        fac.AntdButton(
-                            icon=fac.AntdIcon(icon="antd-history"),
-                            id="ai-chat-x-favorite-btn",
-                            type="text"
+                        fac.AntdPopover(
+                            fac.AntdButton(
+                                icon=fac.AntdIcon(icon="antd-history"),
+                                type="text"
+                            ),
+                            id='ai-chat-x-mobile-session-popup',
+                            content=html.Div(
+                                id='ai-chat-x-mobile-session-content',
+                                children=render_mobile_session_list(user_id=current_user.id),
+                                style={
+                                    'width': '300px',
+                                    'maxHeight': '400px',
+                                    'overflowY': 'auto'
+                                }
+                            ),
+                            title='会话列表',
+                            placement='bottomRight',
+                            trigger='click',
+                            open=False
                         ),
                         fac.AntdButton(
                             icon=fac.AntdIcon(icon="antd-plus"),
-                            id="ai-chat-x-more-btn",
+                            id="ai-chat-x-create-alternative-btn",
                             type="text"
                         )
                     ],
@@ -295,6 +311,7 @@ def _create_state_stores():
         okText='确定',
         cancelText='取消'
     )
+
 
     return [
         session_collapse_store,

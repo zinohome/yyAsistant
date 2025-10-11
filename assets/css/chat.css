@@ -60,3 +60,37 @@
     display: none !important;
   }
 }
+
+/* 移动端会话弹出框样式 */
+.ai-chat-x-mobile-session-new-button:hover {
+    border: 1px solid #1890ff !important;
+    background-color: #f0f7ff !important;
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15) !important;
+}
+
+.mobile-session-item-clickable:hover {
+    background-color: #e6f7ff !important;
+    transform: translateX(2px);
+    transition: all 0.2s ease;
+}
+
+/* 移动端会话弹出框内容样式 */
+#ai-chat-x-mobile-session-content {
+    font-size: 14px;
+}
+
+#ai-chat-x-mobile-session-content .ant-space-item {
+    margin-bottom: 4px !important;
+}
+
+/* 移动端会话项样式 */
+#ai-chat-x-mobile-session-content .ant-typography {
+    font-weight: normal !important;
+    font-size: 14px !important;
+}
+
+/* 移动端删除按钮样式 */
+#ai-chat-x-mobile-session-content .ant-btn-text:hover {
+    background-color: #fff2f0 !important;
+    border-color: #ff4d4f !important;
+}

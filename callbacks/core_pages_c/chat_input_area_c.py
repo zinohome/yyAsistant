@@ -441,8 +441,17 @@ app.clientside_callback(
                             // 这是FefferyMarkdown组件，查找内部的p标签
                             const contentElement = messageElement.querySelector('p');
                             if (contentElement) {
+                                // 处理未完成的Markdown语法
+                                let processedContent = fullContent;
+                                
+                                // 处理未闭合的代码块
+                                const codeBlockCount = (fullContent.match(/```/g) || []).length;
+                                if (codeBlockCount % 2 === 1) {
+                                    processedContent += '\\n```';
+                                }
+                                
                                 // 更新p标签的内容
-                                contentElement.textContent = fullContent;
+                                contentElement.textContent = processedContent;
                             }
                             
                             // 更新流式状态标记

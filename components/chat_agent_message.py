@@ -19,7 +19,7 @@ def ChatAgentMessage(
     icon_bg_color="#1890ff",
     message_bg_color="#f5f5f5",
     message_text_color="#000000",
-    is_streaming=False
+    is_streaming=False,
 ):
     """
     AI代理消息组件
@@ -92,7 +92,6 @@ def ChatAgentMessage(
                         fuc.FefferyDiv(
                             children=[
                                 fmc.FefferyMarkdown(id=message_id, className="agent-message-markdown-body", markdownStr=message, markdownBaseClassName="theme-pie", style=style(color=message_text_color)),
-                                #dcc.Markdown(id=message_id, children=message, style=style(color=message_text_color)),
                                 #fac.AntdText(id=message_id, children=message, style=style(color=message_text_color)),
                             ],
                             style=style(
