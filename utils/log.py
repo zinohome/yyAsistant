@@ -23,10 +23,12 @@ LOG_PATH = os.path.join(LOG_DIR, BaseConfig.app_log_filename)
 log.remove()
 log.add(LOG_PATH,
         format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {file}:{line} | {message}",
-        rotation="100 MB",
-        retention="14 days",
+        rotation="50 MB",
+        retention="7 days",
         level=BaseConfig.app_log_level,
-        enqueue=True)
+        colorize=True,
+        enqueue=True,
+        compression="gz")
 log.add(sys.stdout,
             format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {file}:{line} | {message}",
             colorize=True,

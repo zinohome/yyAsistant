@@ -12,10 +12,10 @@ class BaseConfig:
     sse_animate_delay: int = 1
 
     # 应用基础标题
-    app_title: str = "智能助手"
+    app_title: str = "研奕智能助手"
 
     # 应用版本
-    app_version: str = "0.2.1"
+    app_version: str = "0.5.4"
 
     # 应用密钥
     app_secret_key: str = "yyAsistant-bgt56yhn-passkey"

@@ -2,13 +2,14 @@ import feffery_utils_components as fuc
 import feffery_antd_components as fac
 from dash_iconify import DashIconify
 from feffery_dash_utils.style_utils import style
+from configs.topics_loader import get_category_topics, get_settings
 
 
 def render(
     placeholder="输入您的问题...",
     max_length=2000,
-    topics=["提高工作效率", "数据分析技巧", "代码优化建议", "项目管理方法"],
-    icons=["fluent-mdl2:web-components", "fluent-mdl2:activate-orders", "fluent-mdl2:add-in", "fluent-mdl2:company-directory-mirrored"],
+    topics=None,
+    icons=None,
     enable_file_upload=True,
     enable_voice_input=True,
     enable_send_button=True
@@ -19,12 +20,29 @@ def render(
     参数:
         placeholder: 输入框占位文本
         max_length: 最大输入长度
-        topics: 话题提示列表
-        icons: 话题图标列表，与topics一一对应
+        topics: 话题提示列表，如果为None则从配置文件加载
+        icons: 话题图标列表，与topics一一对应，如果为None则从配置文件加载
         enable_file_upload: 是否启用文件上传
         enable_voice_input: 是否启用语音输入
         enable_send_button: 是否启用发送按钮
     """
+    
+    # 如果未提供topics和icons，从配置文件动态加载分类话题
+    if topics is None:
+        category_topics = get_category_topics()
+        topics = [topic['title'] for topic in category_topics]
+    if icons is None:
+        category_topics = get_category_topics()
+        icons = [topic['icon'] for topic in category_topics]
+    
+    # 获取设置信息
+    settings = get_settings()
+    max_topics_display = settings.get('max_topics_display', 4)
+    
+    # 限制显示的话题数量（现在固定显示4个分类）
+    if len(topics) > max_topics_display:
+        topics = topics[:max_topics_display]
+        icons = icons[:max_topics_display]
     
     # 统一外框的输入区域容器
     children =  fuc.FefferyDiv(
@@ -44,7 +62,7 @@ def render(
                                     ),
                                     topic
                                 ],
-                                id=f"chat-topic-{index}",
+                                id={'type': 'chat-topic', 'index': index},
                                 shadow="hover-shadow-light",
                                 style=style(
                                     display="flex",

@@ -8,6 +8,7 @@ from components.ai_chat_message_history import AiChatMessageHistory
 from server import app, server  # 确保同时导入了server
 from utils.yychat_client import yychat_client
 from utils.log import log
+from configs.topics_loader import get_random_topic_description_by_category, get_categories
 import copy
 import threading
 import time
@@ -27,11 +28,8 @@ active_sse_connections = {}
         Output('ai-chat-x-send-btn', 'disabled')
     ],
     [
-        # 话题提示点击输入
-        Input(f'chat-topic-0', 'nClicks'),
-        Input(f'chat-topic-1', 'nClicks'),
-        Input(f'chat-topic-2', 'nClicks'),
-        Input(f'chat-topic-3', 'nClicks'),
+        # 话题提示点击输入 - 使用动态模式匹配
+        Input({'type': 'chat-topic', 'index': ALL}, 'nClicks'),
         # 消息发送输入（仅按钮点击；Enter 由前端触发按钮点击）
         Input('ai-chat-x-send-btn', 'nClicks'),
         # SSE完成事件
@@ -44,8 +42,7 @@ active_sse_connections = {}
     ],
     prevent_initial_call=True
 )
-def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, topic_3_clicks, 
-                           send_button_clicks, completion_event_json,
+def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_json,
                            message_content, messages_store, current_session_id):
     # 获取触发回调的元素ID
     triggered_id = ctx.triggered_id if ctx.triggered else None
@@ -61,21 +58,24 @@ def handle_chat_interactions(topic_0_clicks, topic_1_clicks, topic_2_clicks, top
         return messages, message_content, False, False
     
     # 处理话题点击
-    if triggered_id and triggered_id.startswith('chat-topic-'):
+    if triggered_id and isinstance(triggered_id, dict) and triggered_id.get('type') == 'chat-topic':
         # 获取话题索引
-        topic_index = int(triggered_id.split('-')[-1])
-        # 预定义话题列表 - 与chat_input_area.py中的保持一致
-        topics = [
-            "怎么提高工作效率",
-            "有哪些数据分析技巧",
-            "有哪些代码优化建议",
-            "项目管理方法有哪些"
-        ]
+        topic_index = triggered_id.get('index')
         
-        if 0 <= topic_index < len(topics):
-            # 返回话题内容到输入框
-            # log.debug(f"话题点击: {topic_index}, 内容: {topics[topic_index]}")
-            return messages, topics[topic_index], False, False
+        if topic_index is not None:
+            # 获取分类列表
+            categories = get_categories()
+            category_list = list(categories.keys())
+            
+            if 0 <= topic_index < len(category_list):
+                # 根据分类随机选择一个话题描述
+                category = category_list[topic_index]
+                random_description = get_random_topic_description_by_category(category)
+                
+                if random_description:
+                    log.debug(f"分类话题点击: {category}, 索引: {topic_index}, 内容: {random_description}")
+                    return messages, random_description, False, False
+        
         # 如果索引无效，返回默认值
         return messages, message_content, False, False
     

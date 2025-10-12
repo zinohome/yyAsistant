@@ -1,0 +1,256 @@
+{
+  "topics": [
+    {
+      "id": "health_wellness",
+      "title": "健康养生",
+      "description": "我最近身体有些不适，想了解一下日常保健的方法，比如饮食调理和运动锻炼方面有什么建议？",
+      "icon": "fluent-mdl2:health",
+      "category": "health"
+    },
+    {
+      "id": "mental_health",
+      "title": "心理健康",
+      "description": "退休后感觉心理状态有些变化，有时候会感到孤独或者焦虑，有什么好的情绪管理方法吗？",
+      "icon": "fluent-mdl2:brain-circuit",
+      "category": "health"
+    },
+    {
+      "id": "chronic_disease_management",
+      "title": "慢性病管理",
+      "description": "我有高血压/糖尿病等慢性病，想了解一下日常护理和饮食注意事项，有什么好的建议？",
+      "icon": "fluent-mdl2:heart-pulse",
+      "category": "health"
+    },
+    {
+      "id": "sleep_health",
+      "title": "睡眠健康",
+      "description": "最近睡眠质量不太好，经常失眠或者早醒，有什么改善睡眠的方法吗？",
+      "icon": "fluent-mdl2:sleep",
+      "category": "health"
+    },
+    {
+      "id": "nutrition_diet",
+      "title": "营养饮食",
+      "description": "想了解一下适合我们老年人的营养搭配，有什么推荐的食谱和饮食原则吗？",
+      "icon": "fluent-mdl2:food",
+      "category": "health"
+    },
+    {
+      "id": "exercise_fitness",
+      "title": "运动健身",
+      "description": "退休后想保持身体健康，有什么适合我们老年人的运动方式和健身计划吗？",
+      "icon": "fluent-mdl2:exercise-tracker",
+      "category": "health"
+    },
+    {
+      "id": "medical_checkup",
+      "title": "体检保健",
+      "description": "想了解一下老年人应该做哪些定期体检，有什么需要注意的检查项目吗？",
+      "icon": "fluent-mdl2:medical",
+      "category": "health"
+    },
+    {
+      "id": "medication_management",
+      "title": "用药管理",
+      "description": "平时需要服用多种药物，担心药物相互作用，有什么安全用药的建议吗？",
+      "icon": "fluent-mdl2:pills",
+      "category": "health"
+    },
+    {
+      "id": "memoir_writing",
+      "title": "回忆录撰写",
+      "description": "我想把自己的工作经历和人生感悟记录下来，但不知道从何开始，能给我一些建议吗？",
+      "icon": "fluent-mdl2:edit",
+      "category": "life"
+    },
+    {
+      "id": "family_relationships",
+      "title": "家庭关系",
+      "description": "和子女、孙辈相处时总感觉有代沟，不知道如何更好地沟通，有什么好的建议吗？",
+      "icon": "fluent-mdl2:family",
+      "category": "life"
+    },
+    {
+      "id": "life_planning",
+      "title": "生活规划",
+      "description": "退休后时间比较充裕，但不知道如何合理安排，有什么好的生活规划建议吗？",
+      "icon": "fluent-mdl2:calendar",
+      "category": "life"
+    },
+    {
+      "id": "hobby_development",
+      "title": "兴趣爱好",
+      "description": "退休后想培养一些兴趣爱好，比如书法、绘画、园艺、音乐等，有什么好的建议吗？",
+      "icon": "fluent-mdl2:palette",
+      "category": "life"
+    },
+    {
+      "id": "travel_planning",
+      "title": "旅行规划",
+      "description": "想出去旅游放松一下，但担心身体和安全问题，有什么适合老年人的旅游建议吗？",
+      "icon": "fluent-mdl2:airplane",
+      "category": "life"
+    },
+    {
+      "id": "home_safety",
+      "title": "居家安全",
+      "description": "年纪大了，担心在家里的安全问题，有什么居家安全防护的建议吗？",
+      "icon": "fluent-mdl2:security",
+      "category": "life"
+    },
+    {
+      "id": "daily_routine",
+      "title": "日常作息",
+      "description": "退休后生活节奏改变了，想建立良好的日常作息习惯，有什么好的建议吗？",
+      "icon": "fluent-mdl2:clock",
+      "category": "life"
+    },
+    {
+      "id": "emotional_support",
+      "title": "情感支持",
+      "description": "有时候感到孤独或者情绪低落，有什么好的情感调节和寻求支持的方法吗？",
+      "icon": "fluent-mdl2:heart",
+      "category": "life"
+    },
+    {
+      "id": "new_skills",
+      "title": "学习新技能",
+      "description": "退休后想学一些新技能，比如使用智能手机、电脑操作，或者书法绘画，有什么适合我们老年人的学习方式？",
+      "icon": "fluent-mdl2:learning-tools",
+      "category": "learning"
+    },
+    {
+      "id": "technology_learning",
+      "title": "科技学习",
+      "description": "想学习使用智能手机、电脑、平板等电子设备，但觉得太复杂，有什么简单易懂的学习方法吗？",
+      "icon": "fluent-mdl2:laptop",
+      "category": "learning"
+    },
+    {
+      "id": "language_learning",
+      "title": "语言学习",
+      "description": "想学习一门外语，比如英语或者其他语言，有什么适合老年人的学习方法吗？",
+      "icon": "fluent-mdl2:translate",
+      "category": "learning"
+    },
+    {
+      "id": "art_culture",
+      "title": "文化艺术",
+      "description": "对书法、绘画、音乐、戏曲等文化艺术很感兴趣，想深入学习，有什么好的建议吗？",
+      "icon": "fluent-mdl2:paint-brush",
+      "category": "learning"
+    },
+    {
+      "id": "financial_management",
+      "title": "理财规划",
+      "description": "退休后的收入有限，想了解一下如何合理理财，有什么适合老年人的理财方式吗？",
+      "icon": "fluent-mdl2:money",
+      "category": "learning"
+    },
+    {
+      "id": "internet_safety",
+      "title": "网络安全",
+      "description": "想学习上网，但担心遇到网络诈骗，有什么网络安全防护的知识可以学习吗？",
+      "icon": "fluent-mdl2:shield",
+      "category": "learning"
+    },
+    {
+      "id": "health_knowledge",
+      "title": "健康知识",
+      "description": "想学习一些基本的健康知识，了解常见疾病的预防和护理，有什么好的学习资源吗？",
+      "icon": "fluent-mdl2:book",
+      "category": "learning"
+    },
+    {
+      "id": "digital_life",
+      "title": "数字生活",
+      "description": "想学习使用各种手机应用，比如微信、支付宝、网上购物等，有什么简单易懂的教程吗？",
+      "icon": "fluent-mdl2:smartphone",
+      "category": "learning"
+    },
+    {
+      "id": "social_participation",
+      "title": "社会参与",
+      "description": "退休后想参加一些社会活动，比如社区服务或者老年大学，有什么好的建议和途径？",
+      "icon": "fluent-mdl2:people",
+      "category": "social"
+    },
+    {
+      "id": "volunteer_work",
+      "title": "志愿服务",
+      "description": "想做一些志愿服务工作，为社会贡献自己的力量，有什么适合的志愿服务机会吗？",
+      "icon": "fluent-mdl2:handshake",
+      "category": "social"
+    },
+    {
+      "id": "community_activities",
+      "title": "社区活动",
+      "description": "想参加社区组织的各种活动，比如广场舞、太极拳、合唱团等，有什么好的建议吗？",
+      "icon": "fluent-mdl2:community",
+      "category": "social"
+    },
+    {
+      "id": "peer_communication",
+      "title": "同龄交流",
+      "description": "想多和同龄人交流，分享退休后的生活经验和感受，有什么好的交流平台或方式吗？",
+      "icon": "fluent-mdl2:chat",
+      "category": "social"
+    },
+    {
+      "id": "mentoring_guidance",
+      "title": "经验传承",
+      "description": "想把自己的工作经验传授给年轻人，或者指导后辈，有什么好的方式和方法吗？",
+      "icon": "fluent-mdl2:graduation-cap",
+      "category": "social"
+    },
+    {
+      "id": "community_leadership",
+      "title": "社区领导",
+      "description": "想在社区中发挥更多作用，参与社区管理和决策，有什么好的途径和建议吗？",
+      "icon": "fluent-mdl2:leaderboard",
+      "category": "social"
+    },
+    {
+      "id": "cultural_activities",
+      "title": "文化活动",
+      "description": "想参加一些文化活动，比如读书会、文化讲座、艺术展览等，有什么好的推荐吗？",
+      "icon": "fluent-mdl2:culture",
+      "category": "social"
+    },
+    {
+      "id": "intergenerational_exchange",
+      "title": "代际交流",
+      "description": "想和年轻人多交流，了解他们的想法，也分享我们的经验，有什么好的交流平台吗？",
+      "icon": "fluent-mdl2:conversation",
+      "category": "social"
+    }
+  ],
+  "categories": {
+    "health": {
+      "name": "健康管理",
+      "color": "#52c41a",
+      "icon": "fluent-mdl2:health"
+    },
+    "life": {
+      "name": "生活指导",
+      "color": "#1890ff",
+      "icon": "fluent-mdl2:home"
+    },
+    "learning": {
+      "name": "学习成长",
+      "color": "#fa8c16",
+      "icon": "fluent-mdl2:learning-tools"
+    },
+    "social": {
+      "name": "社会参与",
+      "color": "#722ed1",
+      "icon": "fluent-mdl2:people"
+    }
+  },
+  "settings": {
+    "max_topics_display": 4,
+    "enable_categories": true,
+    "enable_descriptions": false,
+    "cache_duration": 300
+  }
+}

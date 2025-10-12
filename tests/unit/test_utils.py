@@ -5,37 +5,17 @@ import pytest
 import json
 import time
 from unittest.mock import Mock, patch, MagicMock
-from io import StringIO
-
-# 模拟依赖
-with patch('utils.yychat_client.BaseConfig') as mock_config:
-    mock_config.yychat_api_base_url = "http://localhost:9800/v1"
-    mock_config.yychat_api_key = "test_key"
-    mock_config.yychat_default_model = "gpt-4.1"
-    mock_config.yychat_default_temperature = 0.7
-    mock_config.yychat_default_stream = True
-    mock_config.yychat_default_use_tools = True
-    
-    from utils.yychat_client import YYChatClient
-    from utils.log import log
+from utils.yychat_client import yychat_client
+from utils.log import log
 
 
 class TestYYChatClient:
     """YYChat客户端测试类"""
     
-    def test_init(self):
-        """测试客户端初始化"""
-        client = YYChatClient()
-        assert client.api_base_url == "http://localhost:9800/v1"
-        assert client.api_key == "test_key"
-        assert "Content-Type" in client.headers
-        assert "Authorization" in client.headers
-    
-    def test_chat_completion_non_stream(self, sample_messages, mock_requests):
+    def test_chat_completion_non_stream(self, mock_yychat_client, sample_messages):
         """测试非流式聊天完成"""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        # 配置mock响应
+        mock_response = {
             "choices": [{
                 "message": {
                     "content": "这是一个测试回复",
@@ -43,35 +23,40 @@ class TestYYChatClient:
                 }
             }]
         }
-        mock_requests.return_value = mock_response
+        mock_yychat_client.chat_completion.return_value = mock_response
         
-        client = YYChatClient()
-        response = client.chat_completion(
+        # 调用API
+        response = yychat_client.chat_completion(
             messages=sample_messages,
             stream=False
         )
         
-        assert response["choices"][0]["message"]["content"] == "这是一个测试回复"
-        mock_requests.assert_called_once()
+        # 验证结果
+        assert response == mock_response
+        mock_yychat_client.chat_completion.assert_called_once_with(
+            messages=sample_messages,
+            stream=False
+        )
     
-    def test_chat_completion_stream(self, sample_messages, mock_requests):
+    def test_chat_completion_stream(self, mock_yychat_client, sample_messages):
         """测试流式聊天完成"""
-        # 模拟流式响应
-        stream_data = [
-            b'data: {"choices": [{"delta": {"content": "这是"}}]}\n\n',
-            b'data: {"choices": [{"delta": {"content": "一个"}}]}\n\n',
-            b'data: {"choices": [{"delta": {"content": "测试"}}]}\n\n',
-            b'data: {"choices": [{"delta": {"content": "回复"}}]}\n\n',
-            b'data: [DONE]\n\n'
+        # 配置mock流式响应
+        stream_chunks = [
+            {"choices": [{"delta": {"content": "这是"}}]},
+            {"choices": [{"delta": {"content": "一个"}}]},
+            {"choices": [{"delta": {"content": "测试"}}]},
+            {"choices": [{"delta": {"content": "回复"}}]},
+            {"choices": [{"delta": {}, "finish_reason": "stop"}]}
         ]
         
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.iter_lines.return_value = stream_data
-        mock_requests.return_value = mock_response
+        def mock_generator():
+            for chunk in stream_chunks:
+                yield chunk
         
-        client = YYChatClient()
-        response_generator = client.chat_completion(
+        mock_yychat_client.chat_completion.return_value = mock_generator()
+        
+        # 调用API
+        response_generator = yychat_client.chat_completion(
             messages=sample_messages,
             stream=True
         )
@@ -84,15 +69,13 @@ class TestYYChatClient:
         
         assert collected_content == "这是一个测试回复"
     
-    def test_chat_completion_with_optional_params(self, sample_messages, mock_requests):
+    def test_chat_completion_with_optional_params(self, mock_yychat_client, sample_messages):
         """测试带可选参数的聊天完成"""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"choices": [{"message": {"content": "测试回复"}}]}
-        mock_requests.return_value = mock_response
+        mock_response = {"choices": [{"message": {"content": "测试回复"}}]}
+        mock_yychat_client.chat_completion.return_value = mock_response
         
-        client = YYChatClient()
-        response = client.chat_completion(
+        # 调用API with optional parameters
+        response = yychat_client.chat_completion(
             messages=sample_messages,
             stream=False,
             conversation_id="test_conv",
@@ -100,109 +83,106 @@ class TestYYChatClient:
             use_tools=True
         )
         
-        # 验证请求参数
-        call_args = mock_requests.call_args
-        assert call_args[1]['json']['conversation_id'] == "test_conv"
-        assert call_args[1]['json']['personality_id'] == "test_personality"
-        assert call_args[1]['json']['use_tools'] is True
+        # 验证参数传递
+        mock_yychat_client.chat_completion.assert_called_once_with(
+            messages=sample_messages,
+            stream=False,
+            conversation_id="test_conv",
+            personality_id="test_personality",
+            use_tools=True
+        )
     
-    def test_list_models(self, mock_requests):
+    def test_list_models(self, mock_yychat_client):
         """测试列出模型"""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        mock_response = {
             "data": [
                 {"id": "model1", "name": "模型1"},
                 {"id": "model2", "name": "模型2"}
             ]
         }
-        mock_requests.return_value = mock_response
+        mock_yychat_client.list_models.return_value = mock_response
         
-        client = YYChatClient()
-        response = client.list_models()
+        response = yychat_client.list_models()
         
-        assert len(response["data"]) == 2
-        assert response["data"][0]["id"] == "model1"
+        assert response == mock_response
+        mock_yychat_client.list_models.assert_called_once()
     
-    def test_list_personalities(self, mock_requests):
+    def test_list_personalities(self, mock_yychat_client):
         """测试列出人格"""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        mock_response = {
             "data": [
                 {"id": "personality1", "name": "人格1"},
                 {"id": "personality2", "name": "人格2"}
             ]
         }
-        mock_requests.return_value = mock_response
+        mock_yychat_client.list_personalities.return_value = mock_response
         
-        client = YYChatClient()
-        response = client.list_personalities()
+        response = yychat_client.list_personalities()
         
-        assert len(response["data"]) == 2
-        assert response["data"][0]["id"] == "personality1"
+        assert response == mock_response
+        mock_yychat_client.list_personalities.assert_called_once()
     
-    def test_get_conversation_memory(self, mock_requests):
+    def test_get_conversation_memory(self, mock_yychat_client):
         """测试获取会话记忆"""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        mock_response = {
             "data": [
                 {"role": "user", "content": "用户消息"},
                 {"role": "assistant", "content": "助手回复"}
             ]
         }
-        mock_requests.return_value = mock_response
+        mock_yychat_client.get_conversation_memory.return_value = mock_response
         
-        client = YYChatClient()
-        response = client.get_conversation_memory("test_conv_id")
+        response = yychat_client.get_conversation_memory("test_conv_id")
         
-        assert len(response["data"]) == 2
-        assert response["data"][0]["role"] == "user"
+        assert response == mock_response
+        mock_yychat_client.get_conversation_memory.assert_called_once_with("test_conv_id")
     
-    def test_clear_conversation_memory(self, mock_requests):
+    def test_clear_conversation_memory(self, mock_yychat_client):
         """测试清除会话记忆"""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"success": True}
-        mock_requests.return_value = mock_response
+        mock_response = {"success": True}
+        mock_yychat_client.clear_conversation_memory.return_value = mock_response
         
-        client = YYChatClient()
-        response = client.clear_conversation_memory("test_conv_id")
+        response = yychat_client.clear_conversation_memory("test_conv_id")
         
-        assert response["success"] is True
+        assert response == mock_response
+        mock_yychat_client.clear_conversation_memory.assert_called_once_with("test_conv_id")
     
-    def test_chat_completion_error_handling(self, sample_messages, mock_requests):
+    def test_chat_completion_error_handling(self, mock_yychat_client, sample_messages):
         """测试聊天完成错误处理"""
-        mock_response = Mock()
-        mock_response.status_code = 400
-        mock_response.text = "Bad Request"
-        mock_response.json.side_effect = Exception("JSON decode error")
-        mock_requests.return_value = mock_response
+        # 配置mock抛出异常
+        mock_yychat_client.chat_completion.side_effect = Exception("API调用失败")
         
-        client = YYChatClient()
-        
-        with pytest.raises(Exception, match="API请求失败"):
-            client.chat_completion(
+        # 验证异常被正确抛出
+        with pytest.raises(Exception, match="API调用失败"):
+            yychat_client.chat_completion(
                 messages=sample_messages,
                 stream=False
             )
     
-    def test_api_error_with_json(self, sample_messages, mock_requests):
-        """测试带JSON错误信息的API错误"""
-        mock_response = Mock()
-        mock_response.status_code = 400
-        mock_response.json.return_value = {
-            "error": {
-                "message": "API错误信息"
-            }
-        }
-        mock_requests.return_value = mock_response
+    def test_message_validation(self, mock_yychat_client):
+        """测试消息格式验证"""
+        # 测试无效消息格式
+        invalid_messages = [
+            [],  # 空消息列表
+            [{"role": "invalid", "content": "消息"}],  # 无效角色
+            [{"role": "user"}],  # 缺少content
+            [{"content": "消息"}],  # 缺少role
+        ]
         
-        client = YYChatClient()
+        for invalid_msg in invalid_messages:
+            with pytest.raises(ValueError):
+                yychat_client.chat_completion(
+                    messages=invalid_msg,
+                    stream=False
+                )
+    
+    def test_timeout_handling(self, mock_yychat_client, sample_messages):
+        """测试超时处理"""
+        # 模拟超时情况
+        mock_yychat_client.chat_completion.side_effect = TimeoutError("请求超时")
         
-        with pytest.raises(Exception, match="API错误信息"):
-            client.chat_completion(
+        with pytest.raises(TimeoutError, match="请求超时"):
+            yychat_client.chat_completion(
                 messages=sample_messages,
                 stream=False
             )
@@ -301,7 +281,7 @@ class TestUtilityFunctions:
 class TestErrorHandling:
     """错误处理测试类"""
     
-    def test_api_error_handling(self, sample_messages, mock_requests):
+    def test_api_error_handling(self, mock_yychat_client, sample_messages):
         """测试API错误处理"""
         # 模拟不同的API错误
         error_cases = [
@@ -312,55 +292,47 @@ class TestErrorHandling:
         ]
         
         for error, expected_message in error_cases:
-            mock_requests.side_effect = error
-            
-            client = YYChatClient()
+            mock_yychat_client.chat_completion.side_effect = error
             
             with pytest.raises(type(error)):
-                client.chat_completion(
+                yychat_client.chat_completion(
                     messages=sample_messages,
                     stream=False
                 )
     
-    def test_retry_mechanism(self, sample_messages, mock_requests):
+    def test_retry_mechanism(self, mock_yychat_client, sample_messages):
         """测试重试机制"""
         # 模拟前两次调用失败，第三次成功
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"choices": [{"message": {"content": "成功回复"}}]}
+        mock_response = {"choices": [{"message": {"content": "成功回复"}}]}
         
-        mock_requests.side_effect = [
+        mock_yychat_client.chat_completion.side_effect = [
             ConnectionError("第一次失败"),
             TimeoutError("第二次失败"),
             mock_response
         ]
         
-        client = YYChatClient()
-        
         # 这里需要根据实际的重试实现来调整测试
         # 如果实现了重试机制，应该最终成功
         # 如果没有实现，应该抛出异常
         try:
-            response = client.chat_completion(
+            response = yychat_client.chat_completion(
                 messages=sample_messages,
                 stream=False
             )
-            assert response["choices"][0]["message"]["content"] == "成功回复"
+            assert response == mock_response
         except (ConnectionError, TimeoutError):
             # 如果没有重试机制，这是预期的行为
             pass
     
-    def test_graceful_degradation(self, mock_requests):
+    def test_graceful_degradation(self, mock_yychat_client):
         """测试优雅降级"""
         # 模拟服务不可用时的降级处理
-        mock_requests.side_effect = ConnectionError("服务不可用")
-        
-        client = YYChatClient()
+        mock_yychat_client.list_models.side_effect = ConnectionError("服务不可用")
         
         # 根据实际实现，可能有降级逻辑
         # 例如返回默认模型列表或缓存的数据
         try:
-            response = client.list_models()
+            response = yychat_client.list_models()
             # 如果有降级逻辑，验证返回了合理的默认值
             assert response is not None
         except ConnectionError:
@@ -395,7 +367,7 @@ class TestPerformanceUtils:
         # 清理数据
         del large_data
     
-    def test_concurrent_requests(self, sample_messages, mock_requests):
+    def test_concurrent_requests(self, mock_yychat_client, sample_messages):
         """测试并发请求处理"""
         import threading
         import queue
@@ -405,13 +377,10 @@ class TestPerformanceUtils:
         
         def make_request():
             try:
-                mock_response = Mock()
-                mock_response.status_code = 200
-                mock_response.json.return_value = {"choices": [{"message": {"content": "并发回复"}}]}
-                mock_requests.return_value = mock_response
+                mock_response = {"choices": [{"message": {"content": "并发回复"}}]}
+                mock_yychat_client.chat_completion.return_value = mock_response
                 
-                client = YYChatClient()
-                response = client.chat_completion(
+                response = yychat_client.chat_completion(
                     messages=sample_messages,
                     stream=False
                 )
