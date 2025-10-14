@@ -1,7 +1,7 @@
 import copy
 import datetime
 import time
-from dash import html, dcc, State
+from dash import html, dcc, State, clientside_callback, ClientsideFunction
 import feffery_antd_components as fac
 import feffery_utils_components as fuc
 from feffery_dash_utils.style_utils import style
@@ -364,6 +364,17 @@ def _create_state_stores():
                                         data: { connected: true, client_id: window.voiceWebSocketManager.clientId, timestamp: Date.now() }
                                     });
                                     console.log('连接成功后写入client_id到Store:', window.voiceWebSocketManager.clientId);
+                                    
+                                    // 手动触发trigger_sse，确保语音功能正常工作
+                                    setTimeout(() => {
+                                        console.log('手动触发trigger_sse，确保语音功能正常');
+                                        // 触发一个小的更新来重新触发trigger_sse
+                                        if (window.dash_clientside && window.dash_clientside.set_props) {
+                                            window.dash_clientside.set_props('voice-websocket-connection', {
+                                                data: { connected: true, client_id: window.voiceWebSocketManager.clientId, timestamp: Date.now() + 1 }
+                                            });
+                                        }
+                                    }, 100);
                                 }
                             });
                         }
@@ -563,3 +574,16 @@ def render():
     ]
 
 
+# 添加语音转录镜像回调
+def register_voice_transcription_mirror_callback(app):
+    app.clientside_callback(
+        """
+        function(data) {
+            console.log('镜像转录存储回调被触发:', data);
+            return data; // 直接返回数据，实现镜像
+        }
+        """,
+        Output("voice-transcription-store-server", "data"),
+        Input("voice-transcription-store", "data"),
+        prevent_initial_call=True
+    )

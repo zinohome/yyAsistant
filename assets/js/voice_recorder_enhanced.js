@@ -311,6 +311,19 @@ class VoiceRecorderEnhanced {
         console.log('收到转录结果:', data);
         
         if (data.text && data.text.trim()) {
+            // 立即将 client_id 推送到 Store 与 语音开关，确保随后的 SSE 能带上 client_id
+            try {
+                const cid = (window.voiceChatState && window.voiceChatState.clientId) || localStorage.getItem('voiceClientId');
+                if (cid && window.dash_clientside && window.dash_clientside.set_props) {
+                    window.dash_clientside.set_props('voice-websocket-connection', {
+                        data: { connected: true, client_id: cid, timestamp: Date.now() }
+                    });
+                    window.dash_clientside.set_props('voice-enable-voice', {
+                        data: { enable: true, client_id: cid, ts: Date.now() }
+                    });
+                }
+            } catch (_) {}
+
             // 通过Dash回调更新输入框
             this.updateInputBoxViaDash(data.text.trim());
             
@@ -577,6 +590,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 导出供其他模块使用
+// 添加Dash客户端回调函数
+window.dash_clientside = window.dash_clientside || {};
+window.dash_clientside.voiceTranscription = window.dash_clientside.voiceTranscription || {};
+
+// 镜像转录存储的回调函数
+window.dash_clientside.voiceTranscription.mirrorTranscriptionStore = function(data) {
+    console.log('镜像转录存储回调被触发:', data);
+    return data; // 直接返回数据，实现镜像
+};
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = VoiceRecorderEnhanced;
 }

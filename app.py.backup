@@ -36,15 +36,15 @@ check_dependencies_version(
 )
 
 # 注册聊天输入区域回调
-register_chat_input_callbacks(app)  # 临时注释，使用新的统一回调
+# register_chat_input_callbacks(app)  # 临时注释，使用新的统一回调
 register_voice_transcription_mirror_callback(app)
 
 # 导入语音回调函数（在app初始化后导入）
-import callbacks.voice_chat_c  # 临时注释，使用新的统一回调
+# import callbacks.voice_chat_c  # 临时注释，使用新的统一回调
 
-# 注册完整的统一回调（处理所有聊天功能）
-#from callbacks.core_pages_c.core_chat_callback import register_core_chat_callback
-#register_core_chat_callback(app)
+# 注册核心聊天回调（只处理文本发送、语音转录、SSE完成）
+from callbacks.core_pages_c.core_chat_callback import register_core_chat_callback
+register_core_chat_callback(app)
 
 # 修改app.layout，添加SSE组件到布局中
 app.layout = lambda: fuc.FefferyTopProgress(
@@ -272,7 +272,3 @@ if __name__ == "__main__":
     #app.run(host='0.0.0.0', port=8050)
     # 生产环境推荐使用gunicorn启动
     #gunicorn -w 4 -b 0.0.0.0:8050 app:server
-
-# 注册完整的统一回调
-from callbacks.core_pages_c.core_chat_callback import register_core_chat_callback
-register_core_chat_callback(app)

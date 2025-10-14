@@ -41,13 +41,12 @@ active_sse_connections = {}
     [
         State('ai-chat-x-input', 'value'),
         State('ai-chat-x-messages-store', 'data'),
-        State('ai-chat-x-current-session-id', 'data'),
-        State('voice-websocket-connection', 'data')
+        State('ai-chat-x-current-session-id', 'data')
     ],
     prevent_initial_call=True
 )
 def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_json, transcription_data,
-                           message_content, messages_store, current_session_id, ws_connection_data):
+                           message_content, messages_store, current_session_id):
     # 获取触发回调的元素ID
     triggered_id = ctx.triggered_id if ctx.triggered else None
     
@@ -193,20 +192,8 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
             }
             updated_messages.append(ai_message)
 
-            # 组装语音开关数据，携带client_id用于SSE payload
-            enable_voice_payload = True
-            try:
-                client_id = (ws_connection_data or {}).get('client_id') if isinstance(ws_connection_data, dict) else None
-                enable_voice_payload = {
-                    'enable': True,
-                    'client_id': client_id,
-                    'ts': int(time.time() * 1000)
-                }
-            except Exception:
-                pass
-
-            # 返回：更新消息列表，清空输入框，设置按钮loading/disabled，并设置语音开关（含client_id）
-            return updated_messages, '', True, True, enable_voice_payload
+            # 返回：更新消息列表，清空输入框，设置按钮loading/disabled，以及清空转录store
+            return updated_messages, '', True, True, True
         except Exception as e:
             log.error(f"处理语音转录发送时出错: {e}")
             return messages, message_content, False, False, dash.no_update
@@ -343,16 +330,10 @@ def trigger_sse(messages, enable_voice, ws_connection, current_session_id):
             except Exception:
                 client_id = None
 
-            # 语音联动判定：即使缺少client_id也不要阻断SSE文本
-            # 缺少client_id时仅关闭本次TTS（enable_voice=False），待下次再启用
-            enable_requested = False
-            try:
-                if isinstance(enable_voice, dict):
-                    enable_requested = bool(enable_voice.get('enable'))
-                else:
-                    enable_requested = bool(enable_voice)
-            except Exception:
-                enable_requested = bool(enable_voice)
+            # 根据触发源决定是否等待client_id
+            # 当需要语音但client_id缺失时，先不发起，等待voice-websocket-connection再次触发
+            if bool(enable_voice) and not client_id:
+                return no_update, no_update
 
             request_data = {
                 'messages': conversation_messages,
@@ -360,9 +341,9 @@ def trigger_sse(messages, enable_voice, ws_connection, current_session_id):
                 'personality_id': 'health_assistant',
                 'message_id': message_id,
                 'role': role,
-                # 仅当来源是语音且拿到client_id时才打开TTS
-                'enable_voice': (enable_requested and bool(client_id)),
-                # 后端需要定向推送的client_id（可能为空）
+                # 仅当来源是语音转写触发时才打开TTS
+                'enable_voice': bool(enable_voice),
+                # 后端需要定向推送的client_id
                 'client_id': client_id
             }
             # 兼容后端新字段：conversation_id = session_id
@@ -866,6 +847,7 @@ app.clientside_callback(
         Output('ai-chat-x-messages-store', 'data', allow_duplicate=True),
         Output('ai-chat-x-input', 'value', allow_duplicate=True),
         Output('ai-chat-x-send-btn', 'nClicks', allow_duplicate=True),
+        Output('chat-X-sse', 'url', allow_duplicate=True),
         Output('global-message', 'children', allow_duplicate=True)
     ],
     [
@@ -885,15 +867,15 @@ def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, canc
     """处理所有消息相关操作：重新生成、取消发送"""
     
     if not ctx.triggered:
-        return [dash.no_update] * 4
+        return [dash.no_update] * 5
     
     triggered = ctx.triggered[0]
     if not triggered:
-        return [dash.no_update] * 4
+        return [dash.no_update] * 5
     
     # 检查被触发的按钮是否有点击
     if triggered.get('value', 0) <= 0:
-        return [dash.no_update] * 4
+        return [dash.no_update] * 5
     
     try:
         # 解析被点击的消息ID
@@ -907,7 +889,7 @@ def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, canc
             target_message_id = id_dict['index']
             
             if not messages:
-                return [dash.no_update] * 3 + [fac.AntdMessage(type="error", content="消息列表为空")]
+                return [dash.no_update] * 4 + [fac.AntdMessage(type="error", content="消息列表为空")]
             
             # 找到目标消息和上一条用户消息
             target_message_index = None
@@ -924,10 +906,10 @@ def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, canc
                     break
             
             if target_message_index is None:
-                return [dash.no_update] * 3 + [fac.AntdMessage(type="error", content="无法重新生成：未找到目标消息")]
+                return [dash.no_update] * 4 + [fac.AntdMessage(type="error", content="无法重新生成：未找到目标消息")]
             
             if previous_user_message is None:
-                return [dash.no_update] * 3 + [fac.AntdMessage(type="error", content="无法重新生成：未找到上一条用户消息")]
+                return [dash.no_update] * 4 + [fac.AntdMessage(type="error", content="无法重新生成：未找到上一条用户消息")]
             
             # 创建消息的深拷贝
             updated_messages = copy.deepcopy(messages)
@@ -948,7 +930,7 @@ def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, canc
             updated_messages.append(new_ai_message)
             
             # 返回更新后的消息，SSE会自动通过trigger_sse回调触发
-            return updated_messages, dash.no_update, dash.no_update, dash.no_update
+            return updated_messages, dash.no_update, dash.no_update, dash.no_update, dash.no_update
         
         # 处理用户消息重新生成
         elif '"type":"user-chat-x-regenerate"' in prop_id:
@@ -957,7 +939,7 @@ def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, canc
             target_message_id = id_dict['index']
             
             if not messages:
-                return [dash.no_update] * 4
+                return [dash.no_update] * 5
             
             # 找到目标用户消息
             target_message = None
@@ -983,7 +965,7 @@ def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, canc
             target_message_id = id_dict['index']
             
             if not messages:
-                return [dash.no_update] * 4
+                return [dash.no_update] * 5
             
             # 创建消息的深拷贝
             updated_messages = copy.deepcopy(messages)
@@ -1024,7 +1006,7 @@ def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, canc
                 return [dash.no_update] * 4 + [error_message]
         
         else:
-            return [dash.no_update] * 4
+            return [dash.no_update] * 5
         
     except Exception as e:
         log.error(f"消息操作失败: {e}")

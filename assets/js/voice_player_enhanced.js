@@ -14,6 +14,7 @@ class VoicePlayerEnhanced {
             speed: 1.0,
             volume: 0.8
         };
+        this.playedMessages = new Set(); // 记录已播放的消息ID，避免重复播放
         
         this.init();
     }
@@ -24,6 +25,24 @@ class VoicePlayerEnhanced {
         
         // 绑定事件
         this.bindEvents();
+        
+        // 初始化音频上下文（需要用户交互）
+        this.initAudioContext();
+    }
+    
+    initAudioContext() {
+        // 在用户交互时初始化音频上下文
+        const initAudio = () => {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('音频上下文已初始化');
+            }
+        };
+        
+        // 监听用户交互事件
+        document.addEventListener('click', initAudio, { once: true });
+        document.addEventListener('touchstart', initAudio, { once: true });
+        document.addEventListener('keydown', initAudio, { once: true });
     }
     
     initWebSocket() {
@@ -37,9 +56,32 @@ class VoicePlayerEnhanced {
                     try {
                         window.voiceWebSocketManager.registerMessageHandler('audio_stream', (data) => this.handleAudioStream(data));
                         window.voiceWebSocketManager.registerMessageHandler('voice_response', (data) => {
-                            if (data.audio_data) {
+                            console.log('收到voice_response消息:', data);
+                            
+                            // 检查是否已经播放过这个消息
+                            const messageId = data.message_id;
+                            if (messageId && this.playedMessages.has(messageId)) {
+                                console.log('消息已播放过，跳过:', messageId);
+                                return;
+                            }
+                            
+                            // 停止当前播放
+                            this.stopCurrentAudio();
+                            
+                            if (data.audio) {
+                                console.log('收到voice_response，音频长度:', data.audio.length);
+                                this.playAudioFromBase64(data.audio);
+                                if (messageId) {
+                                    this.playedMessages.add(messageId);
+                                }
+                            } else if (data.audio_data) {
                                 console.log('收到voice_response，音频长度:', data.audio_data.length);
                                 this.playAudioFromBase64(data.audio_data);
+                                if (messageId) {
+                                    this.playedMessages.add(messageId);
+                                }
+                            } else {
+                                console.warn('voice_response消息没有audio或audio_data字段:', data);
                             }
                         });
                         window.voiceWebSocketManager.registerMessageHandler('synthesis_complete', (data) => this.handleSynthesisComplete(data));
@@ -53,9 +95,32 @@ class VoicePlayerEnhanced {
                             try {
                                 window.voiceWebSocketManager.registerMessageHandler('audio_stream', (data) => this.handleAudioStream(data));
                                 window.voiceWebSocketManager.registerMessageHandler('voice_response', (data) => {
-                                    if (data.audio_data) {
+                                    console.log('收到voice_response消息（延迟注册）:', data);
+                                    
+                                    // 检查是否已经播放过这个消息
+                                    const messageId = data.message_id;
+                                    if (messageId && this.playedMessages.has(messageId)) {
+                                        console.log('消息已播放过，跳过:', messageId);
+                                        return;
+                                    }
+                                    
+                                    // 停止当前播放
+                                    this.stopCurrentAudio();
+                                    
+                                    if (data.audio) {
+                                        console.log('收到voice_response，音频长度:', data.audio.length);
+                                        this.playAudioFromBase64(data.audio);
+                                        if (messageId) {
+                                            this.playedMessages.add(messageId);
+                                        }
+                                    } else if (data.audio_data) {
                                         console.log('收到voice_response，音频长度:', data.audio_data.length);
                                         this.playAudioFromBase64(data.audio_data);
+                                        if (messageId) {
+                                            this.playedMessages.add(messageId);
+                                        }
+                                    } else {
+                                        console.warn('voice_response消息没有audio或audio_data字段（延迟注册）:', data);
                                     }
                                 });
                                 window.voiceWebSocketManager.registerMessageHandler('synthesis_complete', (data) => this.handleSynthesisComplete(data));
@@ -202,17 +267,40 @@ class VoicePlayerEnhanced {
         }
     }
     
+    stopCurrentAudio() {
+        if (this.currentAudio) {
+            try {
+                this.currentAudio.stop();
+                this.currentAudio.disconnect();
+                console.log('停止当前音频播放');
+            } catch (error) {
+                console.warn('停止音频播放失败:', error);
+            }
+            this.currentAudio = null;
+        }
+        this.isPlaying = false;
+    }
+    
     async playAudioFromBase64(base64Audio) {
         try {
+            console.log('开始播放音频，base64长度:', base64Audio.length);
+            
+            // 停止当前播放
+            this.stopCurrentAudio();
+            
             // 初始化音频上下文
             if (!this.audioContext) {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('音频上下文已创建');
             }
             
             // 恢复音频上下文（如果被暂停）
             if (this.audioContext.state === 'suspended') {
                 await this.audioContext.resume();
+                console.log('音频上下文已恢复');
             }
+            
+            console.log('音频上下文状态:', this.audioContext.state);
             
             // 解码base64音频数据
             const audioData = atob(base64Audio);
@@ -223,11 +311,15 @@ class VoicePlayerEnhanced {
                 view[i] = audioData.charCodeAt(i);
             }
             
+            console.log('音频数据长度:', audioBuffer.byteLength);
+            
             // 解码音频
             const decodedAudio = await this.audioContext.decodeAudioData(audioBuffer);
+            console.log('音频解码成功，时长:', decodedAudio.duration, '秒');
             
             // 播放音频
             await this.playAudioBuffer(decodedAudio);
+            console.log('音频播放完成');
             
         } catch (error) {
             console.error('播放音频失败:', error);
