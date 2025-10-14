@@ -139,12 +139,14 @@ class YYChatClient:
         '''
         
         try:
-            # 发送请求
+            # 发送请求，设置较长的超时时间以支持第一次请求的Memory初始化
+            timeout = 30 if payload["stream"] else 60  # 流式请求30秒，非流式请求60秒
             response = requests.post(
                 url, 
                 headers=self.headers, 
                 json=payload,
-                stream=payload["stream"]
+                stream=payload["stream"],
+                timeout=timeout
             )
             
             # 检查响应状态
@@ -172,6 +174,12 @@ class YYChatClient:
                     # 不尝试以流式方式处理，而是抛出异常让调用方处理
                     raise Exception(f"解析非流式响应失败: {str(json_error)}")
             
+        except requests.exceptions.Timeout:
+            log.error(f"YYChat API调用超时 (超时时间: {timeout}秒)")
+            raise Exception(f"API请求超时，请稍后重试。首次请求可能需要更长时间来初始化Memory。")
+        except requests.exceptions.ConnectionError:
+            log.error(f"YYChat API连接错误")
+            raise Exception(f"无法连接到YYChat API服务器，请检查网络连接。")
         except Exception as e:
             log.error(f"YYChat API调用异常: {str(e)}")
             raise

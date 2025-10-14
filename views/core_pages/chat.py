@@ -1,7 +1,7 @@
 import copy
 import datetime
 import time
-from dash import html, dcc
+from dash import html, dcc, State
 import feffery_antd_components as fac
 import feffery_utils_components as fuc
 from feffery_dash_utils.style_utils import style
@@ -19,6 +19,7 @@ from components.preference import render as render_preference_drawer
 
 # 导入配置和用户相关模块
 from configs import BaseConfig
+from configs.voice_config import VoiceConfig
 from flask_login import current_user
 from utils.log import log
 
@@ -294,6 +295,113 @@ def _create_state_stores():
     
     # 添加：复制结果的虚拟输出组件
     copy_result_store = dcc.Store(id='ai-chat-x-copy-result', data=None)
+    
+    # 添加语音功能相关的存储组件
+    voice_recording_status = dcc.Store(id='voice-recording-status', data=False)
+    voice_call_status = dcc.Store(id='voice-call-status', data=False)
+    voice_websocket_connection = dcc.Store(id='voice-websocket-connection', data=None)
+    voice_settings_store = dcc.Store(id='voice-settings-store', data=None)
+    # 语音触发TTS开关（仅语音转写触发的那次SSE需要使能）
+    voice_enable_voice_store = dcc.Store(id='voice-enable-voice', data=False)
+    voice_transcription_store = dcc.Store(id='voice-transcription-store', data=None)
+    voice_transcription_store_server = dcc.Store(id='voice-transcription-store-server', data=None)
+    
+    # 添加语音功能相关的显示组件
+    voice_message_notification = html.Div(id='voice-message-notification')
+    voice_error_notification = html.Div(id='voice-error-notification')
+    voice_js_integration = html.Div(
+        id='voice-js-integration',
+        children=[
+            # WebSocket管理器（最先加载）
+            html.Script(src='/assets/js/voice_websocket_manager.js'),
+            # 语音录制器
+            html.Script(src='/assets/js/voice_recorder_enhanced.js'),
+               # 语音播放器
+               html.Script(src='/assets/js/voice_player_enhanced.js'),
+               # 语音调试器（开发环境）
+               html.Script(src='/test/test_voice_debug.js'),
+            # 语音功能初始化脚本 - 动态从Python配置获取
+            html.Script('''
+                // 语音功能初始化
+                document.addEventListener('DOMContentLoaded', function() {{
+                    console.log('语音功能已加载');
+                    
+                    // 从Python配置动态设置全局语音配置
+                    window.voiceConfig = {{
+                        WS_URL: '''' + VoiceConfig.WS_URL + '''',
+                        AUDIO_SAMPLE_RATE: ''' + str(VoiceConfig.AUDIO_SAMPLE_RATE) + ''',
+                        AUDIO_CHANNELS: ''' + str(VoiceConfig.AUDIO_CHANNELS) + ''',
+                        AUDIO_BIT_RATE: ''' + str(VoiceConfig.AUDIO_BIT_RATE) + ''',
+                        VOICE_DEFAULT: '''' + VoiceConfig.VOICE_DEFAULT + '''',
+                        VOLUME_DEFAULT: ''' + str(VoiceConfig.VOLUME_DEFAULT) + ''',
+                        AUTO_PLAY_DEFAULT: ''' + str(VoiceConfig.AUTO_PLAY_DEFAULT).lower() + '''
+                    }};
+                    
+                    console.log('语音配置已设置:', window.voiceConfig);
+                    
+                    // 初始化WebSocket管理器
+                    if (window.VoiceWebSocketManager) {
+                        window.voiceWebSocketManager = new window.VoiceWebSocketManager();
+                        console.log('WebSocket管理器已初始化');
+                    }
+                    
+                    // 若已存在clientId，立即同步到Dash Store，避免竞态导致client_id为None
+                    try {
+                        if (window.voiceWebSocketManager && window.voiceWebSocketManager.clientId && window.dash_clientside && window.dash_clientside.set_props) {
+                            window.dash_clientside.set_props('voice-websocket-connection', {
+                                data: { connected: true, client_id: window.voiceWebSocketManager.clientId, timestamp: Date.now() }
+                            });
+                            console.log('已同步现有WS client_id到Store:', window.voiceWebSocketManager.clientId);
+                        }
+                    } catch (e) { console.warn('初始化同步client_id失败:', e); }
+
+                    // 监听连接成功事件，拿到client_id后写入Store
+                    try {
+                        if (window.voiceWebSocketManager && window.voiceWebSocketManager.registerConnectionHandler) {
+                            window.voiceWebSocketManager.registerConnectionHandler(function(success){
+                                if (success && window.voiceWebSocketManager.clientId && window.dash_clientside && window.dash_clientside.set_props) {
+                                    window.dash_clientside.set_props('voice-websocket-connection', {
+                                        data: { connected: true, client_id: window.voiceWebSocketManager.clientId, timestamp: Date.now() }
+                                    });
+                                    console.log('连接成功后写入client_id到Store:', window.voiceWebSocketManager.clientId);
+                                }
+                            });
+                        }
+                    } catch (e) { console.warn('注册连接回调失败:', e); }
+
+                    // 监听消息完成事件，触发语音播放
+                    const originalDispatchEvent = window.dispatchEvent;
+                    window.dispatchEvent = function(event) {{
+                        if (event.type === 'messageCompleted' && event.detail) {{
+                            // 触发语音播放
+                            if (window.voicePlayer) {{
+                                window.voicePlayer.playText(event.detail.text);
+                            }}
+                        }}
+                        return originalDispatchEvent.call(this, event);
+                    }};
+                    
+                    // 监听语音转录完成事件
+                    document.addEventListener('voiceTranscriptionComplete', function(event) {{
+                        console.log('收到语音转录完成事件:', event.detail);
+                        if (event.detail && event.detail.text) {{
+                            if (window.dash_clientside && window.dash_clientside.set_props) {{
+                                window.dash_clientside.set_props('voice-transcription-store', {{
+                                    data: {{ text: event.detail.text, ts: Date.now() }}
+                                }});
+                                // 同步镜像到服务端可见Store，确保触发服务端回调
+                                window.dash_clientside.set_props('voice-transcription-store-server', {{
+                                    data: {{ text: event.detail.text, ts: Date.now() }}
+                                }});
+                            }} else {{
+                                console.warn('dash_clientside.set_props 不可用，无法更新 voice-transcription-store');
+                            }}
+                        }}
+                    }});
+                }});
+            ''')
+        ]
+    )
 
     # 添加：会话改名对话框
     session_rename_modal = fac.AntdModal(
@@ -325,6 +433,19 @@ def _create_state_stores():
         copy_result_store,
         current_rename_conv_id_store,
         session_rename_modal,
+        
+        # 语音功能相关组件
+        voice_recording_status,
+        voice_call_status,
+        voice_websocket_connection,
+        voice_settings_store,
+        voice_enable_voice_store,
+        voice_transcription_store,
+        voice_transcription_store_server,
+        voice_message_notification,
+        voice_error_notification,
+        voice_js_integration,
+        
         html.Div(id="global-message")  # 全局消息提示组件
     ]
 
@@ -440,3 +561,5 @@ def render():
             id="ai-chat-x-main-layout"
         )
     ]
+
+

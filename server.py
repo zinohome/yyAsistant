@@ -188,7 +188,11 @@ def stream():
                     stream=True,
                     conversation_id=session_id,
                     personality_id=personality_id,  # 使用从请求参数中获取的值
-                    use_tools=BaseConfig.yychat_default_use_tools
+                    use_tools=BaseConfig.yychat_default_use_tools,
+                    # 透传语音相关上下文到下游，便于后端按方案B并行触发TTS
+                    enable_voice=data.get('enable_voice', False),
+                    client_id=data.get('client_id'),
+                    message_id=message_id
                 ):
                     # 检查超时
                     current_time = time.time()

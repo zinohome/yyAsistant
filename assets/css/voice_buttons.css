@@ -1,0 +1,200 @@
+/* 语音按钮样式增强 */
+
+/* 录音按钮基础样式 */
+#voice-record-btn {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 录音按钮悬停效果 - 与文本提交按钮保持一致 */
+#voice-record-btn:hover:not(:disabled) {
+    box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3) !important;
+}
+
+/* 录音按钮激活效果 */
+#voice-record-btn:active:not(:disabled) {
+    box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* 录音按钮禁用样式 */
+#voice-record-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+/* 录音按钮脉冲动画（录音中） */
+#voice-record-btn.recording {
+    animation: voice-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+    0% {
+        box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
+    }
+    50% {
+        box-shadow: 0 4px 12px rgba(255, 77, 79, 0.5);
+    }
+    100% {
+        box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
+    }
+}
+
+/* 通话按钮基础样式 */
+#voice-call-btn {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 通话按钮悬停效果 - 与文本提交按钮保持一致 */
+#voice-call-btn:hover:not(:disabled) {
+    box-shadow: 0 4px 8px rgba(82, 196, 26, 0.3) !important;
+}
+
+/* 通话按钮激活效果 */
+#voice-call-btn:active:not(:disabled) {
+    box-shadow: 0 2px 4px rgba(82, 196, 26, 0.2) !important;
+}
+
+/* 通话按钮禁用样式 */
+#voice-call-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+/* 通话按钮呼吸动画（通话中） */
+#voice-call-btn.calling {
+    animation: call-breathe 2s ease-in-out infinite;
+}
+
+@keyframes call-breathe {
+    0% {
+        box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
+    }
+    50% {
+        box-shadow: 0 6px 16px rgba(255, 77, 79, 0.4);
+    }
+    100% {
+        box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
+    }
+}
+
+/* 按钮图标动画 */
+.voice-button-icon {
+    transition: transform 0.2s ease;
+}
+
+#voice-record-btn:hover .voice-button-icon {
+    transform: scale(1.1);
+}
+
+#voice-call-btn:hover .voice-button-icon {
+    transform: scale(1.1);
+}
+
+/* 按钮文字样式 */
+.voice-button-text {
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 4px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    #voice-record-btn,
+    #voice-call-btn {
+        width: 36px !important;
+        height: 36px !important;
+        padding: 6px !important;
+    }
+    
+    .voice-button-text {
+        display: none;
+    }
+}
+
+/* 按钮组容器样式 */
+.voice-buttons-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* 状态指示器 */
+.voice-status-indicator {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #52c41a;
+    border: 2px solid white;
+    animation: status-blink 2s infinite;
+}
+
+.voice-status-indicator.recording {
+    background-color: #ff4d4f;
+}
+
+.voice-status-indicator.calling {
+    background-color: #1890ff;
+}
+
+.voice-status-indicator.disabled {
+    background-color: #d9d9d9;
+    animation: none;
+}
+
+@keyframes status-blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0.3;
+    }
+}
+
+/* 工具提示样式 */
+.voice-tooltip {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    color: white !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    padding: 6px 10px !important;
+}
+
+/* 按钮加载状态 */
+.voice-button-loading {
+    position: relative;
+}
+
+.voice-button-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: voice-spin 1s linear infinite;
+}
+
+@keyframes voice-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}

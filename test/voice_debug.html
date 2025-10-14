@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音功能调试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .debug-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin: 5px 0;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .record-btn {
+            background-color: #1890ff;
+            color: white;
+        }
+        .call-btn {
+            background-color: #52c41a;
+            color: white;
+        }
+        .stop-btn {
+            background-color: #ff4d4f;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>语音功能调试页面</h1>
+    
+    <div class="debug-section">
+        <h2>1. 浏览器兼容性检查</h2>
+        <div id="browser-support"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>2. 麦克风权限检查</h2>
+        <button onclick="checkMicrophonePermission()">检查麦克风权限</button>
+        <div id="microphone-status"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>3. 语音功能测试</h2>
+        <button id="test-record-btn" class="record-btn" onclick="testRecording()">测试录音</button>
+        <button id="test-call-btn" class="call-btn" onclick="testCall()">测试通话</button>
+        <div id="voice-test-status"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>4. WebSocket连接测试</h2>
+        <button onclick="testWebSocket()">测试WebSocket连接</button>
+        <div id="websocket-status"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>5. 控制台日志</h2>
+        <div id="console-log" style="background-color: #f8f9fa; padding: 10px; border-radius: 3px; font-family: monospace; max-height: 200px; overflow-y: auto;"></div>
+    </div>
+
+    <script>
+        // 重写console.log来显示在页面上
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToLog(message, type = 'log') {
+            const logDiv = document.getElementById('console-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            logEntry.style.color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToLog(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToLog(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToLog(args.join(' '), 'warn');
+        };
+        
+        // 检查浏览器兼容性
+        function checkBrowserSupport() {
+            const support = {
+                mediaDevices: !!navigator.mediaDevices,
+                getUserMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+                mediaRecorder: !!window.MediaRecorder,
+                webm: MediaRecorder ? MediaRecorder.isTypeSupported('audio/webm') : false,
+                opus: MediaRecorder ? MediaRecorder.isTypeSupported('audio/webm;codecs=opus') : false,
+                websocket: !!window.WebSocket
+            };
+            
+            const statusDiv = document.getElementById('browser-support');
+            let html = '';
+            
+            for (const [feature, supported] of Object.entries(support)) {
+                const className = supported ? 'success' : 'error';
+                const status = supported ? '✓ 支持' : '✗ 不支持';
+                html += `<div class="status ${className}">${feature}: ${status}</div>`;
+            }
+            
+            statusDiv.innerHTML = html;
+            
+            const fullySupported = Object.values(support).every(Boolean);
+            if (fullySupported) {
+                console.log('浏览器完全支持语音功能');
+            } else {
+                console.error('浏览器不完全支持语音功能');
+            }
+        }
+        
+        // 检查麦克风权限
+        async function checkMicrophonePermission() {
+            const statusDiv = document.getElementById('microphone-status');
+            statusDiv.innerHTML = '<div class="status warning">正在检查麦克风权限...</div>';
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                statusDiv.innerHTML = '<div class="status success">✓ 麦克风权限已授予</div>';
+                console.log('麦克风权限检查成功');
+                
+                // 停止流
+                stream.getTracks().forEach(track => track.stop());
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">✗ 麦克风权限被拒绝: ${error.message}</div>`;
+                console.error('麦克风权限检查失败:', error);
+            }
+        }
+        
+        // 测试录音功能
+        async function testRecording() {
+            const statusDiv = document.getElementById('voice-test-status');
+            const btn = document.getElementById('test-record-btn');
+            
+            if (btn.textContent === '测试录音') {
+                try {
+                    statusDiv.innerHTML = '<div class="status warning">正在初始化录音...</div>';
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const mediaRecorder = new MediaRecorder(stream);
+                    
+                    btn.textContent = '停止录音';
+                    btn.className = 'stop-btn';
+                    statusDiv.innerHTML = '<div class="status success">✓ 录音已开始</div>';
+                    console.log('录音测试开始');
+                    
+                    mediaRecorder.start();
+                    
+                    // 3秒后自动停止
+                    setTimeout(() => {
+                        mediaRecorder.stop();
+                        stream.getTracks().forEach(track => track.stop());
+                        btn.textContent = '测试录音';
+                        btn.className = 'record-btn';
+                        statusDiv.innerHTML = '<div class="status success">✓ 录音测试完成</div>';
+                        console.log('录音测试完成');
+                    }, 3000);
+                    
+                } catch (error) {
+                    statusDiv.innerHTML = `<div class="status error">✗ 录音测试失败: ${error.message}</div>`;
+                    console.error('录音测试失败:', error);
+                }
+            }
+        }
+        
+        // 测试通话功能
+        function testCall() {
+            const statusDiv = document.getElementById('voice-test-status');
+            const btn = document.getElementById('test-call-btn');
+            
+            if (btn.textContent === '测试通话') {
+                btn.textContent = '结束通话';
+                btn.className = 'stop-btn';
+                statusDiv.innerHTML = '<div class="status success">✓ 通话测试开始</div>';
+                console.log('通话测试开始');
+                
+                // 3秒后自动结束
+                setTimeout(() => {
+                    btn.textContent = '测试通话';
+                    btn.className = 'call-btn';
+                    statusDiv.innerHTML = '<div class="status success">✓ 通话测试完成</div>';
+                    console.log('通话测试完成');
+                }, 3000);
+            }
+        }
+        
+        // 测试WebSocket连接
+        function testWebSocket() {
+            const statusDiv = document.getElementById('websocket-status');
+            statusDiv.innerHTML = '<div class="status warning">正在测试WebSocket连接...</div>';
+            
+            try {
+                const ws = new WebSocket('ws://192.168.66.209:9800/ws/chat');
+                
+                ws.onopen = function() {
+                    statusDiv.innerHTML = '<div class="status success">✓ WebSocket连接成功</div>';
+                    console.log('WebSocket连接成功');
+                    ws.close();
+                };
+                
+                ws.onerror = function(error) {
+                    statusDiv.innerHTML = '<div class="status error">✗ WebSocket连接失败</div>';
+                    console.error('WebSocket连接失败:', error);
+                };
+                
+                ws.onclose = function() {
+                    console.log('WebSocket连接已关闭');
+                };
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">✗ WebSocket连接异常: ${error.message}</div>`;
+                console.error('WebSocket连接异常:', error);
+            }
+        }
+        
+        // 页面加载时自动检查
+        window.onload = function() {
+            console.log('语音功能调试页面已加载');
+            checkBrowserSupport();
+        };
+    </script>
+</body>
+</html>

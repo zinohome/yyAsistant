@@ -149,39 +149,7 @@ def render(
                             fac.AntdCol(
                                 flex="none",
                                 children=fac.AntdSpace(
-                                    [
-                                        # 录音按钮
-                                        *( [
-                                            fac.AntdButton(
-                                                #icon=fac.AntdIcon(icon="proicons:microphone"),
-                                                icon=DashIconify(icon="proicons:microphone",
-                                                        width=20,
-                                                        height=20,
-                                                        rotate=0,
-                                                        flip="horizontal",
-                                                    ),
-                                                type="text",
-                                                title="语音输入",
-                                                style=style(padding="4px 8px")
-                                            )
-                                        ] if enable_voice_input else [] ),
-
-                                        # 通话按钮
-                                        *( [
-                                            fac.AntdButton(
-                                                #icon=fac.AntdIcon(icon="proicons:microphone"),
-                                                icon=DashIconify(icon="bi:telephone",
-                                                        width=20,
-                                                        height=20,
-                                                        rotate=3,
-                                                        flip="horizontal",
-                                                    ),
-                                                type="text",
-                                                title="直接通话",
-                                                style=style(padding="4px 8px")
-                                            )
-                                        ] if enable_voice_input else [] ),
-                                        
+                                    [   
                                         # 发送按钮（上箭头）
                                         *( [
                                             fac.AntdButton(
@@ -195,7 +163,57 @@ def render(
                                                     padding="0"
                                                 )
                                             )
-                                        ] if enable_send_button else [] )
+                                        ] if enable_send_button else [] ),
+
+                                        # 录音按钮
+                                        *( [
+                                            fac.AntdButton(
+                                                id="voice-record-btn",
+                                                icon=DashIconify(icon="proicons:microphone",
+                                                        width=24,
+                                                        height=24,
+                                                        rotate=0,
+                                                        flip="horizontal",
+                                                    ),
+                                                type="primary",
+                                                size="large",
+                                                title="语音输入",
+                                                style=style(
+                                                    padding="8px",
+                                                    width="40px",
+                                                    height="40px",
+                                                    borderRadius="8px",
+                                                    backgroundColor="#1890ff",
+                                                    borderColor="#1890ff",
+                                                    boxShadow="0 2px 4px rgba(24, 144, 255, 0.2)"
+                                                )
+                                            )
+                                        ] if enable_voice_input else [] ),
+
+                                        # 通话按钮
+                                        *( [
+                                            fac.AntdButton(
+                                                id="voice-call-btn",
+                                                icon=DashIconify(icon="bi:telephone",
+                                                        width=24,
+                                                        height=24,
+                                                        rotate=3,
+                                                        flip="horizontal",
+                                                    ),
+                                                type="primary",
+                                                size="large",
+                                                title="实时语音通话",
+                                                style=style(
+                                                    padding="8px",
+                                                    width="40px",
+                                                    height="40px",
+                                                    borderRadius="8px",
+                                                    backgroundColor="#52c41a",
+                                                    borderColor="#52c41a",
+                                                    boxShadow="0 2px 4px rgba(82, 196, 26, 0.2)"
+                                                )
+                                            )
+                                        ] if enable_voice_input else [] )
                                     ],
                                     size="small"
                                 )

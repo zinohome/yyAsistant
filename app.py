@@ -37,6 +37,9 @@ check_dependencies_version(
 # 注册聊天输入区域回调
 register_chat_input_callbacks(app)
 
+# 导入语音回调函数（在app初始化后导入）
+import callbacks.voice_chat_c
+
 # 修改app.layout，添加SSE组件到布局中
 app.layout = lambda: fuc.FefferyTopProgress(
     [

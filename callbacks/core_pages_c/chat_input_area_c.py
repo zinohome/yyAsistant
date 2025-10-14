@@ -25,7 +25,8 @@ active_sse_connections = {}
         Output('ai-chat-x-messages-store', 'data'),
         Output('ai-chat-x-input', 'value'),
         Output('ai-chat-x-send-btn', 'loading'),
-        Output('ai-chat-x-send-btn', 'disabled')
+        Output('ai-chat-x-send-btn', 'disabled'),
+        Output('voice-enable-voice', 'data')
     ],
     [
         # 话题提示点击输入 - 使用动态模式匹配
@@ -33,7 +34,9 @@ active_sse_connections = {}
         # 消息发送输入（仅按钮点击；Enter 由前端触发按钮点击）
         Input('ai-chat-x-send-btn', 'nClicks'),
         # SSE完成事件
-        Input('ai-chat-x-sse-completed-receiver', 'data-completion-event')
+        Input('ai-chat-x-sse-completed-receiver', 'data-completion-event'),
+        # 语音转录结果（服务端可见的镜像）
+        Input('voice-transcription-store-server', 'data')
     ],
     [
         State('ai-chat-x-input', 'value'),
@@ -42,7 +45,7 @@ active_sse_connections = {}
     ],
     prevent_initial_call=True
 )
-def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_json,
+def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_json, transcription_data,
                            message_content, messages_store, current_session_id):
     # 获取触发回调的元素ID
     triggered_id = ctx.triggered_id if ctx.triggered else None
@@ -55,7 +58,7 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
     
     # 确保ctx.triggered不为空
     if not ctx.triggered:
-        return messages, message_content, False, False
+        return messages, message_content, False, False, dash.no_update
     
     # 处理话题点击
     if triggered_id and isinstance(triggered_id, dict) and triggered_id.get('type') == 'chat-topic':
@@ -74,10 +77,10 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
                 
                 if random_description:
                     log.debug(f"分类话题点击: {category}, 索引: {topic_index}, 内容: {random_description}")
-                    return messages, random_description, False, False
+                    return messages, random_description, False, False, dash.no_update
         
         # 如果索引无效，返回默认值
-        return messages, message_content, False, False
+        return messages, message_content, False, False, dash.no_update
     
     # 处理SSE完成事件
     elif triggered_id == 'ai-chat-x-sse-completed-receiver.data-completion-event' or 'sse-completed-receiver' in str(triggered_id):
@@ -109,7 +112,7 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
                         # log.debug(f"从最后一条消息获取: message_id={message_id}")
                     else:
                         # log.debug("没有找到需要完成的流式消息")
-                        return messages, message_content, False, False
+                        return messages, message_content, False, False, dash.no_update
                 
                 # 创建消息的深拷贝，避免修改原始数据
                 updated_messages = copy.deepcopy(messages)
@@ -151,13 +154,49 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
                     # log.debug(f"清理SSE连接: {message_id}")
                 
                 # 返回更新后的消息存储和恢复按钮状态
-                return updated_messages, message_content, False, False
+                return updated_messages, message_content, False, False, dash.no_update
             except Exception as e:
                 log.error(f"处理SSE完成事件时出错: {e}")
-                return messages, message_content, False, False
+                return messages, message_content, False, False, dash.no_update
         else:
             # log.debug("SSE完成事件数据不完整，跳过处理")
-            return messages, message_content, False, False
+            return messages, message_content, False, False, dash.no_update
+
+    # 处理语音转录触发的发送（镜像Store）
+    elif triggered_id == 'voice-transcription-store-server' and transcription_data and transcription_data.get('text'):
+        try:
+            transcribed_text = transcription_data.get('text', '').strip()
+            if not transcribed_text:
+                return messages, message_content, False, False
+
+            updated_messages = copy.deepcopy(messages)
+
+            # 添加用户消息
+            usr_message_id = f"usr-message-{len(updated_messages)}"
+            user_message = {
+                'role': 'user',
+                'content': transcribed_text,
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'id': usr_message_id
+            }
+            updated_messages.append(user_message)
+
+            # 添加AI流式消息占位
+            ai_message_id = f"ai-message-{len(updated_messages)}"
+            ai_message = {
+                'role': 'assistant',
+                'content': '正在思考中...',
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'id': ai_message_id,
+                'is_streaming': True
+            }
+            updated_messages.append(ai_message)
+
+            # 返回：更新消息列表，清空输入框，设置按钮loading/disabled，以及清空转录store
+            return updated_messages, '', True, True, True
+        except Exception as e:
+            log.error(f"处理语音转录发送时出错: {e}")
+            return messages, message_content, False, False, dash.no_update
     
     # 处理消息发送
     elif triggered_id in ['ai-chat-x-send-btn'] and message_content:
@@ -224,12 +263,12 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
             
             # log.debug(f"创建用户消息和AI消息: {user_message}, {ai_message}")
             
-            return updated_messages, '', True, True  # 发送时禁用按钮并显示loading
+            return updated_messages, '', True, True, dash.no_update  # 发送时禁用按钮并显示loading
         # 如果消息内容为空，返回默认值
-        return messages, message_content, False, False
+        return messages, message_content, False, False, dash.no_update
     
     # 默认返回当前状态
-    return messages, message_content, False, False
+    return messages, message_content, False, False, dash.no_update
 
 # SSE触发回调 - 用于启动SSE连接
 @app.callback(
@@ -237,11 +276,15 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
         Output('chat-X-sse', 'url'),
         Output('chat-X-sse', 'options')
     ],
-    [Input('ai-chat-x-messages-store', 'data')],
+    [
+        Input('ai-chat-x-messages-store', 'data'),
+        Input('voice-enable-voice', 'data'),
+        Input('voice-websocket-connection', 'data')
+    ],
     [State('ai-chat-x-current-session-id', 'data')],
     prevent_initial_call=True
 )
-def trigger_sse(messages, current_session_id):
+def trigger_sse(messages, enable_voice, ws_connection, current_session_id):
     # 检查是否有新的AI消息正在流式传输
     if messages and len(messages) > 0:
         last_message = messages[-1]
@@ -255,28 +298,58 @@ def trigger_sse(messages, current_session_id):
                 return no_update, no_update
             role = last_message.get('role', 'assistant')
             
-            # 准备要发送给/stream端点的消息
-            # 只包含对话历史，不包含当前正在流式传输的消息
+            # 仅发送“最后一条用户消息”到/stream（按需避免提交全量历史）
             conversation_messages = []
-            for msg in messages:
-                if msg.get('role') in ['user', 'assistant', 'agent', 'system'] and \
-                   not (msg.get('role') in ['assistant', 'agent'] and msg.get('is_streaming', False)):
-                    conversation_messages.append({
-                        'role': msg.get('role'),
-                        'content': msg.get('content')
-                    })
+            last_user_msg = None
+            for i in range(len(messages) - 1, -1, -1):
+                m = messages[i]
+                if m.get('role') == 'user':
+                    last_user_msg = m
+                    break
+            if last_user_msg:
+                conversation_messages.append({
+                    'role': 'user',
+                    'content': last_user_msg.get('content', '')
+                })
             
             # 处理会话ID - 如果为空，使用默认值
             session_id = current_session_id or 'conversation_0001'
             
             # 构建请求数据
+            # 从WS连接信息获取client_id
+            client_id = None
+            try:
+                if ws_connection and isinstance(ws_connection, dict):
+                    client_id = ws_connection.get('client_id')
+            except Exception:
+                client_id = None
+
+            # 根据触发源决定是否等待client_id
+            # 当需要语音但client_id缺失时，先不发起，等待voice-websocket-connection再次触发
+            if bool(enable_voice) and not client_id:
+                return no_update, no_update
+
             request_data = {
                 'messages': conversation_messages,
                 'session_id': session_id,
                 'personality_id': 'health_assistant',
                 'message_id': message_id,
-                'role': role
+                'role': role,
+                # 仅当来源是语音转写触发时才打开TTS
+                'enable_voice': bool(enable_voice),
+                # 后端需要定向推送的client_id
+                'client_id': client_id
             }
+            # 兼容后端新字段：conversation_id = session_id
+            request_data['conversation_id'] = session_id
+
+            try:
+                log.debug(f"/stream 请求payload: enable_voice={request_data.get('enable_voice')}, "
+                          f"client_id={request_data.get('client_id')}, "
+                          f"message_id={request_data.get('message_id')}, "
+                          f"conversation_id={request_data.get('conversation_id')}")
+            except Exception:
+                pass
             
             # log.debug(f"触发SSE连接，消息ID: {message_id}, 会话ID: {session_id}")
             # log.debug(f"SSE请求数据: {request_data}")
@@ -290,10 +363,15 @@ def trigger_sse(messages, current_session_id):
             # 使用sse_options函数正确配置SSE连接
             # 注意：这里需要传入正确的请求参数
             options = sse_options(
-                payload=json.dumps(request_data),  # 转换为JSON字符串
+                payload=json.dumps(request_data, ensure_ascii=False),  # 转换为JSON字符串
                 method='POST',
                 headers={'Content-Type': 'application/json'}
             )
+
+            try:
+                log.debug(f"/stream 请求options已构建，url=/stream")
+            except Exception:
+                pass
             
             return '/stream', options
     
@@ -542,6 +620,16 @@ app.clientside_callback(
                                 }
                             });
                             document.dispatchEvent(event);
+
+                            // 触发TTS播放（voice_player_enhanced.js 会监听 messageCompleted）
+                            try {
+                                const ttsEvent = new CustomEvent('messageCompleted', {
+                                    detail: { text: fullContent }
+                                });
+                                document.dispatchEvent(ttsEvent);
+                            } catch (e) {
+                                console.warn('触发TTS事件失败:', e);
+                            }
                             
                             // 新增：SSE完成时强制滚动到底部
                             if (window.dash_clientside && window.dash_clientside.clientside_basic && window.dash_clientside.clientside_basic.forceScrollToBottom) {
