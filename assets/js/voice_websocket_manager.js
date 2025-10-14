@@ -26,6 +26,10 @@ class VoiceWebSocketManager {
         
         // 初始化全局状态
         this.initGlobalState();
+
+        // 初始化安全 set_props 任务队列
+        this.propQueue = [];
+        this.propDrainTimer = null;
     }
     
     /**
@@ -79,6 +83,51 @@ class VoiceWebSocketManager {
         document.addEventListener('conversationSwitched', (event) => {
             this.updateSessionId(event.detail.conversationId);
         });
+    }
+
+    // 安全的 set_props：组件未挂载时排队，避免解析错误
+    safeSetProps(targetId, payload) {
+        const tryDispatch = () => {
+            try {
+                const ready = !!(window.dash_clientside && window.dash_clientside.set_props);
+                const el = document.getElementById(targetId);
+                if (ready && el) {
+                    window.dash_clientside.set_props(targetId, payload);
+                    return true;
+                }
+            } catch (_) {}
+            return false;
+        };
+
+        if (!tryDispatch()) {
+            this.propQueue.push({ targetId, payload, tries: 0 });
+            if (!this.propDrainTimer) {
+                this.propDrainTimer = setInterval(() => this.drainPropQueue(), 200);
+            }
+        }
+    }
+
+    drainPropQueue() {
+        const next = [];
+        for (const item of this.propQueue) {
+            item.tries += 1;
+            try {
+                const ready = !!(window.dash_clientside && window.dash_clientside.set_props);
+                const el = document.getElementById(item.targetId);
+                if (ready && el) {
+                    window.dash_clientside.set_props(item.targetId, item.payload);
+                    continue; // 已发送
+                }
+            } catch (_) {}
+            if (item.tries < 10) {
+                next.push(item);
+            }
+        }
+        this.propQueue = next;
+        if (this.propQueue.length === 0 && this.propDrainTimer) {
+            clearInterval(this.propDrainTimer);
+            this.propDrainTimer = null;
+        }
     }
     
     /**
@@ -253,48 +302,19 @@ class VoiceWebSocketManager {
                 window.voiceChatState.clientId = this.clientId;
                 window.voiceChatState.isConnected = this.isConnected;
                 console.log('首次绑定client_id:', this.clientId);
-                if (window.dash_clientside && window.dash_clientside.set_props) {
-                    window.dash_clientside.set_props('voice-websocket-connection', {
-                        data: {
-                            connected: true,
-                            client_id: this.clientId,
-                            timestamp: Date.now()
-                        }
-                    });
-                    // 若当前正处于语音触发流程，但之前因缺少 client_id 未能开启 TTS，这里补写一次开关，促使后端拿到client_id
-                    try {
-                        window.dash_clientside.set_props('voice-enable-voice', {
-                            data: {
-                                enable: true,
-                                client_id: this.clientId,
-                                ts: Date.now()
-                            }
+                // 幂等：如已存在相同 clientId 则不重复写入
+                try {
+                    const storeEl = document.getElementById('voice-websocket-connection');
+                    const current = storeEl ? (storeEl.value ? JSON.parse(storeEl.value).client_id : null) : null;
+                    if (current !== this.clientId) {
+                        this.safeSetProps('voice-websocket-connection', {
+                            data: { connected: true, client_id: this.clientId, timestamp: Date.now() }
                         });
-                    } catch (e) {
-                        console.warn('设置voice-enable-voice失败（可忽略）:', e);
+                        this.safeSetProps('voice-enable-voice', {
+                            data: { enable: true, client_id: this.clientId, ts: Date.now() }
+                        });
                     }
-
-                    // 额外重试：短时间内重复写入，避免首写入因渲染时序未生效
-                    try {
-                        let tries = 0;
-                        const maxTries = 5;
-                        const timer = setInterval(() => {
-                            tries += 1;
-                            try {
-                                window.dash_clientside.set_props('voice-websocket-connection', {
-                                    data: {
-                                        connected: true,
-                                        client_id: this.clientId,
-                                        timestamp: Date.now()
-                                    }
-                                });
-                            } catch (_) {}
-                            if (tries >= maxTries) {
-                                clearInterval(timer);
-                            }
-                        }, 200);
-                    } catch (_) {}
-                }
+                } catch (_) {}
             }
 
             // 消息验证 - 防串台机制
