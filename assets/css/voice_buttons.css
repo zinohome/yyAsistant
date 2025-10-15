@@ -1,33 +1,57 @@
 /* 语音按钮样式增强 */
 
 /* 录音按钮基础样式 */
-#voice-record-btn {
+#voice-record-button {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-weight: 500;
     border: none;
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 录音按钮图标居中样式 */
+#voice-record-button svg,
+#voice-record-button .voice-button-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+/* 录音按钮内容居中 */
+#voice-record-button > * {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
 }
 
 /* 录音按钮悬停效果 - 与文本提交按钮保持一致 */
-#voice-record-btn:hover:not(:disabled) {
+#voice-record-button:hover:not(:disabled) {
     box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3) !important;
 }
 
 /* 录音按钮激活效果 */
-#voice-record-btn:active:not(:disabled) {
+#voice-record-button:active:not(:disabled) {
     box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2) !important;
 }
 
 /* 录音按钮禁用样式 */
-#voice-record-btn:disabled {
+#voice-record-button:disabled {
     opacity: 0.6;
     cursor: not-allowed !important;
     transform: none !important;
 }
 
 /* 录音按钮脉冲动画（录音中） */
-#voice-record-btn.recording {
+#voice-record-button.recording {
     animation: voice-pulse 1.5s ease-in-out infinite;
 }
 

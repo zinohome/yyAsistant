@@ -15,6 +15,7 @@ class VoicePlayerEnhanced {
             volume: 0.8
         };
         this.playedMessages = new Set(); // 记录已播放的消息ID，避免重复播放
+        this.streamStates = new Map(); // message_id -> { chunks: [{seq, base64}], nextSeq, codec, session_id }
         
         this.init();
     }
@@ -28,6 +29,32 @@ class VoicePlayerEnhanced {
         
         // 初始化音频上下文（需要用户交互）
         this.initAudioContext();
+        
+        // 监听状态变化
+        this.initStateListener();
+    }
+    
+    /**
+     * 初始化状态监听
+     */
+    initStateListener() {
+        // 监听全局状态变化
+        window.addEventListener('voiceStateChange', (event) => {
+            const { oldState, newState } = event.detail;
+            this.onStateChange(oldState, newState);
+        });
+    }
+    
+    /**
+     * 状态变化处理
+     */
+    onStateChange(oldState, newState) {
+        console.log(`播放器状态变化: ${oldState} → ${newState}`);
+        
+        // 如果状态变为中断，停止播放
+        if (newState === 'interrupted' && this.isPlaying) {
+            this.stopPlayback();
+        }
     }
     
     initAudioContext() {
@@ -70,13 +97,13 @@ class VoicePlayerEnhanced {
                             
                             if (data.audio) {
                                 console.log('收到voice_response，音频长度:', data.audio.length);
-                                this.playAudioFromBase64(data.audio);
+                                this.enqueueSingleShot(data.audio, data.message_id, data.session_id, data.codec || 'audio/mpeg');
                                 if (messageId) {
                                     this.playedMessages.add(messageId);
                                 }
                             } else if (data.audio_data) {
                                 console.log('收到voice_response，音频长度:', data.audio_data.length);
-                                this.playAudioFromBase64(data.audio_data);
+                                this.enqueueSingleShot(data.audio_data, data.message_id, data.session_id, data.codec || 'audio/mpeg');
                                 if (messageId) {
                                     this.playedMessages.add(messageId);
                                 }
@@ -109,13 +136,13 @@ class VoicePlayerEnhanced {
                                     
                                     if (data.audio) {
                                         console.log('收到voice_response，音频长度:', data.audio.length);
-                                        this.playAudioFromBase64(data.audio);
+                                        this.enqueueSingleShot(data.audio, data.message_id, data.session_id, data.codec || 'audio/mpeg');
                                         if (messageId) {
                                             this.playedMessages.add(messageId);
                                         }
                                     } else if (data.audio_data) {
                                         console.log('收到voice_response，音频长度:', data.audio_data.length);
-                                        this.playAudioFromBase64(data.audio_data);
+                                        this.enqueueSingleShot(data.audio_data, data.message_id, data.session_id, data.codec || 'audio/mpeg');
                                         if (messageId) {
                                             this.playedMessages.add(messageId);
                                         }
@@ -186,6 +213,11 @@ class VoicePlayerEnhanced {
             
             console.log('开始语音合成:', text);
             
+            // 更新状态为播放中
+            if (window.voiceStateManager) {
+                window.voiceStateManager.startPlaying();
+            }
+            
             // 显示语音播放状态
             this.showPlaybackStatus();
             
@@ -195,6 +227,11 @@ class VoicePlayerEnhanced {
         } catch (error) {
             console.error('语音合成失败:', error);
             this.hidePlaybackStatus();
+            
+            // 播放失败，重置状态
+            if (window.voiceStateManager) {
+                window.voiceStateManager.setState(window.voiceStateManager.STATES.IDLE);
+            }
         }
     }
     
@@ -258,12 +295,90 @@ class VoicePlayerEnhanced {
     
     handleAudioStream(data) {
         try {
-            if (data.audio_data) {
-                // 将base64音频数据转换为AudioBuffer
-                this.playAudioFromBase64(data.audio_data);
+            const messageId = data.message_id || 'unknown';
+            const sessionId = data.session_id || null;
+            const codec = data.codec || 'audio/mpeg';
+            const base64 = data.audio || data.audio_data;
+            const seq = typeof data.seq === 'number' ? data.seq : null;
+
+            if (!base64) {
+                return;
+            }
+
+            // 初始化该消息的流状态
+            if (!this.streamStates.has(messageId)) {
+                this.streamStates.set(messageId, {
+                    chunks: [],
+                    nextSeq: (seq !== null ? seq : 0),
+                    codec: codec,
+                    session_id: sessionId,
+                    playing: false
+                });
+            }
+            const state = this.streamStates.get(messageId);
+
+            // 记录分片
+            state.chunks.push({ seq: (seq !== null ? seq : state.chunks.length), base64 });
+            // 根据seq排序，确保按序播放
+            state.chunks.sort((a, b) => a.seq - b.seq);
+
+            // 若未在播放该消息，则启动播放循环
+            if (!state.playing) {
+                state.playing = true;
+                this.playStreamState(messageId).catch(err => {
+                    console.error('播放流失败:', err);
+                    state.playing = false;
+                });
             }
         } catch (error) {
             console.error('处理音频流失败:', error);
+        }
+    }
+
+    async playStreamState(messageId) {
+        const state = this.streamStates.get(messageId);
+        if (!state) return;
+
+        while (state.chunks.length > 0) {
+            // 取出最小seq的分片
+            const chunk = state.chunks.shift();
+            try {
+                await this.playAudioFromBase64(chunk.base64);
+            } catch (e) {
+                console.warn('播放分片失败，跳过该分片:', e);
+            }
+        }
+
+        state.playing = false;
+    }
+
+    enqueueSingleShot(base64, messageId, sessionId, codec) {
+        try {
+            if (!messageId) {
+                // 无messageId则直接播放一次
+                this.playAudioFromBase64(base64);
+                return;
+            }
+            if (!this.streamStates.has(messageId)) {
+                this.streamStates.set(messageId, {
+                    chunks: [],
+                    nextSeq: 0,
+                    codec: codec,
+                    session_id: sessionId,
+                    playing: false
+                });
+            }
+            const state = this.streamStates.get(messageId);
+            state.chunks.push({ seq: state.chunks.length, base64 });
+            if (!state.playing) {
+                state.playing = true;
+                this.playStreamState(messageId).catch(err => {
+                    console.error('一次性音频播放失败:', err);
+                    state.playing = false;
+                });
+            }
+        } catch (e) {
+            console.warn('enqueueSingleShot失败:', e);
         }
     }
     
@@ -342,6 +457,12 @@ class VoicePlayerEnhanced {
                 // 设置播放结束回调
                 source.onended = () => {
                     this.isPlaying = false;
+                    
+                    // 播放完成，更新状态
+                    if (window.voiceStateManager) {
+                        window.voiceStateManager.finishPlaying();
+                    }
+                    
                     resolve();
                 };
                 
@@ -361,11 +482,43 @@ class VoicePlayerEnhanced {
     handleSynthesisComplete(data) {
         console.log('语音合成完成');
         this.hidePlaybackStatus();
+        
+        // 合成完成，如果当前没有播放，则重置状态
+        if (!this.isPlaying && window.voiceStateManager) {
+            window.voiceStateManager.finishPlaying();
+        }
     }
     
     handleError(data) {
         console.error('语音合成错误:', data.message);
         this.hidePlaybackStatus();
+        
+        // 播放错误，重置状态
+        if (window.voiceStateManager) {
+            window.voiceStateManager.setState(window.voiceStateManager.STATES.IDLE);
+        }
+    }
+    
+    /**
+     * 停止播放
+     */
+    stopPlayback() {
+        console.log('停止播放');
+        
+        // 停止当前音频
+        this.stopCurrentAudio();
+        
+        // 清空音频队列
+        this.audioQueue = [];
+        
+        // 清空流状态
+        this.streamStates.clear();
+        
+        // 隐藏播放状态
+        this.hidePlaybackStatus();
+        
+        // 重置播放状态
+        this.isPlaying = false;
     }
     
     showPlaybackStatus() {

@@ -16,11 +16,11 @@ from server import app
 # 语音按钮统一回调 - 处理录音和通话按钮的所有状态
 @app.callback(
     [
-        Output("voice-record-btn", "type"),
-        Output("voice-record-btn", "icon"),
-        Output("voice-record-btn", "title"),
-        Output("voice-record-btn", "style"),
-        Output("voice-record-btn", "disabled"),
+        Output("voice-record-button", "type"),
+        Output("voice-record-button", "icon"),
+        Output("voice-record-button", "title"),
+        Output("voice-record-button", "style"),
+        Output("voice-record-button", "disabled"),
         Output("voice-call-btn", "type"),
         Output("voice-call-btn", "icon"),
         Output("voice-call-btn", "title"),
@@ -31,7 +31,7 @@ from server import app
         Output("ai-chat-x-send-btn", "disabled", allow_duplicate=True)
     ],
     [
-        Input("voice-record-btn", "nClicks"),
+        Input("voice-record-button", "nClicks"),
         Input("voice-call-btn", "nClicks"),
         Input("ai-chat-x-send-btn", "loading")
     ],
@@ -72,7 +72,7 @@ def handle_voice_buttons(record_clicks, call_clicks, is_loading, is_recording, i
             )
         
         # 处理录音按钮点击
-        if triggered_id == "voice-record-btn" and record_clicks:
+        if triggered_id == "voice-record-button" and record_clicks:
             if not is_recording:
                 # 开始录音
                 log.info("开始语音录音")
@@ -158,7 +158,7 @@ def handle_voice_buttons(record_clicks, call_clicks, is_loading, is_recording, i
         Output("voice-websocket-connection", "data"),
         Output("voice-error-notification", "children")
     ],
-    [Input("voice-record-btn", "n_clicks"), Input("voice-call-btn", "n_clicks")],
+    [Input("voice-record-button", "n_clicks"), Input("voice-call-btn", "n_clicks")],
     [State("voice-websocket-connection", "data")]
 )
 def manage_websocket_connection(record_clicks, call_clicks, connection_data):
@@ -214,7 +214,7 @@ def handle_voice_messages(connection_data, current_messages):
 # 语音功能JavaScript集成回调
 @app.callback(
     Output("voice-js-integration", "children"),
-    [Input("voice-record-btn", "n_clicks"), Input("voice-call-btn", "n_clicks")],
+    [Input("voice-record-button", "n_clicks"), Input("voice-call-btn", "n_clicks")],
     [State("voice-recording-status", "data"), State("voice-call-status", "data")]
 )
 def integrate_voice_javascript(record_clicks, call_clicks, is_recording, is_calling):

@@ -30,6 +30,32 @@ class VoiceRecorderEnhanced {
         
         // 绑定事件
         this.bindEvents();
+        
+        // 监听状态变化
+        this.initStateListener();
+    }
+    
+    /**
+     * 初始化状态监听
+     */
+    initStateListener() {
+        // 监听全局状态变化
+        window.addEventListener('voiceStateChange', (event) => {
+            const { oldState, newState } = event.detail;
+            this.onStateChange(oldState, newState);
+        });
+    }
+    
+    /**
+     * 状态变化处理
+     */
+    onStateChange(oldState, newState) {
+        console.log(`录音器状态变化: ${oldState} → ${newState}`);
+        
+        // 如果状态变为中断，停止录音
+        if (newState === 'interrupted' && this.isRecording) {
+            this.stopRecording();
+        }
     }
     
     initWebSocket() {
@@ -99,15 +125,24 @@ class VoiceRecorderEnhanced {
     }
     
     bindEvents() {
-        // 监听录音按钮点击事件
+        // 监听录音按钮点击事件 - 使用新的按钮ID
         document.addEventListener('click', (event) => {
-            if (event.target.closest('#voice-record-btn')) {
+            if (event.target.closest('#voice-record-button')) {
                 this.toggleRecording();
             }
         });
     }
     
     async toggleRecording() {
+        // 使用状态管理器处理按钮点击，而不是直接切换录音状态
+        if (window.voiceStateManager) {
+            const handled = window.voiceStateManager.handleButtonClick();
+            if (handled) {
+                return; // 状态管理器已处理
+            }
+        }
+        
+        // 如果没有状态管理器，使用原来的逻辑
         if (this.isRecording) {
             await this.stopRecording();
         } else {
@@ -116,7 +151,18 @@ class VoiceRecorderEnhanced {
     }
     
     async startRecording() {
+        // 检查状态管理器是否允许开始录音
+        if (window.voiceStateManager && !window.voiceStateManager.canStartRecording()) {
+            console.warn('当前状态不允许开始录音:', window.voiceStateManager.getState());
+            return;
+        }
+        
         try {
+            // 更新状态为录音中
+            if (window.voiceStateManager) {
+                window.voiceStateManager.startRecording();
+            }
+            
             // 请求麦克风权限
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
@@ -201,20 +247,37 @@ class VoiceRecorderEnhanced {
                 this.audioContext.close();
             }
             
-            console.log('停止录音');
+            console.log('停止录音，开始处理音频');
+            
+            // 更新状态为处理中
+            if (window.voiceStateManager) {
+                console.log('录音器调用startProcessing，当前状态:', window.voiceStateManager.getState());
+                window.voiceStateManager.startProcessing();
+                console.log('录音器调用startProcessing后，状态:', window.voiceStateManager.getState());
+            } else {
+                console.error('voiceStateManager不存在！');
+            }
+            
+            // 处理录音数据
+            await this.processRecording();
         }
     }
     
     async processRecording() {
         try {
+            console.log('开始处理录音数据，音频块数量:', this.audioChunks.length);
+            
             // 创建音频Blob
             const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+            console.log('音频Blob创建完成，大小:', audioBlob.size, 'bytes');
             
             // 显示处理中状态
             this.showProcessingStatus();
             
             // 发送音频到后端进行语音转文本
+            console.log('准备发送音频到后端进行STT...');
             await this.sendAudioForTranscription(audioBlob);
+            console.log('STT请求发送完成');
             
         } catch (error) {
             console.error('处理录音失败:', error);
@@ -224,8 +287,17 @@ class VoiceRecorderEnhanced {
     
     async sendAudioForTranscription(audioBlob) {
         return new Promise((resolve, reject) => {
-            if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-                reject(new Error('WebSocket连接不可用'));
+            // 使用 voiceWebSocketManager 检查连接状态，支持自动重连
+            if (!window.voiceWebSocketManager || !window.voiceWebSocketManager.isConnected) {
+                console.warn('WebSocket未连接，尝试重连...');
+                window.voiceWebSocketManager.connect().then(() => {
+                    // 重连成功后，延迟一点时间再发送
+                    setTimeout(() => {
+                        this.sendAudioForTranscription(audioBlob).then(resolve).catch(reject);
+                    }, 1000);
+                }).catch(() => {
+                    reject(new Error('WebSocket连接不可用'));
+                });
                 return;
             }
             
@@ -234,23 +306,21 @@ class VoiceRecorderEnhanced {
             reader.onload = () => {
                 const base64Audio = reader.result.split(',')[1];
                 
-                // 发送语音转文本请求
-                const message = {
-                    type: 'audio_input',
-                    audio_data: base64Audio,
+                // 使用 voiceWebSocketManager 发送消息
+                window.voiceWebSocketManager.sendAudioInput(base64Audio, {
                     audio_format: 'webm',
                     sample_rate: this.config.sampleRate
-                };
-                
-                console.log('发送语音转文本请求:', {
-                    type: message.type,
-                    audio_format: message.audio_format,
-                    sample_rate: message.sample_rate,
-                    audio_data_length: base64Audio.length
+                }).then((success) => {
+                    if (success) {
+                        console.log('发送语音转文本请求成功');
+                        resolve();
+                    } else {
+                        reject(new Error('发送语音转文本请求失败'));
+                    }
+                }).catch((error) => {
+                    console.error('发送语音转文本请求失败:', error);
+                    reject(error);
                 });
-                
-                this.websocket.send(JSON.stringify(message));
-                resolve();
             };
             
             reader.onerror = () => {
@@ -332,10 +402,17 @@ class VoiceRecorderEnhanced {
             // 隐藏处理状态
             this.hideProcessingStatus();
             
+            // 转录完成，状态保持为处理中，等待SSE和TTS完成
             console.log('语音转文本成功:', data.text);
+            console.log('当前状态保持为处理中，等待SSE和TTS完成');
         } else {
             console.log('转录结果为空或无效:', data);
             this.showError('未识别到语音内容');
+            
+            // 转录失败，重置状态为空闲
+            if (window.voiceStateManager) {
+                window.voiceStateManager.setState(window.voiceStateManager.STATES.IDLE);
+            }
         }
     }
     

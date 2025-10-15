@@ -1,6 +1,6 @@
 from peewee import CharField
 from typing import Union, Dict, List
-from playhouse.sqlite_ext import JSONField
+from playhouse.sqlite_ext import JSONBField
 from werkzeug.security import check_password_hash
 
 from . import db, BaseModel
@@ -30,7 +30,7 @@ class Users(BaseModel):
     user_icon = CharField(null=True)
 
     # 用户其他辅助信息，任意JSON格式，允许空值
-    other_info = JSONField(null=True)
+    other_info = JSONBField(null=True)
 
     @classmethod
     def get_user(cls, user_id: str):

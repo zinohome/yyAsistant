@@ -39,6 +39,10 @@ check_dependencies_version(
 register_chat_input_callbacks(app)  # 临时注释，使用新的统一回调
 register_voice_transcription_mirror_callback(app)
 
+# 注册语音按钮回调
+from views.core_pages.chat import register_voice_button_callback
+register_voice_button_callback(app)
+
 # 导入语音回调函数（在app初始化后导入）
 import callbacks.voice_chat_c  # 临时注释，使用新的统一回调
 
@@ -75,6 +79,8 @@ app.layout = lambda: fuc.FefferyTopProgress(
         html.Div(
             id="root-container",
         ),
+        # 语音状态管理器脚本
+        html.Script(src="/assets/js/voice_state_manager.js"),
     ],
     id="layout-top-progress",
     minimum=0.33,

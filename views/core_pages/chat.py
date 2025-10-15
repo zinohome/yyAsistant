@@ -587,3 +587,19 @@ def register_voice_transcription_mirror_callback(app):
         Input("voice-transcription-store", "data"),
         prevent_initial_call=True
     )
+
+
+def register_voice_button_callback(app):
+    """注册语音按钮回调"""
+    @app.callback(
+        Output("voice-record-button", "n_clicks"),
+        Input("voice-record-button", "n_clicks"),
+        prevent_initial_call=True
+    )
+    def handle_voice_button_click(n_clicks):
+        """处理语音按钮点击事件"""
+        if n_clicks is None:
+            return no_update
+        
+        # 使用JavaScript处理按钮点击
+        return no_update

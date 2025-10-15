@@ -165,10 +165,10 @@ def render(
                                             )
                                         ] if enable_send_button else [] ),
 
-                                        # 录音按钮
+                                        # 录音按钮 - 支持状态管理
                                         *( [
                                             fac.AntdButton(
-                                                id="voice-record-btn",
+                                                id="voice-record-button",
                                                 icon=DashIconify(icon="proicons:microphone",
                                                         width=24,
                                                         height=24,
@@ -177,7 +177,7 @@ def render(
                                                     ),
                                                 type="primary",
                                                 size="large",
-                                                title="语音输入",
+                                                title="开始录音",
                                                 style=style(
                                                     padding="8px",
                                                     width="40px",

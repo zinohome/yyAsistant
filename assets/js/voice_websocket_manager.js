@@ -18,6 +18,10 @@ class VoiceWebSocketManager {
         this.disconnectionHandlers = [];
         // 预注册心跳回应为no-op，避免未注册报错
         this.messageHandlers.set('heartbeat_response', () => {});
+        // 预注册音频消息处理器占位，避免未注册时报错
+        this.messageHandlers.set('audio_stream', () => {});
+        this.messageHandlers.set('voice_response', () => {});
+        this.messageHandlers.set('synthesis_complete', () => {});
         
         // 从配置获取WebSocket URL，并附带持久化client_id
         this.wsUrlBase = window.voiceConfig?.WS_URL || 'ws://192.168.66.209:9800/ws/chat';
@@ -143,59 +147,69 @@ class VoiceWebSocketManager {
      * 建立WebSocket连接
      */
     async connect() {
-        try {
-            console.log('正在连接语音WebSocket:', this.wsUrl);
-            
-            this.ws = new WebSocket(this.wsUrl);
-            
-            this.ws.onopen = (event) => {
-                console.log('语音WebSocket连接已建立');
-                // 新连接建立时，清空旧的 clientId，等待服务端下发新的 connection_established 进行绑定
-                this.clientId = null;
-                window.voiceChatState.clientId = null;
-                // 尝试从页面当前会话控件读取会话ID，避免 session 校验期望为 null
-                try {
-                    const el = document.getElementById('ai-chat-x-current-session-id');
-                    const sid = (el && (el.value || el.textContent)) ? (el.value || el.textContent) : null;
-                    if (sid) {
-                        this.updateSessionId(sid);
-                    }
-                } catch (_) {}
-                this.isConnected = true;
-                this.reconnectAttempts = 0;
-                this.startHeartbeat();
-                this.notifyConnectionHandlers(true);
-            };
-            
-            this.ws.onmessage = (event) => {
-                this.handleMessage(event.data);
-            };
-            
-            this.ws.onclose = (event) => {
-                console.log('语音WebSocket连接已关闭:', event.code, event.reason);
-                // 连接关闭时也清理 clientId，避免用旧 id 校验新连接的首条消息
-                this.clientId = null;
-                window.voiceChatState.clientId = null;
-                this.isConnected = false;
-                this.stopHeartbeat();
-                this.notifyDisconnectionHandlers();
+        return new Promise((resolve, reject) => {
+            try {
+                console.log('正在连接语音WebSocket:', this.wsUrl);
                 
-                // 自动重连
-                if (this.reconnectAttempts < this.maxReconnectAttempts) {
-                    this.scheduleReconnect();
-                }
-            };
-            
-            this.ws.onerror = (error) => {
-                console.error('语音WebSocket连接错误:', error);
-                this.notifyConnectionHandlers(false);
-            };
-            
-            return true;
-        } catch (error) {
-            console.error('语音WebSocket连接失败:', error);
-            return false;
-        }
+                this.ws = new WebSocket(this.wsUrl);
+                
+                this.ws.onopen = (event) => {
+                    console.log('语音WebSocket连接已建立');
+                    // 新连接建立时，清空旧的 clientId，等待服务端下发新的 connection_established 进行绑定
+                    this.clientId = null;
+                    window.voiceChatState.clientId = null;
+                    // 清理本地存储的旧 client_id，强制重新生成
+                    try {
+                        localStorage.removeItem('voiceClientId');
+                    } catch (_) {}
+                    // 重新生成持久化 client_id
+                    this.persistentClientId = this.ensurePersistentClientId();
+                    this.wsUrl = this.appendClientId(this.wsUrlBase, this.persistentClientId);
+                    // 尝试从页面当前会话控件读取会话ID，避免 session 校验期望为 null
+                    try {
+                        const el = document.getElementById('ai-chat-x-current-session-id');
+                        const sid = (el && (el.value || el.textContent)) ? (el.value || el.textContent) : null;
+                        if (sid) {
+                            this.updateSessionId(sid);
+                        }
+                    } catch (_) {}
+                    this.isConnected = true;
+                    this.reconnectAttempts = 0;
+                    this.startHeartbeat();
+                    this.notifyConnectionHandlers(true);
+                    resolve(true);
+                };
+                
+                this.ws.onmessage = (event) => {
+                    this.handleMessage(event.data);
+                };
+                
+                this.ws.onclose = (event) => {
+                    console.log('语音WebSocket连接已关闭:', event.code, event.reason);
+                    // 连接关闭时也清理 clientId，避免用旧 id 校验新连接的首条消息
+                    this.clientId = null;
+                    window.voiceChatState.clientId = null;
+                    this.isConnected = false;
+                    this.stopHeartbeat();
+                    this.notifyDisconnectionHandlers();
+                    
+                    // 自动重连
+                    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                        this.scheduleReconnect();
+                    }
+                };
+                
+                this.ws.onerror = (error) => {
+                    console.error('语音WebSocket连接错误:', error);
+                    this.notifyConnectionHandlers(false);
+                    reject(error);
+                };
+                
+            } catch (error) {
+                console.error('语音WebSocket连接失败:', error);
+                reject(error);
+            }
+        });
     }
     
     /**
@@ -222,7 +236,10 @@ class VoiceWebSocketManager {
         try {
             const messageStr = JSON.stringify(message);
             this.ws.send(messageStr);
-            console.log('发送语音消息:', message.type);
+            // 注释掉心跳消息的日志
+            if (message.type !== 'heartbeat') {
+                console.log('发送语音消息:', message.type);
+            }
             return true;
         } catch (error) {
             console.error('发送消息失败:', error);
@@ -233,16 +250,22 @@ class VoiceWebSocketManager {
     /**
      * 发送音频输入消息
      */
-    sendAudioInput(audioData, options = {}) {
-        const message = {
-            type: 'audio_input',
-            audio_data: this.encodeAudioData(audioData),
-            timestamp: Date.now() / 1000,
-            client_id: this.clientId,
-            session_id: this.sessionId,
-            ...options
-        };
-        return this.sendMessage(message);
+    async sendAudioInput(audioData, options = {}) {
+        try {
+            const encodedAudio = await this.encodeAudioData(audioData);
+            const message = {
+                type: 'audio_input',
+                audio_data: encodedAudio,
+                timestamp: Date.now() / 1000,
+                client_id: this.clientId,
+                session_id: this.sessionId,
+                ...options
+            };
+            return this.sendMessage(message);
+        } catch (error) {
+            console.error('编码音频数据失败:', error);
+            return false;
+        }
     }
     
     /**
@@ -294,46 +317,47 @@ class VoiceWebSocketManager {
     handleMessage(data) {
         try {
             const message = JSON.parse(data);
-            console.log('收到语音消息:', message.type);
+            // 注释掉心跳消息的日志
+            if (message.type !== 'heartbeat_response') {
+                console.log('收到语音消息:', message.type);
+            }
 
-            // 如果首次收到带有client_id的消息，先建立绑定，再进行校验，避免"expected: null"误丢弃
-            if (message.client_id && !window.voiceChatState.clientId) {
+            // 仅在 connection_established 时绑定 client_id，提高安全性
+            if (message.type === 'connection_established' && message.client_id) {
                 this.clientId = message.client_id;
+                if (!window.voiceChatState) {
+                    window.voiceChatState = {};
+                }
                 window.voiceChatState.clientId = this.clientId;
                 window.voiceChatState.isConnected = this.isConnected;
                 console.log('首次绑定client_id:', this.clientId);
-                // 幂等：如已存在相同 clientId 则不重复写入
+                // 写入 Dash Store，便于 SSE 侧携带一致的 client_id
                 try {
-                    const storeEl = document.getElementById('voice-websocket-connection');
-                    const current = storeEl ? (storeEl.value ? JSON.parse(storeEl.value).client_id : null) : null;
-                    if (current !== this.clientId) {
-                        this.safeSetProps('voice-websocket-connection', {
-                            data: { connected: true, client_id: this.clientId, timestamp: Date.now() }
-                        });
-                        this.safeSetProps('voice-enable-voice', {
-                            data: { enable: true, client_id: this.clientId, ts: Date.now() }
-                        });
-                    }
+                    this.safeSetProps('voice-websocket-connection', {
+                        data: { connected: true, client_id: this.clientId, timestamp: Date.now() }
+                    });
+                    // 兜底写一份到 voice-enable-voice，保证后续SSE能携带
+                    this.safeSetProps('voice-enable-voice', {
+                        data: { enable: true, client_id: this.clientId, ts: Date.now() }
+                    });
                 } catch (_) {}
             }
 
-            // 消息验证 - 防串台机制
+            // 消息验证 - 防串台机制（在完成绑定之后再校验）
             if (!this.validateMessage(message)) {
                 console.warn('消息验证失败，丢弃消息:', message);
                 return;
             }
 
-            // 更新客户端ID（非首次场景）
-            if (message.client_id && this.clientId !== message.client_id) {
-                this.clientId = message.client_id;
-                window.voiceChatState.clientId = this.clientId;
-                console.log('更新client_id:', this.clientId);
-            }
+            // 此处无需再次更新client_id，上面已完成统一绑定
             
             // 调用对应的处理器
             const handler = this.messageHandlers.get(message.type);
             if (handler) {
-                console.log('调用消息处理器:', message.type);
+                // 注释掉心跳消息处理器的日志
+                if (message.type !== 'heartbeat_response') {
+                    console.log('调用消息处理器:', message.type);
+                }
                 try {
                     handler(message);
                 } catch (error) {
