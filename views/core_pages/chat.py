@@ -306,6 +306,8 @@ def _create_state_stores():
     voice_transcription_store = dcc.Store(id='voice-transcription-store', data=None)
     voice_transcription_store_server = dcc.Store(id='voice-transcription-store-server', data=None)
     
+    # 不再需要隐藏div，直接通过JavaScript更新Store
+    
     # 添加语音功能相关的显示组件
     voice_message_notification = html.Div(id='voice-message-notification')
     voice_error_notification = html.Div(id='voice-error-notification')
@@ -338,6 +340,55 @@ def _create_state_stores():
                     }};
                     
                     console.log('语音配置已设置:', window.voiceConfig);
+                    
+                    // 延迟测试dash_clientside.set_props是否可用
+                    setTimeout(() => {{
+                        try {{
+                            if (window.dash_clientside && window.dash_clientside.set_props) {{
+                                console.log('dash_clientside.set_props 可用，测试更新');
+                                window.dash_clientside.set_props('voice-websocket-connection', {{
+                                    data: {{ connected: false, client_id: null, timestamp: Date.now() }}
+                                }});
+                                console.log('测试更新成功');
+                            }} else {{
+                                console.warn('dash_clientside.set_props 不可用');
+                            }}
+                        }} catch (e) {{
+                            console.error('测试更新失败:', e);
+                        }}
+                    }}, 1000);
+                    
+                    // 测试事件监听器是否注册成功
+                    console.log('注册事件监听器...');
+                    document.addEventListener('voiceWebSocketConnected', function(event) {{
+                        console.log('事件监听器被触发:', event.detail);
+                    }});
+                    console.log('事件监听器注册完成');
+                    
+                    // 立即测试事件机制
+                    setTimeout(() => {{
+                        console.log('测试事件机制...');
+                        const testEvent = new CustomEvent('voiceWebSocketConnected', {{
+                            detail: {{ clientId: 'test-client-id', connected: true, timestamp: Date.now() }}
+                        }});
+                        document.dispatchEvent(testEvent);
+                        console.log('测试事件已触发');
+                    }}, 2000);
+                    
+                    // 全局注册事件监听器，确保在任何时候都能响应
+                    window.addEventListener('voiceWebSocketConnected', function(event) {{
+                        console.log('全局事件监听器被触发:', event.detail);
+                    }});
+                    console.log('全局事件监听器注册完成');
+                    
+                    // 直接注册到全局对象，确保在任何时候都能响应
+                    if (!window.voiceWebSocketEventHandlers) {{
+                        window.voiceWebSocketEventHandlers = [];
+                    }}
+                    window.voiceWebSocketEventHandlers.push(function(event) {{
+                        console.log('全局事件处理器被触发:', event.detail);
+                    }});
+                    console.log('全局事件处理器注册完成');
                     
                     // 初始化WebSocket管理器
                     if (window.VoiceWebSocketManager) {
@@ -407,6 +458,74 @@ def _create_state_stores():
                             }} else {{
                                 console.warn('dash_clientside.set_props 不可用，无法更新 voice-transcription-store');
                             }}
+                        }}
+                    }});
+                    
+                    // 监听WebSocket连接事件，更新Dash存储
+                    document.addEventListener('voiceWebSocketConnecting', function(event) {{
+                        console.log('收到WebSocket连接中事件:', event.detail);
+                        if (event.detail) {{
+                            try {{
+                                if (window.dash_clientside && window.dash_clientside.set_props) {{
+                                    // 更新WebSocket连接状态（连接中，client_id为null）
+                                    window.dash_clientside.set_props('voice-websocket-connection', {{
+                                        data: {{ 
+                                            connected: event.detail.connected, 
+                                            client_id: event.detail.client_id, 
+                                            timestamp: event.detail.timestamp 
+                                        }}
+                                    }});
+                                    console.log('连接中状态更新成功');
+                                }} else {{
+                                    console.warn('dash_clientside.set_props 不可用');
+                                }}
+                            }} catch (e) {{
+                                console.error('连接中状态更新失败:', e);
+                            }}
+                        }}
+                    }});
+                    
+                    document.addEventListener('voiceWebSocketConnected', function(event) {{
+                        console.log('收到WebSocket连接完成事件:', event.detail);
+                        if (event.detail && event.detail.clientId) {{
+                            // 使用重试机制确保dash_clientside.set_props可用
+                            const updateWithRetry = (retryCount = 0) => {{
+                                try {{
+                                    console.log('准备更新Dash存储，clientId:', event.detail.clientId, '重试次数:', retryCount);
+                                    if (window.dash_clientside && window.dash_clientside.set_props) {{
+                                        console.log('dash_clientside.set_props 可用，开始更新');
+                                        // 更新WebSocket连接状态
+                                        window.dash_clientside.set_props('voice-websocket-connection', {{
+                                            data: {{ 
+                                                connected: true, 
+                                                client_id: event.detail.clientId, 
+                                                timestamp: event.detail.timestamp 
+                                            }}
+                                        }});
+                                        console.log('voice-websocket-connection 更新完成');
+                                        // 更新语音开关状态
+                                        window.dash_clientside.set_props('voice-enable-voice', {{
+                                            data: {{ 
+                                                enable: true, 
+                                                client_id: event.detail.clientId, 
+                                                ts: event.detail.timestamp 
+                                            }}
+                                        }});
+                                        console.log('voice-enable-voice 更新完成');
+                                        console.log('通过事件更新Dash存储成功');
+                                    }} else if (retryCount < 5) {{
+                                        console.log('dash_clientside.set_props 不可用，1秒后重试');
+                                        setTimeout(() => updateWithRetry(retryCount + 1), 1000);
+                                    }} else {{
+                                        console.warn('dash_clientside.set_props 重试5次后仍不可用');
+                                    }}
+                                }} catch (e) {{
+                                    console.error('更新Dash存储失败:', e);
+                                }}
+                            }};
+                            updateWithRetry();
+                        }} else {{
+                            console.warn('事件数据无效:', event.detail);
                         }}
                     }});
                 }});
@@ -587,6 +706,9 @@ def register_voice_transcription_mirror_callback(app):
         Input("voice-transcription-store", "data"),
         prevent_initial_call=True
     )
+
+
+# 不再需要复杂的callback机制，直接使用dash_clientside.set_props
 
 
 def register_voice_button_callback(app):

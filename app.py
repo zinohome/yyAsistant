@@ -43,6 +43,40 @@ register_voice_transcription_mirror_callback(app)
 from views.core_pages.chat import register_voice_button_callback
 register_voice_button_callback(app)
 
+# 添加统一按钮状态管理器的客户端回调
+app.clientside_callback(
+    """
+    function(n_clicks, input_value) {
+        if (!n_clicks) return window.dash_clientside.no_update;
+        if (window.unifiedButtonStateManager) {
+            const canProceed = window.unifiedButtonStateManager.handleTextButtonClick();
+            if (!canProceed) return window.dash_clientside.no_update;
+        }
+        return n_clicks;
+    }
+    """,
+    Output('ai-chat-x-send-btn', 'n_clicks', allow_duplicate=True),
+    Input('ai-chat-x-send-btn', 'n_clicks'),
+    State('ai-chat-x-input', 'value'),
+    prevent_initial_call=True
+)
+
+# 添加SSE完成后的TTS准备回调
+app.clientside_callback(
+    """
+    function(completion_event) {
+        if (completion_event && window.unifiedButtonStateManager) {
+            console.log('SSE完成，准备TTS');
+            window.unifiedButtonStateManager.prepareForTTS();
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('ai-chat-x-sse-completed-receiver', 'data-completion-event', allow_duplicate=True),
+    Input('ai-chat-x-sse-completed-receiver', 'data-completion-event'),
+    prevent_initial_call=True
+)
+
 # 导入语音回调函数（在app初始化后导入）
 import callbacks.voice_chat_c  # 临时注释，使用新的统一回调
 
@@ -79,6 +113,8 @@ app.layout = lambda: fuc.FefferyTopProgress(
         html.Div(
             id="root-container",
         ),
+        # 统一按钮状态管理器脚本
+        html.Script(src="/assets/js/unified_button_state_manager.js"),
         # 语音状态管理器脚本
         html.Script(src="/assets/js/voice_state_manager.js"),
     ],

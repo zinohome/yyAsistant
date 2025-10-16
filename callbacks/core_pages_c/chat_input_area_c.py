@@ -61,6 +61,12 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
     if not ctx.triggered:
         return messages, message_content, False, False, dash.no_update
     
+    # 验证输入框内容（仅对发送按钮触发）
+    if triggered_id == 'ai-chat-x-send-btn':
+        if not message_content or not message_content.strip():
+            log.info('输入框为空，拒绝提交')
+            return messages, message_content, False, False, dash.no_update
+    
     # 处理话题点击
     if triggered_id and isinstance(triggered_id, dict) and triggered_id.get('type') == 'chat-topic':
         # 获取话题索引
@@ -148,6 +154,10 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
                             # log.debug(f"AI消息已保存到数据库: {current_session_id}")
                     except Exception as e:
                         log.error(f"保存AI消息到数据库失败: {e}")
+                
+                # 通知前端SSE完成，准备TTS
+                log.info("SSE完成，通知前端准备TTS")
+                # 前端会调用 prepareForTTS() 检查 AUTO_PLAY 配置
                 
                 # 清理活跃的SSE连接
                 if message_id in active_sse_connections:
@@ -301,6 +311,7 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
 )
 def trigger_sse(messages, enable_voice, ws_connection, current_session_id):
     log.info(f"🔍 trigger_sse被触发: messages数量={len(messages) if messages else 0}, enable_voice={enable_voice}")
+    log.info(f"🔍 参数: ws_connection={ws_connection}")
     if messages:
         log.info(f"🔍 messages最后一条: {messages[-1]}")
     
@@ -338,10 +349,20 @@ def trigger_sse(messages, enable_voice, ws_connection, current_session_id):
             # 从WS连接信息获取client_id
             client_id = None
             try:
+                log.debug(f"WS连接数据: {ws_connection}")
                 if ws_connection and isinstance(ws_connection, dict):
                     client_id = ws_connection.get('client_id')
-            except Exception:
+                    log.debug(f"从WS连接获取client_id: {client_id}")
+                else:
+                    log.debug(f"WS连接数据无效: {ws_connection}")
+            except Exception as e:
+                log.debug(f"获取client_id异常: {e}")
                 client_id = None
+            
+            # 如果client_id为空，记录警告但不阻塞
+            if not client_id:
+                log.warn("client_id为空，TTS将被禁用")
+                log.debug("client_id为空，尝试其他方式获取")
 
             # 语音联动判定：即使缺少client_id也不要阻断SSE文本
             # 缺少client_id时仅关闭本次TTS（enable_voice=False），待下次再启用
@@ -360,8 +381,8 @@ def trigger_sse(messages, enable_voice, ws_connection, current_session_id):
                 'personality_id': 'health_assistant',
                 'message_id': message_id,
                 'role': role,
-                # 仅当来源是语音且拿到client_id时才打开TTS
-                'enable_voice': (enable_requested and bool(client_id)),
+            # 当有client_id时启用TTS（文本聊天和语音聊天都支持）
+            'enable_voice': bool(client_id),
                 # 后端需要定向推送的client_id（可能为空）
                 'client_id': client_id
             }

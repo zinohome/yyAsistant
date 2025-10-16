@@ -3,12 +3,18 @@
  * 专门处理与yychat后端的语音WebSocket通信
  */
 
+/**
+ * 语音WebSocket管理器
+ * 使用隐藏div和Dash clientside callback机制来更新Store
+ */
+
 class VoiceWebSocketManager {
     constructor() {
         this.ws = null;
         this.clientId = null;
         this.sessionId = null;  // 当前会话ID (conversation_id)
         this.isConnected = false;
+        this.isConnecting = false;  // 添加连接中标志
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectInterval = 1000;
@@ -31,9 +37,7 @@ class VoiceWebSocketManager {
         // 初始化全局状态
         this.initGlobalState();
 
-        // 初始化安全 set_props 任务队列
-        this.propQueue = [];
-        this.propDrainTimer = null;
+        // 移除复杂的队列机制，直接使用简单的更新方式
     }
     
     /**
@@ -89,50 +93,9 @@ class VoiceWebSocketManager {
         });
     }
 
-    // 安全的 set_props：组件未挂载时排队，避免解析错误
-    safeSetProps(targetId, payload) {
-        const tryDispatch = () => {
-            try {
-                const ready = !!(window.dash_clientside && window.dash_clientside.set_props);
-                const el = document.getElementById(targetId);
-                if (ready && el) {
-                    window.dash_clientside.set_props(targetId, payload);
-                    return true;
-                }
-            } catch (_) {}
-            return false;
-        };
+    // 移除有问题的updateDashStore方法，完全使用事件机制
 
-        if (!tryDispatch()) {
-            this.propQueue.push({ targetId, payload, tries: 0 });
-            if (!this.propDrainTimer) {
-                this.propDrainTimer = setInterval(() => this.drainPropQueue(), 200);
-            }
-        }
-    }
-
-    drainPropQueue() {
-        const next = [];
-        for (const item of this.propQueue) {
-            item.tries += 1;
-            try {
-                const ready = !!(window.dash_clientside && window.dash_clientside.set_props);
-                const el = document.getElementById(item.targetId);
-                if (ready && el) {
-                    window.dash_clientside.set_props(item.targetId, item.payload);
-                    continue; // 已发送
-                }
-            } catch (_) {}
-            if (item.tries < 10) {
-                next.push(item);
-            }
-        }
-        this.propQueue = next;
-        if (this.propQueue.length === 0 && this.propDrainTimer) {
-            clearInterval(this.propDrainTimer);
-            this.propDrainTimer = null;
-        }
-    }
+    // 移除复杂的队列机制
     
     /**
      * 更新会话ID
@@ -147,6 +110,13 @@ class VoiceWebSocketManager {
      * 建立WebSocket连接
      */
     async connect() {
+        // 如果正在连接中，直接返回
+        if (this.isConnecting) {
+            console.log('WebSocket正在连接中，跳过重复连接');
+            return Promise.resolve();
+        }
+        
+        this.isConnecting = true;
         return new Promise((resolve, reject) => {
             try {
                 console.log('正在连接语音WebSocket:', this.wsUrl);
@@ -155,9 +125,22 @@ class VoiceWebSocketManager {
                 
                 this.ws.onopen = (event) => {
                     console.log('语音WebSocket连接已建立');
+                    this.isConnected = true;
+                    this.isConnecting = false;  // 重置连接中标志
                     // 新连接建立时，清空旧的 clientId，等待服务端下发新的 connection_established 进行绑定
                     this.clientId = null;
                     window.voiceChatState.clientId = null;
+                    
+                    // 使用事件机制更新连接状态
+                    try {
+                        const event = new CustomEvent('voiceWebSocketConnecting', {
+                            detail: { connected: true, client_id: null, timestamp: Date.now() }
+                        });
+                        document.dispatchEvent(event);
+                        console.log('连接时使用事件机制更新状态');
+                    } catch (e) {
+                        console.warn('连接时事件机制失败:', e);
+                    }
                     // 清理本地存储的旧 client_id，强制重新生成
                     try {
                         localStorage.removeItem('voiceClientId');
@@ -190,6 +173,7 @@ class VoiceWebSocketManager {
                     this.clientId = null;
                     window.voiceChatState.clientId = null;
                     this.isConnected = false;
+                    this.isConnecting = false;  // 重置连接中标志
                     this.stopHeartbeat();
                     this.notifyDisconnectionHandlers();
                     
@@ -201,12 +185,14 @@ class VoiceWebSocketManager {
                 
                 this.ws.onerror = (error) => {
                     console.error('语音WebSocket连接错误:', error);
+                    this.isConnecting = false;  // 重置连接中标志
                     this.notifyConnectionHandlers(false);
                     reject(error);
                 };
                 
             } catch (error) {
                 console.error('语音WebSocket连接失败:', error);
+                this.isConnecting = false;  // 重置连接中标志
                 reject(error);
             }
         });
@@ -221,6 +207,7 @@ class VoiceWebSocketManager {
             this.ws = null;
         }
         this.isConnected = false;
+        this.isConnecting = false;  // 重置连接中标志
         this.stopHeartbeat();
     }
     
@@ -331,16 +318,64 @@ class VoiceWebSocketManager {
                 window.voiceChatState.clientId = this.clientId;
                 window.voiceChatState.isConnected = this.isConnected;
                 console.log('首次绑定client_id:', this.clientId);
-                // 写入 Dash Store，便于 SSE 侧携带一致的 client_id
+                
+                // 立即写入 Dash Store，便于 SSE 侧携带一致的 client_id
+                const connectionData = { connected: true, client_id: this.clientId, timestamp: Date.now() };
+                const enableVoiceData = { enable: true, client_id: this.clientId, ts: Date.now() };
+                
+            // 使用全局变量存储client_id，避免时机问题
+            window.voiceClientId = this.clientId;
+            window.voiceWebSocketConnected = true;
+            console.log('已设置全局client_id:', this.clientId);
+            
+            // 添加全局函数来获取client_id
+            window.getVoiceClientId = () => {
+                return window.voiceClientId || null;
+            };
+            
+            // 添加一个方法来获取当前的client_id
+            this.getClientId = () => {
+                return this.clientId || window.voiceClientId;
+            };
+            
+            // 使用正确的dash_clientside.set_props语法更新Store
+            const updateDashStore = () => {
                 try {
-                    this.safeSetProps('voice-websocket-connection', {
-                        data: { connected: true, client_id: this.clientId, timestamp: Date.now() }
-                    });
-                    // 兜底写一份到 voice-enable-voice，保证后续SSE能携带
-                    this.safeSetProps('voice-enable-voice', {
-                        data: { enable: true, client_id: this.clientId, ts: Date.now() }
-                    });
-                } catch (_) {}
+                    if (window.dash_clientside && window.dash_clientside.set_props) {
+                        console.log('使用dash_clientside.set_props更新Store，clientId:', this.clientId);
+                        
+                        // 更新WebSocket连接状态 - 使用正确的语法
+                        window.dash_clientside.set_props('voice-websocket-connection', {
+                            data: { 
+                                connected: true, 
+                                client_id: this.clientId, 
+                                timestamp: Date.now() 
+                            }
+                        });
+                        console.log('voice-websocket-connection 更新成功');
+                        
+                        // 更新语音开关状态 - 使用正确的语法
+                        window.dash_clientside.set_props('voice-enable-voice', {
+                            data: { 
+                                enable: true, 
+                                client_id: this.clientId, 
+                                ts: Date.now() 
+                            }
+                        });
+                        console.log('voice-enable-voice 更新成功');
+                    } else {
+                        console.log('dash_clientside.set_props 不可用，延迟重试');
+                        setTimeout(updateDashStore, 200);
+                    }
+                } catch (e) {
+                    console.error('更新Dash Store失败:', e);
+                    // 延迟重试
+                    setTimeout(updateDashStore, 200);
+                }
+            };
+            
+            // 延迟执行，确保Dash完全初始化
+            setTimeout(updateDashStore, 500);
             }
 
             // 消息验证 - 防串台机制（在完成绑定之后再校验）
@@ -532,12 +567,50 @@ class VoiceWebSocketManager {
      * 获取WebSocket连接对象
      */
     getConnection() {
-        if (!this.isConnected || !this.ws) {
-            console.warn('WebSocket未连接，尝试连接...');
-            this.connect();
+        // 如果已连接，直接返回连接
+        if (this.isConnected && this.ws) {
+            return this.ws;
+        }
+        
+        // 如果正在连接中，等待连接完成
+        if (this.isConnecting) {
+            console.log('WebSocket正在连接中，等待连接完成...');
             return null;
         }
-        return this.ws;
+        
+        // 如果未连接，尝试连接（只允许一次）
+        if (!this.isConnected && !this.isConnecting) {
+            console.warn('WebSocket未连接，尝试连接...');
+            this.connect();
+        }
+        
+        return null; // 连接中或未连接时返回null
+    }
+    
+    /**
+     * 等待连接建立（用于组件初始化）
+     */
+    async waitForConnection(maxWaitTime = 5000) {
+        const startTime = Date.now();
+        
+        while (Date.now() - startTime < maxWaitTime) {
+            if (this.isConnected && this.ws) {
+                return this.ws;
+            }
+            if (this.isConnecting) {
+                // 等待连接完成
+                await new Promise(resolve => setTimeout(resolve, 100));
+                continue;
+            }
+            // 如果既未连接也不在连接中，尝试连接
+            if (!this.isConnected && !this.isConnecting) {
+                this.connect();
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        console.warn('等待WebSocket连接超时');
+        return null;
     }
 }
 

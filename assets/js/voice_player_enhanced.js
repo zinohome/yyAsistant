@@ -17,12 +17,15 @@ class VoicePlayerEnhanced {
         this.playedMessages = new Set(); // 记录已播放的消息ID，避免重复播放
         this.streamStates = new Map(); // message_id -> { chunks: [{seq, base64}], nextSeq, codec, session_id }
         
-        this.init();
+        // 异步初始化
+        this.init().catch(error => {
+            console.error('播放器初始化失败:', error);
+        });
     }
     
-    init() {
+    async init() {
         // 初始化WebSocket连接
-        this.initWebSocket();
+        await this.initWebSocket();
         
         // 绑定事件
         this.bindEvents();
@@ -72,13 +75,14 @@ class VoicePlayerEnhanced {
         document.addEventListener('keydown', initAudio, { once: true });
     }
     
-    initWebSocket() {
+    async initWebSocket() {
         try {
             // 使用全局WebSocket管理器，避免重复连接
             if (window.voiceWebSocketManager) {
-                this.websocket = window.voiceWebSocketManager.getConnection();
+                // 等待连接建立
+                this.websocket = await window.voiceWebSocketManager.waitForConnection();
                 if (this.websocket) {
-                    console.log('使用全局WebSocket连接');
+                    console.log('播放器使用共享WebSocket连接');
                     // 通过管理器注册播放相关消息处理器，避免被其他模块覆盖onmessage
                     try {
                         window.voiceWebSocketManager.registerMessageHandler('audio_stream', (data) => this.handleAudioStream(data));
@@ -209,6 +213,11 @@ class VoicePlayerEnhanced {
             if (!text || !text.trim()) {
                 console.log('没有文本需要合成语音');
                 return;
+            }
+            
+            // 通知统一按钮状态管理器开始播放
+            if (window.unifiedButtonStateManager) {
+                window.unifiedButtonStateManager.startPlayingTTS();
             }
             
             console.log('开始语音合成:', text);
@@ -463,6 +472,11 @@ class VoicePlayerEnhanced {
                         window.voiceStateManager.finishPlaying();
                     }
                     
+                    // 通知统一按钮状态管理器播放完成
+                    if (window.unifiedButtonStateManager) {
+                        window.unifiedButtonStateManager.stopPlayingOrComplete();
+                    }
+                    
                     resolve();
                 };
                 
@@ -504,6 +518,11 @@ class VoicePlayerEnhanced {
      */
     stopPlayback() {
         console.log('停止播放');
+        
+        // 通知统一按钮状态管理器停止播放
+        if (window.unifiedButtonStateManager) {
+            window.unifiedButtonStateManager.stopPlayingOrComplete();
+        }
         
         // 停止当前音频
         this.stopCurrentAudio();

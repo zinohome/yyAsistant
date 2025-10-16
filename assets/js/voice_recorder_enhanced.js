@@ -21,12 +21,15 @@ class VoiceRecorderEnhanced {
             bitRate: 128000
         };
         
-        this.init();
+        // 异步初始化
+        this.init().catch(error => {
+            console.error('录音器初始化失败:', error);
+        });
     }
     
-    init() {
+    async init() {
         // 初始化WebSocket连接
-        this.initWebSocket();
+        await this.initWebSocket();
         
         // 绑定事件
         this.bindEvents();
@@ -58,13 +61,14 @@ class VoiceRecorderEnhanced {
         }
     }
     
-    initWebSocket() {
+    async initWebSocket() {
         try {
             // 使用全局WebSocket管理器，避免重复连接
             if (window.voiceWebSocketManager) {
-                this.websocket = window.voiceWebSocketManager.getConnection();
+                // 等待连接建立
+                this.websocket = await window.voiceWebSocketManager.waitForConnection();
                 if (this.websocket) {
-                    console.log('使用全局WebSocket连接');
+                    console.log('录音器使用共享WebSocket连接');
                     // 通过管理器注册消息处理器，避免共享连接相互覆盖 onmessage
                     try {
                         window.voiceWebSocketManager.registerMessageHandler('transcription_result', (data) => this.handleTranscriptionResult(data));
@@ -74,22 +78,7 @@ class VoiceRecorderEnhanced {
                         });
                     } catch (e) { console.warn('注册录音器消息处理器失败:', e); }
                 } else {
-                    console.log('WebSocket管理器未连接，等待连接...');
-                    // 等待连接建立
-                    setTimeout(() => {
-                        this.websocket = window.voiceWebSocketManager.getConnection();
-                        if (this.websocket) {
-                            // 连接建立后再注册
-                            try {
-                                window.voiceWebSocketManager.registerMessageHandler('transcription_result', (data) => this.handleTranscriptionResult(data));
-                                window.voiceWebSocketManager.registerMessageHandler('audio_processing_start', () => this.showProcessingStatus());
-                                window.voiceWebSocketManager.registerMessageHandler('error', (data) => {
-                                    if (data && data.message) this.showError(data.message);
-                                });
-                            } catch (e) { console.warn('延迟注册录音器处理器失败:', e); }
-                        }
-                    }, 1000);
-                    return;
+                    console.warn('录音器无法获取WebSocket连接');
                 }
             } else {
                 // 从全局配置获取WebSocket URL
@@ -163,6 +152,11 @@ class VoiceRecorderEnhanced {
                 window.voiceStateManager.startRecording();
             }
             
+            // 通知统一按钮状态管理器
+            if (window.unifiedButtonStateManager) {
+                window.unifiedButtonStateManager.startRecording();
+            }
+            
             // 请求麦克风权限
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
@@ -229,6 +223,11 @@ class VoiceRecorderEnhanced {
         if (this.mediaRecorder && this.isRecording) {
             this.mediaRecorder.stop();
             this.isRecording = false;
+            
+            // 通知统一按钮状态管理器
+            if (window.unifiedButtonStateManager) {
+                window.unifiedButtonStateManager.stopRecording();
+            }
             
             // 停止波形动画
             this.stopWaveformAnimation();
@@ -381,6 +380,11 @@ class VoiceRecorderEnhanced {
         console.log('收到转录结果:', data);
         
         if (data.text && data.text.trim()) {
+            // 通知统一按钮状态管理器STT完成
+            if (window.unifiedButtonStateManager) {
+                window.unifiedButtonStateManager.sttCompleted();
+            }
+            
             // 立即将 client_id 推送到 Store 与 语音开关，确保随后的 SSE 能带上 client_id
             try {
                 const cid = (window.voiceChatState && window.voiceChatState.clientId) || localStorage.getItem('voiceClientId');

@@ -76,3 +76,7 @@ class BaseConfig:
     yychat_default_stream: bool = True
     # 默认是否使用工具
     yychat_default_use_tools: bool = True
+    
+    # 语音自动播放配置
+    # SSE结束后是否自动触发TTS语音播放
+    enable_auto_tts_after_sse: bool = True
