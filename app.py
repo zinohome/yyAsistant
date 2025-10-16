@@ -43,37 +43,165 @@ register_voice_transcription_mirror_callback(app)
 from views.core_pages.chat import register_voice_button_callback
 register_voice_button_callback(app)
 
-# 添加统一按钮状态管理器的客户端回调
+# ============================================================================
+# 统一按钮状态管理 - Clientside Callbacks (官方推荐的dcc.Store架构)
+# ============================================================================
+
+# 回调 1: 状态更新回调 (多个Input → unified-button-state Store)
 app.clientside_callback(
     """
-    function(n_clicks, input_value) {
-        if (!n_clicks) return window.dash_clientside.no_update;
-        if (window.unifiedButtonStateManager) {
-            const canProceed = window.unifiedButtonStateManager.handleTextButtonClick();
-            if (!canProceed) return window.dash_clientside.no_update;
+    function(text_clicks, sse_event, recording_event, input_value, current_state) {
+        const ctx = dash_clientside.callback_context;
+        if (!ctx.triggered || ctx.triggered.length === 0) {
+            return window.dash_clientside.no_update;
         }
-        return n_clicks;
+        
+        const manager = window.unifiedButtonStateManager;
+        if (!manager) {
+            console.warn('UnifiedButtonStateManager not initialized');
+            return window.dash_clientside.no_update;
+        }
+        
+        const triggered = ctx.triggered[0];
+        const triggeredId = triggered.prop_id.split('.')[0];
+        const now = Date.now();
+        let newState = current_state || {state: 'idle', timestamp: 0};
+        
+        // 文本按钮点击
+        if (triggeredId === 'ai-chat-x-send-btn') {
+            if (!manager.checkInputContent()) {
+                return window.dash_clientside.no_update;
+            }
+            newState = {
+                state: 'text_processing',
+                timestamp: now,
+                metadata: {
+                    from_scenario: 'text',
+                    auto_play: manager.getAutoPlaySetting()
+                }
+            };
+        }
+        // SSE完成
+        else if (triggeredId === 'ai-chat-x-sse-completed-receiver') {
+            const metadata = current_state.metadata || {};
+            const autoPlay = metadata.auto_play !== false;
+            
+            // 文本聊天场景检查AUTO_PLAY配置
+            if (metadata.from_scenario === 'text' && !autoPlay) {
+                console.log('Text chat: AUTO_PLAY disabled, skip TTS');
+                newState = {state: 'idle', timestamp: now, metadata: {}};
+            } else {
+                console.log('Preparing TTS');
+                newState = {state: 'preparing_tts', timestamp: now, metadata: metadata};
+            }
+        }
+        // 外部事件 (录音/播放)
+        else if (triggeredId === 'button-event-trigger' && recording_event) {
+            const type = recording_event.type;
+            
+            if (type === 'recording_start') {
+                newState = {
+                    state: 'recording',
+                    timestamp: now,
+                    metadata: {from_scenario: 'voice'}
+                };
+            }
+            else if (type === 'recording_stop') {
+                newState = {
+                    state: 'voice_processing',
+                    timestamp: now,
+                    metadata: {from_scenario: 'voice'}
+                };
+            }
+            else if (type === 'stt_complete') {
+                newState = {
+                    state: 'text_processing',
+                    timestamp: now,
+                    metadata: {from_scenario: 'voice', auto_play: true}  // 语音录音始终播放TTS
+                };
+            }
+            else if (type === 'tts_start') {
+                newState = {
+                    state: 'playing_tts',
+                    timestamp: now,
+                    metadata: current_state.metadata || {}
+                };
+            }
+            else if (type === 'tts_complete' || type === 'tts_stop') {
+                newState = {state: 'idle', timestamp: now, metadata: {}};
+            }
+        }
+        
+        console.log('State update:', newState);
+        return newState;
     }
     """,
-    Output('ai-chat-x-send-btn', 'n_clicks', allow_duplicate=True),
-    Input('ai-chat-x-send-btn', 'n_clicks'),
-    State('ai-chat-x-input', 'value'),
+    Output('unified-button-state', 'data'),
+    [
+        Input('ai-chat-x-send-btn', 'n_clicks'),
+        Input('ai-chat-x-sse-completed-receiver', 'data-completion-event'),
+        Input('button-event-trigger', 'data')
+    ],
+    [
+        State('ai-chat-x-input', 'value'),
+        State('unified-button-state', 'data')
+    ],
     prevent_initial_call=True
 )
 
-# 添加SSE完成后的TTS准备回调
+# 回调 2: UI更新回调 (unified-button-state Store → 按钮样式)
 app.clientside_callback(
     """
-    function(completion_event) {
-        if (completion_event && window.unifiedButtonStateManager) {
-            console.log('SSE完成，准备TTS');
-            window.unifiedButtonStateManager.prepareForTTS();
+    function(state_data) {
+        if (!state_data || !window.unifiedButtonStateManager) {
+            const noupdate = window.dash_clientside.no_update;
+            return [noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate];
         }
+        
+        const state = state_data.state || 'idle';
+        const styles = window.unifiedButtonStateManager.getButtonStyles(state);
+        
+        console.log('UI update for state:', state);
+        return styles;
+    }
+    """,
+    [
+        Output('ai-chat-x-send-btn', 'style', allow_duplicate=True),
+        Output('ai-chat-x-send-btn', 'loading', allow_duplicate=True),
+        Output('ai-chat-x-send-btn', 'disabled', allow_duplicate=True),
+        Output('voice-record-button', 'style', allow_duplicate=True),
+        Output('voice-record-button', 'disabled', allow_duplicate=True),
+        Output('voice-call-btn', 'style', allow_duplicate=True),
+        Output('voice-call-btn', 'disabled', allow_duplicate=True)
+    ],
+    Input('unified-button-state', 'data'),
+    prevent_initial_call=True
+)
+
+# 回调 3: 输入验证回调 (显示警告消息)
+app.clientside_callback(
+    """
+    function(n_clicks, input_value) {
+        if (!n_clicks || !window.unifiedButtonStateManager) {
+            return window.dash_clientside.no_update;
+        }
+        
+        if (!window.unifiedButtonStateManager.checkInputContent()) {
+            console.log('Empty input warning');
+            // 返回Ant Design Message格式
+            return {
+                'content': '请输入消息内容',
+                'type': 'warning',
+                'duration': 2
+            };
+        }
+        
         return window.dash_clientside.no_update;
     }
     """,
-    Output('ai-chat-x-sse-completed-receiver', 'data-completion-event', allow_duplicate=True),
-    Input('ai-chat-x-sse-completed-receiver', 'data-completion-event'),
+    Output('global-message', 'children'),
+    Input('ai-chat-x-send-btn', 'n_clicks'),
+    State('ai-chat-x-input', 'value'),
     prevent_initial_call=True
 )
 

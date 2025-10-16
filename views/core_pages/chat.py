@@ -296,6 +296,16 @@ def _create_state_stores():
     # 添加：复制结果的虚拟输出组件
     copy_result_store = dcc.Store(id='ai-chat-x-copy-result', data=None)
     
+    # 添加统一按钮状态管理Store (官方推荐的Clientside Callback + dcc.Store架构)
+    unified_button_state = dcc.Store(
+        id='unified-button-state',
+        data={'state': 'idle', 'timestamp': 0}
+    )
+    button_event_trigger = dcc.Store(
+        id='button-event-trigger',
+        data=None
+    )
+    
     # 添加语音功能相关的存储组件
     voice_recording_status = dcc.Store(id='voice-recording-status', data=False)
     voice_call_status = dcc.Store(id='voice-call-status', data=False)
@@ -563,6 +573,10 @@ def _create_state_stores():
         copy_result_store,
         current_rename_conv_id_store,
         session_rename_modal,
+        
+        # 统一按钮状态管理Store
+        unified_button_state,
+        button_event_trigger,
         
         # 语音功能相关组件
         voice_recording_status,

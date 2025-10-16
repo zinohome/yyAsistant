@@ -472,9 +472,12 @@ class VoicePlayerEnhanced {
                         window.voiceStateManager.finishPlaying();
                     }
                     
-                    // 通知统一按钮状态管理器播放完成
-                    if (window.unifiedButtonStateManager) {
-                        window.unifiedButtonStateManager.stopPlayingOrComplete();
+                    // 通知统一按钮状态管理器播放完成 (通过dcc.Store)
+                    if (window.dash_clientside && window.dash_clientside.set_props) {
+                        window.dash_clientside.set_props('button-event-trigger', {
+                            data: {type: 'tts_complete', timestamp: Date.now()}
+                        });
+                        console.log('TTS播放完成，触发状态更新');
                     }
                     
                     resolve();
@@ -484,6 +487,14 @@ class VoicePlayerEnhanced {
                 source.start(0);
                 this.isPlaying = true;
                 this.currentAudio = source;
+                
+                // 通知统一按钮状态管理器TTS播放开始 (通过dcc.Store)
+                if (window.dash_clientside && window.dash_clientside.set_props) {
+                    window.dash_clientside.set_props('button-event-trigger', {
+                        data: {type: 'tts_start', timestamp: Date.now()}
+                    });
+                    console.log('TTS播放开始，触发状态更新');
+                }
                 
                 console.log('开始播放音频');
                 
@@ -608,6 +619,15 @@ class VoicePlayerEnhanced {
                 this.currentAudio.stop();
                 this.currentAudio = null;
                 this.isPlaying = false;
+                
+                // 通知统一按钮状态管理器播放停止 (通过dcc.Store)
+                if (window.dash_clientside && window.dash_clientside.set_props) {
+                    window.dash_clientside.set_props('button-event-trigger', {
+                        data: {type: 'tts_stop', timestamp: Date.now()}
+                    });
+                    console.log('TTS播放停止，触发状态更新');
+                }
+                
                 console.log('停止语音播放');
             } catch (error) {
                 console.error('停止播放失败:', error);

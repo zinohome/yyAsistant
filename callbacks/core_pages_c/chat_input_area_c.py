@@ -24,8 +24,8 @@ active_sse_connections = {}
     [
         Output('ai-chat-x-messages-store', 'data'),
         Output('ai-chat-x-input', 'value'),
-        Output('ai-chat-x-send-btn', 'loading'),
-        Output('ai-chat-x-send-btn', 'disabled'),
+        Output('ai-chat-x-send-btn', 'loading', allow_duplicate=True),
+        Output('ai-chat-x-send-btn', 'disabled', allow_duplicate=True),
         Output('voice-enable-voice', 'data')
     ],
     [

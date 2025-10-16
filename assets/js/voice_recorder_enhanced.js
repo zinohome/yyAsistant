@@ -152,9 +152,12 @@ class VoiceRecorderEnhanced {
                 window.voiceStateManager.startRecording();
             }
             
-            // 通知统一按钮状态管理器
-            if (window.unifiedButtonStateManager) {
-                window.unifiedButtonStateManager.startRecording();
+            // 通知统一按钮状态管理器 (通过dcc.Store)
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props('button-event-trigger', {
+                    data: {type: 'recording_start', timestamp: Date.now()}
+                });
+                console.log('录音开始，触发状态更新');
             }
             
             // 请求麦克风权限
@@ -224,9 +227,12 @@ class VoiceRecorderEnhanced {
             this.mediaRecorder.stop();
             this.isRecording = false;
             
-            // 通知统一按钮状态管理器
-            if (window.unifiedButtonStateManager) {
-                window.unifiedButtonStateManager.stopRecording();
+            // 通知统一按钮状态管理器 (通过dcc.Store)
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props('button-event-trigger', {
+                    data: {type: 'recording_stop', timestamp: Date.now()}
+                });
+                console.log('录音停止，触发状态更新');
             }
             
             // 停止波形动画
@@ -380,9 +386,12 @@ class VoiceRecorderEnhanced {
         console.log('收到转录结果:', data);
         
         if (data.text && data.text.trim()) {
-            // 通知统一按钮状态管理器STT完成
-            if (window.unifiedButtonStateManager) {
-                window.unifiedButtonStateManager.sttCompleted();
+            // 通知统一按钮状态管理器STT完成 (通过dcc.Store)
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props('button-event-trigger', {
+                    data: {type: 'stt_complete', timestamp: Date.now()}
+                });
+                console.log('STT完成，触发状态更新');
             }
             
             // 立即将 client_id 推送到 Store 与 语音开关，确保随后的 SSE 能带上 client_id

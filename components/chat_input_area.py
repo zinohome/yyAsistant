@@ -150,7 +150,7 @@ def render(
                                 flex="none",
                                 children=fac.AntdSpace(
                                     [   
-                                        # 发送按钮（上箭头）
+                                        # 发送按钮（上箭头） - 统一样式
                                         *( [
                                             fac.AntdButton(
                                                 icon=fac.AntdIcon(icon="antd-arrow-up"),
@@ -160,21 +160,25 @@ def render(
                                                 loading=False,
                                                 disabled=False,
                                                 style=style(
-                                                    padding="0"
+                                                    padding="0",
+                                                    width="40px",
+                                                    height="40px",
+                                                    borderRadius="8px",
+                                                    backgroundColor="#1890ff",
+                                                    borderColor="#1890ff"
                                                 )
                                             )
                                         ] if enable_send_button else [] ),
 
-                                        # 录音按钮 - 支持状态管理
+                                        # 录音按钮 - 统一样式
                                         *( [
                                             fac.AntdButton(
                                                 id="voice-record-button",
-                                                icon=DashIconify(icon="proicons:microphone",
-                                                        width=24,
-                                                        height=24,
-                                                        rotate=0,
-                                                        flip="horizontal",
-                                                    ),
+                                                icon=DashIconify(
+                                                    icon="proicons:microphone",
+                                                    width=20,
+                                                    height=20
+                                                ),
                                                 type="primary",
                                                 size="large",
                                                 title="开始录音",
@@ -190,16 +194,15 @@ def render(
                                             )
                                         ] if enable_voice_input else [] ),
 
-                                        # 通话按钮
+                                        # 通话按钮 - 统一样式
                                         *( [
                                             fac.AntdButton(
                                                 id="voice-call-btn",
-                                                icon=DashIconify(icon="bi:telephone",
-                                                        width=24,
-                                                        height=24,
-                                                        rotate=3,
-                                                        flip="horizontal",
-                                                    ),
+                                                icon=DashIconify(
+                                                    icon="bi:telephone",
+                                                    width=20,
+                                                    height=20
+                                                ),
                                                 type="primary",
                                                 size="large",
                                                 title="实时语音通话",

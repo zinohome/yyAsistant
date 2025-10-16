@@ -1,141 +1,212 @@
 /**
  * Unified Button State Manager
  * 
- * Manages the state of text, recording, and call buttons across different chat scenarios.
- * Coordinates button states to prevent conflicts and ensure consistent user experience.
+ * 基于官方推荐的Dash Clientside Callback + dcc.Store架构
+ * 不直接操作DOM，而是返回样式数据供clientside callback使用
+ * 
+ * 架构：
+ * - 使用dcc.Store作为单一状态源
+ * - clientside callback监听Store变化并更新UI
+ * - 状态管理器只负责提供样式数据和辅助方法
+ * 
+ * 创建日期: 2025-01-15
+ * 版本: 2.0 (Store-based architecture)
  */
 
 class UnifiedButtonStateManager {
     constructor() {
         // Global states for the entire system
         this.GLOBAL_STATES = {
-            IDLE: 'idle',                     // All buttons available
-            TEXT_PROCESSING: 'text_processing', // Text processing (SSE)
-            RECORDING: 'recording',            // Recording in progress
-            VOICE_PROCESSING: 'voice_processing', // Voice processing (STT)
-            PREPARING_TTS: 'preparing_tts',   // Preparing TTS (SSE complete)
-            PLAYING_TTS: 'playing_tts',       // TTS playing
-            CALLING: 'calling'                 // Real-time call in progress
+            IDLE: 'idle',                           // All buttons available
+            TEXT_PROCESSING: 'text_processing',     // Text processing (SSE)
+            RECORDING: 'recording',                 // Recording in progress
+            VOICE_PROCESSING: 'voice_processing',   // Voice processing (STT)
+            PREPARING_TTS: 'preparing_tts',        // Preparing TTS (SSE complete)
+            PLAYING_TTS: 'playing_tts',            // TTS playing
+            CALLING: 'calling'                      // Real-time call in progress
         };
         
-        this.currentState = this.GLOBAL_STATES.IDLE;
-        this.stateHandlers = new Map();
-        this.initStateHandlers();
-        
-        console.log('UnifiedButtonStateManager initialized');
+        console.log('UnifiedButtonStateManager v2.0 initialized (Store-based architecture)');
     }
     
     /**
-     * Initialize state handlers for each state
+     * Get button styles for all buttons based on state
+     * Returns array: [textStyle, textLoading, textDisabled, recordStyle, recordDisabled, callStyle, callDisabled]
+     * This method is called by clientside callback
      */
-    initStateHandlers() {
-        this.stateHandlers.set(this.GLOBAL_STATES.IDLE, () => {
-            this.updateTextButton('发送', false, false);
-            this.updateRecordButton('录音', '🎤', '#1890ff', true);
-            this.updateCallButton('通话', '📞', '#52c41a', true);
-        });
+    getButtonStyles(state) {
+        const styles = this.getStateStyles(state);
         
-        this.stateHandlers.set(this.GLOBAL_STATES.TEXT_PROCESSING, () => {
-            this.updateTextButton('处理中', true, true);
-            this.updateRecordButton('录音', '🎤', '#d9d9d9', false);
-            this.updateCallButton('通话', '📞', '#d9d9d9', false);
-        });
-        
-        this.stateHandlers.set(this.GLOBAL_STATES.RECORDING, () => {
-            this.updateTextButton('发送', false, false);
-            this.updateRecordButton('停止', '⏹️', '#ff4d4f', true);
-            this.updateCallButton('通话', '📞', '#d9d9d9', false);
-        });
-        
-        this.stateHandlers.set(this.GLOBAL_STATES.VOICE_PROCESSING, () => {
-            this.updateTextButton('处理中', true, true);
-            this.updateRecordButton('处理中', '⏳', '#faad14', false);
-            this.updateCallButton('通话', '📞', '#d9d9d9', false);
-        });
-        
-        this.stateHandlers.set(this.GLOBAL_STATES.PREPARING_TTS, () => {
-            this.updateTextButton('处理中', true, true);
-            this.updateRecordButton('准备播放', '⏳', '#faad14', false);
-            this.updateCallButton('通话', '📞', '#d9d9d9', false);
-        });
-        
-        this.stateHandlers.set(this.GLOBAL_STATES.PLAYING_TTS, () => {
-            this.updateTextButton('处理中', true, true);
-            this.updateRecordButton('停止', '⏸️', '#52c41a', true);
-            this.updateCallButton('通话', '📞', '#d9d9d9', false);
-        });
-        
-        this.stateHandlers.set(this.GLOBAL_STATES.CALLING, () => {
-            this.updateTextButton('发送', false, false);
-            this.updateRecordButton('录音', '🎤', '#d9d9d9', false);
-            this.updateCallButton('停止', '⏹️', '#ff4d4f', true);
-        });
+        return [
+            styles.textButton,      // Text button style {backgroundColor, borderColor}
+            styles.textLoading,     // Text button loading (true/false)
+            styles.textDisabled,    // Text button disabled (true/false)
+            styles.recordButton,    // Record button style {backgroundColor, borderColor}
+            styles.recordDisabled,  // Record button disabled (true/false)
+            styles.callButton,      // Call button style {backgroundColor, borderColor}
+            styles.callDisabled     // Call button disabled (true/false)
+        ];
     }
     
     /**
-     * Set the current state and update UI
+     * Get styles for each button based on current state
      */
-    setState(newState) {
-        if (this.currentState === newState) {
-            return; // Skip update if state is the same
-        }
-        
-        console.log(`State transition: ${this.currentState} → ${newState}`);
-        this.currentState = newState;
-        
-        // Use requestAnimationFrame for smooth UI updates
-        requestAnimationFrame(() => {
-            const handler = this.stateHandlers.get(newState);
-            if (handler) {
-                handler();
-            } else {
-                console.error(`No handler found for state: ${newState}`);
+    getStateStyles(state) {
+        const states = {
+            [this.GLOBAL_STATES.IDLE]: {
+                textButton: {
+                    backgroundColor: '#1890ff',
+                    borderColor: '#1890ff'
+                },
+                textLoading: false,
+                textDisabled: false,
+                recordButton: {
+                    backgroundColor: '#1890ff',
+                    borderColor: '#1890ff',
+                    boxShadow: '0 2px 4px rgba(24, 144, 255, 0.2)'
+                },
+                recordDisabled: false,
+                callButton: {
+                    backgroundColor: '#52c41a',
+                    borderColor: '#52c41a',
+                    boxShadow: '0 2px 4px rgba(82, 196, 26, 0.2)'
+                },
+                callDisabled: false
+            },
+            
+            [this.GLOBAL_STATES.TEXT_PROCESSING]: {
+                textButton: {
+                    backgroundColor: '#1890ff',
+                    borderColor: '#1890ff'
+                },
+                textLoading: true,
+                textDisabled: true,
+                recordButton: {
+                    backgroundColor: '#d9d9d9',
+                    borderColor: '#d9d9d9',
+                    boxShadow: 'none'
+                },
+                recordDisabled: true,
+                callButton: {
+                    backgroundColor: '#d9d9d9',
+                    borderColor: '#d9d9d9',
+                    boxShadow: 'none'
+                },
+                callDisabled: true
+            },
+            
+            [this.GLOBAL_STATES.RECORDING]: {
+                textButton: {
+                    backgroundColor: '#d9d9d9',
+                    borderColor: '#d9d9d9'
+                },
+                textLoading: false,
+                textDisabled: true,
+                recordButton: {
+                    backgroundColor: '#ff4d4f',
+                    borderColor: '#ff4d4f',
+                    boxShadow: '0 2px 4px rgba(255, 77, 79, 0.2)'
+                },
+                recordDisabled: false,
+                callButton: {
+                    backgroundColor: '#d9d9d9',
+                    borderColor: '#d9d9d9',
+                    boxShadow: 'none'
+                },
+                callDisabled: true
+            },
+            
+            [this.GLOBAL_STATES.VOICE_PROCESSING]: {
+                textButton: {
+                    backgroundColor: '#1890ff',
+                    borderColor: '#1890ff'
+                },
+                textLoading: true,
+                textDisabled: true,
+                recordButton: {
+                    backgroundColor: '#faad14',
+                    borderColor: '#faad14',
+                    boxShadow: '0 2px 4px rgba(250, 173, 20, 0.2)'
+                },
+                recordDisabled: true,
+                callButton: {
+                    backgroundColor: '#d9d9d9',
+                    borderColor: '#d9d9d9',
+                    boxShadow: 'none'
+                },
+                callDisabled: true
+            },
+            
+            [this.GLOBAL_STATES.PREPARING_TTS]: {
+                textButton: {
+                    backgroundColor: '#1890ff',
+                    borderColor: '#1890ff'
+                },
+                textLoading: true,
+                textDisabled: true,
+                recordButton: {
+                    backgroundColor: '#faad14',
+                    borderColor: '#faad14',
+                    boxShadow: '0 2px 4px rgba(250, 173, 20, 0.2)'
+                },
+                recordDisabled: true,
+                callButton: {
+                    backgroundColor: '#d9d9d9',
+                    borderColor: '#d9d9d9',
+                    boxShadow: 'none'
+                },
+                callDisabled: true
+            },
+            
+            [this.GLOBAL_STATES.PLAYING_TTS]: {
+                textButton: {
+                    backgroundColor: '#1890ff',
+                    borderColor: '#1890ff'
+                },
+                textLoading: true,
+                textDisabled: true,
+                recordButton: {
+                    backgroundColor: '#52c41a',
+                    borderColor: '#52c41a',
+                    boxShadow: '0 2px 4px rgba(82, 196, 26, 0.2)'
+                },
+                recordDisabled: false,  // Can click to stop
+                callButton: {
+                    backgroundColor: '#d9d9d9',
+                    borderColor: '#d9d9d9',
+                    boxShadow: 'none'
+                },
+                callDisabled: true
+            },
+            
+            [this.GLOBAL_STATES.CALLING]: {
+                textButton: {
+                    backgroundColor: '#d9d9d9',
+                    borderColor: '#d9d9d9'
+                },
+                textLoading: false,
+                textDisabled: true,
+                recordButton: {
+                    backgroundColor: '#d9d9d9',
+                    borderColor: '#d9d9d9',
+                    boxShadow: 'none'
+                },
+                recordDisabled: true,
+                callButton: {
+                    backgroundColor: '#ff4d4f',
+                    borderColor: '#ff4d4f',
+                    boxShadow: '0 2px 4px rgba(255, 77, 79, 0.2)'
+                },
+                callDisabled: false
             }
-        });
-    }
-    
-    /**
-     * Update text button state
-     */
-    updateTextButton(label, disabled, loading) {
-        const button = document.getElementById('ai-chat-x-send-btn');
-        if (button) {
-            button.disabled = disabled;
-            button.loading = loading;
-            if (button.children[0]) {
-                button.children[0].textContent = label;
-            }
-        }
-    }
-    
-    /**
-     * Update recording button state
-     */
-    updateRecordButton(label, icon, color, clickable) {
-        const button = document.getElementById('voice-record-button');
-        if (button) {
-            button.style.backgroundColor = color;
-            if (button.children[0]) button.children[0].textContent = icon;
-            if (button.children[1]) button.children[1].textContent = label;
-            button.disabled = !clickable;
-        }
-    }
-    
-    /**
-     * Update call button state
-     */
-    updateCallButton(label, icon, color, clickable) {
-        const button = document.getElementById('voice-call-btn');
-        if (button) {
-            button.style.backgroundColor = color;
-            if (button.children[0]) button.children[0].textContent = icon;
-            if (button.children[1]) button.children[1].textContent = label;
-            button.disabled = !clickable;
-        }
+        };
+        
+        return states[state] || states[this.GLOBAL_STATES.IDLE];
     }
     
     /**
      * Check if input field has content
+     * Used by clientside callback for input validation
      */
     checkInputContent() {
         const input = document.getElementById('ai-chat-x-input');
@@ -143,205 +214,39 @@ class UnifiedButtonStateManager {
             console.warn('Input field not found');
             return false;
         }
-        const hasContent = input.value && input.value.trim().length > 0;
-        console.log(`Input content check: ${hasContent}`);
+        
+        const value = input.value || '';
+        const hasContent = value.trim().length > 0;
+        
+        if (!hasContent) {
+            console.log('Input validation: empty input');
+        }
+        
         return hasContent;
     }
     
     /**
-     * Show warning for empty input
-     */
-    showInputEmptyWarning() {
-        console.log('Showing empty input warning');
-        // Use Dash clientside to update global message
-        if (window.dash_clientside && window.dash_clientside.updateProps) {
-            window.dash_clientside.updateProps('global-message', {
-                'children': '请输入消息内容',
-                'type': 'warning',
-                'duration': 3
-            });
-        }
-    }
-    
-    /**
-     * Handle text button click
-     */
-    handleTextButtonClick() {
-        console.log('Text button clicked');
-        
-        // Check if we're in idle state
-        if (this.currentState !== this.GLOBAL_STATES.IDLE) {
-            console.log('Not in idle state, rejecting text button click');
-            return false;
-        }
-        
-        // Check input content
-        if (!this.checkInputContent()) {
-            this.showInputEmptyWarning();
-            return false;
-        }
-        
-        // Start text processing
-        this.startTextProcessing();
-        return true;
-    }
-    
-    /**
-     * Handle recording button click
-     */
-    handleRecordButtonClick() {
-        console.log('Record button clicked');
-        
-        switch (this.currentState) {
-            case this.GLOBAL_STATES.IDLE:
-                this.startRecording();
-                return true;
-            case this.GLOBAL_STATES.RECORDING:
-                this.stopRecording();
-                return true;
-            case this.GLOBAL_STATES.PLAYING_TTS:
-                this.stopPlayingOrComplete();
-                return true;
-            default:
-                console.log(`Record button click rejected in state: ${this.currentState}`);
-                return false;
-        }
-    }
-    
-    /**
-     * Handle call button click
-     */
-    handleCallButtonClick() {
-        console.log('Call button clicked');
-        
-        switch (this.currentState) {
-            case this.GLOBAL_STATES.IDLE:
-                this.startCalling();
-                return true;
-            case this.GLOBAL_STATES.CALLING:
-                this.stopCalling();
-                return true;
-            default:
-                console.log(`Call button click rejected in state: ${this.currentState}`);
-                return false;
-        }
-    }
-    
-    /**
-     * Start text processing (SSE)
-     */
-    startTextProcessing() {
-        console.log('Starting text processing');
-        this.setState(this.GLOBAL_STATES.TEXT_PROCESSING);
-    }
-    
-    /**
-     * Start recording
-     */
-    startRecording() {
-        console.log('Starting recording');
-        this.setState(this.GLOBAL_STATES.RECORDING);
-    }
-    
-    /**
-     * Stop recording
-     */
-    stopRecording() {
-        console.log('Stopping recording');
-        this.setState(this.GLOBAL_STATES.VOICE_PROCESSING);
-    }
-    
-    /**
-     * STT completed, enter text processing
-     */
-    sttCompleted() {
-        console.log('STT completed, entering text processing');
-        this.setState(this.GLOBAL_STATES.TEXT_PROCESSING);
-    }
-    
-    /**
-     * Prepare for TTS (check config)
-     */
-    prepareForTTS() {
-        console.log('Preparing for TTS');
-        
-        // Check AUTO_PLAY setting
-        const autoPlay = this.getAutoPlaySetting();
-        if (!autoPlay) {
-            console.log('Auto-play disabled, skipping TTS');
-            this.resetToIdle();
-            return;
-        }
-        
-        this.setState(this.GLOBAL_STATES.PREPARING_TTS);
-    }
-    
-    /**
-     * Start playing TTS
-     */
-    startPlayingTTS() {
-        console.log('Starting TTS playback');
-        this.setState(this.GLOBAL_STATES.PLAYING_TTS);
-    }
-    
-    /**
-     * Stop playing or complete
-     */
-    stopPlayingOrComplete() {
-        console.log('Stopping TTS or completing');
-        this.resetToIdle();
-    }
-    
-    /**
-     * Start calling (placeholder for future)
-     */
-    startCalling() {
-        console.log('Starting call (future implementation)');
-        this.setState(this.GLOBAL_STATES.CALLING);
-    }
-    
-    /**
-     * Stop calling
-     */
-    stopCalling() {
-        console.log('Stopping call');
-        this.resetToIdle();
-    }
-    
-    /**
-     * Reset to idle state
-     */
-    resetToIdle() {
-        console.log('Resetting to idle state');
-        this.setState(this.GLOBAL_STATES.IDLE);
-    }
-    
-    /**
-     * Get AUTO_PLAY setting from config
+     * Get TTS auto-play setting from voice config
+     * Used in state update callback to determine TTS behavior
      */
     getAutoPlaySetting() {
-        // Try to get from global config or default to true
-        if (window.voiceConfig) {
-            // 检查不同的配置名称
-            const autoPlay = window.voiceConfig.AUTO_PLAY_DEFAULT || window.voiceConfig.autoPlay;
-            if (typeof autoPlay !== 'undefined') {
-                console.log('AUTO_PLAY配置:', autoPlay);
-                return autoPlay;
-            }
+        // Check window.voiceConfig.AUTO_PLAY_DEFAULT
+        if (window.voiceConfig && typeof window.voiceConfig.AUTO_PLAY_DEFAULT !== 'undefined') {
+            return window.voiceConfig.AUTO_PLAY_DEFAULT;
         }
         
-        // Default to true if not configured
-        console.log('使用默认AUTO_PLAY配置: true');
+        // Fallback: check window.voiceConfig.autoPlay
+        if (window.voiceConfig && typeof window.voiceConfig.autoPlay !== 'undefined') {
+            return window.voiceConfig.autoPlay;
+        }
+        
+        // Default: enabled
+        console.log('TTS auto-play setting not found, defaulting to true');
         return true;
-    }
-    
-    /**
-     * Get current state
-     */
-    getCurrentState() {
-        return this.currentState;
     }
 }
 
 // Initialize global instance
 window.unifiedButtonStateManager = new UnifiedButtonStateManager();
+
+console.log('Unified Button State Manager loaded successfully');
