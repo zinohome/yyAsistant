@@ -114,18 +114,26 @@ class VoiceRecorderEnhanced {
     }
     
     bindEvents() {
+        console.log('绑定录音按钮事件监听器...');
+        
         // 监听录音按钮点击事件 - 使用新的按钮ID
-        document.addEventListener('click', (event) => {
+        document.addEventListener('click', async (event) => {
+            console.log('文档点击事件触发，目标元素:', event.target);
             if (event.target.closest('#voice-record-button')) {
-                this.toggleRecording();
+                console.log('录音按钮被点击');
+                event.preventDefault();
+                event.stopPropagation();
+                await this.toggleRecording();
             }
         });
+        
+        console.log('录音按钮事件监听器绑定完成');
     }
     
     async toggleRecording() {
         // 使用状态管理器处理按钮点击，而不是直接切换录音状态
         if (window.voiceStateManager) {
-            const handled = window.voiceStateManager.handleButtonClick();
+            const handled = await window.voiceStateManager.handleButtonClick();
             if (handled) {
                 return; // 状态管理器已处理
             }
@@ -140,11 +148,15 @@ class VoiceRecorderEnhanced {
     }
     
     async startRecording() {
-        // 检查状态管理器是否允许开始录音
-        if (window.voiceStateManager && !window.voiceStateManager.canStartRecording()) {
-            console.warn('当前状态不允许开始录音:', window.voiceStateManager.getState());
-            return;
+        console.log('startRecording 被调用');
+        
+        // 检查是否已经在录音
+        if (this.isRecording) {
+            console.warn('已经在录音中，跳过重复开始');
+            return true;
         }
+        
+        console.log('准备开始录音');
         
         try {
             // 更新状态为录音中
@@ -152,8 +164,11 @@ class VoiceRecorderEnhanced {
                 window.voiceStateManager.startRecording();
             }
             
-            // 通知统一按钮状态管理器 (通过dcc.Store)
-            if (window.dash_clientside && window.dash_clientside.set_props) {
+            // 通知统一按钮状态管理器 (通过dcc.Store) - 只在/core/chat页面
+            const currentPath = window.location.pathname;
+            const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+            
+            if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
                 window.dash_clientside.set_props('button-event-trigger', {
                     data: {type: 'recording_start', timestamp: Date.now()}
                 });
@@ -161,6 +176,7 @@ class VoiceRecorderEnhanced {
             }
             
             // 请求麦克风权限
+            console.log('正在请求麦克风权限...');
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     sampleRate: this.config.sampleRate,
@@ -169,6 +185,7 @@ class VoiceRecorderEnhanced {
                     noiseSuppression: true
                 }
             });
+            console.log('麦克风权限获取成功，音频流:', stream);
             
             // 初始化音频上下文
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -215,10 +232,33 @@ class VoiceRecorderEnhanced {
             this.disableInput();
             
             console.log('开始录音');
+            return true; // 录音开始成功
             
         } catch (error) {
             console.error('开始录音失败:', error);
-            this.showError('无法访问麦克风，请检查权限设置');
+            
+            // 重置状态
+            if (window.voiceStateManager) {
+                window.voiceStateManager.stopRecording();
+            }
+            
+            // 根据错误类型提供不同的提示
+            let errorMessage = '无法访问麦克风，请检查权限设置';
+            if (error.name === 'NotAllowedError') {
+                errorMessage = '麦克风权限被拒绝，请在浏览器设置中允许麦克风访问';
+            } else if (error.name === 'NotFoundError') {
+                errorMessage = '未找到麦克风设备，请检查设备连接';
+            } else if (error.name === 'NotReadableError') {
+                errorMessage = '麦克风被其他应用占用，请关闭其他应用后重试';
+            }
+            
+            this.showError(errorMessage);
+            console.error('录音错误详情:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
+            return false; // 录音开始失败
         }
     }
     
@@ -227,8 +267,11 @@ class VoiceRecorderEnhanced {
             this.mediaRecorder.stop();
             this.isRecording = false;
             
-            // 通知统一按钮状态管理器 (通过dcc.Store)
-            if (window.dash_clientside && window.dash_clientside.set_props) {
+            // 通知统一按钮状态管理器 (通过dcc.Store) - 只在/core/chat页面
+            const currentPath = window.location.pathname;
+            const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+            
+            if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
                 window.dash_clientside.set_props('button-event-trigger', {
                     data: {type: 'recording_stop', timestamp: Date.now()}
                 });
@@ -386,8 +429,11 @@ class VoiceRecorderEnhanced {
         console.log('收到转录结果:', data);
         
         if (data.text && data.text.trim()) {
-            // 通知统一按钮状态管理器STT完成 (通过dcc.Store)
-            if (window.dash_clientside && window.dash_clientside.set_props) {
+            // 通知统一按钮状态管理器STT完成 (通过dcc.Store) - 只在/core/chat页面
+            const currentPath = window.location.pathname;
+            const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+            
+            if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
                 window.dash_clientside.set_props('button-event-trigger', {
                     data: {type: 'stt_complete', timestamp: Date.now()}
                 });
@@ -676,7 +722,30 @@ class VoiceRecorderEnhanced {
 
 // 初始化语音录制器
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('初始化语音录制器...');
     window.voiceRecorder = new VoiceRecorderEnhanced();
+    console.log('语音录制器初始化完成:', window.voiceRecorder);
+    
+    // 延迟检查录音按钮，因为Dash组件可能还没有渲染
+    setTimeout(() => {
+        const recordButton = document.getElementById('voice-record-button');
+        console.log('延迟检查录音按钮元素:', recordButton);
+        
+        if (recordButton) {
+            console.log('录音按钮找到，直接事件绑定完成');
+        } else {
+            console.warn('录音按钮仍未找到，将在页面完全加载后重试');
+            // 使用MutationObserver监听DOM变化
+            const observer = new MutationObserver(() => {
+                const button = document.getElementById('voice-record-button');
+                if (button) {
+                    console.log('录音按钮已渲染，停止观察');
+                    observer.disconnect();
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+    }, 1000);
 });
 
 // 导出供其他模块使用

@@ -472,13 +472,8 @@ class VoicePlayerEnhanced {
                         window.voiceStateManager.finishPlaying();
                     }
                     
-                    // 通知统一按钮状态管理器播放完成 (通过dcc.Store)
-                    if (window.dash_clientside && window.dash_clientside.set_props) {
-                        window.dash_clientside.set_props('button-event-trigger', {
-                            data: {type: 'tts_complete', timestamp: Date.now()}
-                        });
-                        console.log('TTS播放完成，触发状态更新');
-                    }
+                    // 不在这里触发状态更新，等待synthesis_complete事件
+                    console.log('TTS片段播放完成');
                     
                     resolve();
                 };
@@ -488,8 +483,11 @@ class VoicePlayerEnhanced {
                 this.isPlaying = true;
                 this.currentAudio = source;
                 
-                // 通知统一按钮状态管理器TTS播放开始 (通过dcc.Store)
-                if (window.dash_clientside && window.dash_clientside.set_props) {
+                // 通知统一按钮状态管理器TTS播放开始 (通过dcc.Store) - 只在/core/chat页面
+                const currentPath = window.location.pathname;
+                const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+                
+                if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
                     window.dash_clientside.set_props('button-event-trigger', {
                         data: {type: 'tts_start', timestamp: Date.now()}
                     });
@@ -511,6 +509,17 @@ class VoicePlayerEnhanced {
         // 合成完成，如果当前没有播放，则重置状态
         if (!this.isPlaying && window.voiceStateManager) {
             window.voiceStateManager.finishPlaying();
+        }
+        
+        // 通知统一按钮状态管理器所有TTS播放完成 (通过dcc.Store) - 只在/core/chat页面
+        const currentPath = window.location.pathname;
+        const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+        
+        if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
+            window.dash_clientside.set_props('button-event-trigger', {
+                data: {type: 'tts_complete', timestamp: Date.now()}
+            });
+            console.log('所有TTS播放完成，触发状态更新');
         }
     }
     
@@ -620,8 +629,11 @@ class VoicePlayerEnhanced {
                 this.currentAudio = null;
                 this.isPlaying = false;
                 
-                // 通知统一按钮状态管理器播放停止 (通过dcc.Store)
-                if (window.dash_clientside && window.dash_clientside.set_props) {
+                // 通知统一按钮状态管理器播放停止 (通过dcc.Store) - 只在/core/chat页面
+                const currentPath = window.location.pathname;
+                const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+                
+                if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
                     window.dash_clientside.set_props('button-event-trigger', {
                         data: {type: 'tts_stop', timestamp: Date.now()}
                     });

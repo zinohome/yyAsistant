@@ -50,10 +50,24 @@ register_voice_button_callback(app)
 # 回调 1: 状态更新回调 (多个Input → unified-button-state Store)
 app.clientside_callback(
     """
-    function(text_clicks, sse_event, recording_event, input_value, current_state) {
+        function(sse_event, recording_event, input_value, current_state) {
+        console.log('🔍 状态管理callback被触发:', {sse_event, recording_event, input_value, current_state});
         const ctx = dash_clientside.callback_context;
         if (!ctx.triggered || ctx.triggered.length === 0) {
+            console.log('🔍 没有触发事件，返回no_update');
             return window.dash_clientside.no_update;
+        }
+        
+        // 显示当前状态信息
+        if (current_state && window.unifiedButtonStateManager) {
+            const stateInfo = window.unifiedButtonStateManager.getStateInfo(current_state.state, current_state.scenario);
+            const buttonDetails = window.unifiedButtonStateManager.getButtonStateDetails(current_state.state);
+            console.log('🔍 当前状态:', stateInfo);
+            console.log('🔍 按钮状态详情:', {
+                textButton: `${buttonDetails.textButton.status} (loading: ${buttonDetails.textButton.loading}, disabled: ${buttonDetails.textButton.disabled})`,
+                recordButton: `${buttonDetails.recordButton.status} (disabled: ${buttonDetails.recordButton.disabled})`,
+                callButton: `${buttonDetails.callButton.status} (disabled: ${buttonDetails.callButton.disabled})`
+            });
         }
         
         const manager = window.unifiedButtonStateManager;
@@ -69,9 +83,12 @@ app.clientside_callback(
         
         // 文本按钮点击
         if (triggeredId === 'ai-chat-x-send-btn') {
+            console.log('Text button clicked, checking input content...');
             if (!manager.checkInputContent()) {
+                console.log('Input content check failed, returning no_update');
                 return window.dash_clientside.no_update;
             }
+            console.log('Input content valid, setting state to text_processing');
             newState = {
                 state: 'text_processing',
                 timestamp: now,
@@ -81,54 +98,75 @@ app.clientside_callback(
                 }
             };
         }
-        // SSE完成
-        else if (triggeredId === 'ai-chat-x-sse-completed-receiver') {
-            const metadata = current_state.metadata || {};
-            const autoPlay = metadata.auto_play !== false;
-            
-            // 文本聊天场景检查AUTO_PLAY配置
-            if (metadata.from_scenario === 'text' && !autoPlay) {
-                console.log('Text chat: AUTO_PLAY disabled, skip TTS');
-                newState = {state: 'idle', timestamp: now, metadata: {}};
-            } else {
-                console.log('Preparing TTS');
-                newState = {state: 'preparing_tts', timestamp: now, metadata: metadata};
+            // SSE流式处理 - 只在非TTS播放状态下更新
+            else if (triggeredId === 'ai-chat-x-sse-completed-receiver' && sse_event) {
+                const currentState = current_state?.state || 'idle';
+                
+                // 如果当前在TTS播放状态，忽略SSE事件
+                if (currentState === 'tts_playing' || currentState === 'voice_tts_playing') {
+                    console.log('🔍 SSE事件被忽略，当前在TTS播放状态');
+                    return window.dash_clientside.no_update;
+                }
+                
+                // 如果当前是idle状态，更新为text_processing
+                if (currentState === 'idle') {
+                    newState = {
+                        state: 'text_processing',
+                        scenario: 'text_chat',
+                        timestamp: now,
+                        metadata: {from_scenario: 'text', auto_play: true}
+                    };
+                    console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+                } else {
+                    console.log('🔍 SSE事件被忽略，保持当前状态');
+                    return window.dash_clientside.no_update;
+                }
             }
-        }
+            // SSE完成 - 不更新状态，继续等待TTS完成
+            else if (triggeredId === 'ai-chat-x-sse-completed-receiver') {
+                console.log('🔍 SSE完成事件被忽略，等待TTS完成');
+                return window.dash_clientside.no_update;
+            }
         // 外部事件 (录音/播放)
         else if (triggeredId === 'button-event-trigger' && recording_event) {
             const type = recording_event.type;
             
-            if (type === 'recording_start') {
+            if (type === 'text_button_clicked') {
+                console.log('Text button clicked, setting state to text_processing');
+                newState = {
+                    state: 'text_processing',
+                    scenario: 'text_chat',
+                    timestamp: now,
+                    metadata: recording_event.metadata || {from_scenario: 'text', auto_play: true}
+                };
+                console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+            }
+            else if (type === 'recording_start') {
                 newState = {
                     state: 'recording',
+                    scenario: 'voice_recording',
                     timestamp: now,
                     metadata: {from_scenario: 'voice'}
                 };
+                console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
             }
             else if (type === 'recording_stop') {
                 newState = {
                     state: 'voice_processing',
+                    scenario: 'voice_recording',
                     timestamp: now,
-                    metadata: {from_scenario: 'voice'}
+                    metadata: {from_scenario: 'voice', auto_play: true}
                 };
-            }
-            else if (type === 'stt_complete') {
-                newState = {
-                    state: 'text_processing',
-                    timestamp: now,
-                    metadata: {from_scenario: 'voice', auto_play: true}  // 语音录音始终播放TTS
-                };
-            }
-            else if (type === 'tts_start') {
-                newState = {
-                    state: 'playing_tts',
-                    timestamp: now,
-                    metadata: current_state.metadata || {}
-                };
+                console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
             }
             else if (type === 'tts_complete' || type === 'tts_stop') {
-                newState = {state: 'idle', timestamp: now, metadata: {}};
+                newState = {state: 'idle', scenario: null, timestamp: now, metadata: {}};
+                console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+            }
+            else if (type === 'tts_start') {
+                // TTS开始播放，保持当前状态不变
+                console.log('🔍 TTS开始播放，保持当前状态');
+                return window.dash_clientside.no_update;
             }
         }
         
@@ -138,7 +176,6 @@ app.clientside_callback(
     """,
     Output('unified-button-state', 'data'),
     [
-        Input('ai-chat-x-send-btn', 'n_clicks'),
         Input('ai-chat-x-sse-completed-receiver', 'data-completion-event'),
         Input('button-event-trigger', 'data')
     ],
@@ -152,18 +189,22 @@ app.clientside_callback(
 # 回调 2: UI更新回调 (unified-button-state Store → 按钮样式)
 app.clientside_callback(
     """
-    function(state_data) {
-        if (!state_data || !window.unifiedButtonStateManager) {
-            const noupdate = window.dash_clientside.no_update;
-            return [noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate];
+        function(state_data) {
+            if (!state_data || !window.unifiedButtonStateManager) {
+                const noupdate = window.dash_clientside.no_update;
+                return [noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate];
+            }
+            
+            const state = state_data.state || 'idle';
+            const scenario = state_data.scenario || null;
+            const styles = window.unifiedButtonStateManager.getButtonStyles(state);
+            
+            // 显示状态信息
+            const stateInfo = window.unifiedButtonStateManager.getStateInfo(state, scenario);
+            console.log('🔍 UI更新:', stateInfo);
+            
+            return styles;
         }
-        
-        const state = state_data.state || 'idle';
-        const styles = window.unifiedButtonStateManager.getButtonStyles(state);
-        
-        console.log('UI update for state:', state);
-        return styles;
-    }
     """,
     [
         Output('ai-chat-x-send-btn', 'style', allow_duplicate=True),

@@ -26,9 +26,28 @@ app = DashProxy(
     external_stylesheets=[
         '/assets/css/responsive_chat.css',
         '/assets/css/chat.css'
-    ]
+    ],
+    # 添加静态文件配置，避免dash_table字体文件404错误
+    serve_locally=True
 )
 server = app.server
+
+# 添加静态文件路由，提供dash_table字体文件
+@app.server.route('/_dash-component-suites/dash/dash_table/<path:filename>')
+def serve_dash_table_assets(filename):
+    """提供dash_table字体文件，避免404错误"""
+    from flask import send_from_directory, abort
+    import os
+    
+    # 静态文件目录
+    static_dir = os.path.join(os.path.dirname(__file__), 'static', '_dash-component-suites', 'dash', 'dash_table')
+    
+    try:
+        return send_from_directory(static_dir, filename)
+    except FileNotFoundError:
+        # 如果文件不存在，返回空响应避免404错误
+        from flask import Response
+        return Response("", status=200, mimetype='application/octet-stream')
 
 # 添加SSE相关导入
 from dash_extensions.streaming import sse_message, sse_options

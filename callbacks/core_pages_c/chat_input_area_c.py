@@ -63,6 +63,7 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
     
     # 验证输入框内容（仅对发送按钮触发）
     if triggered_id == 'ai-chat-x-send-btn':
+        log.info(f"🔍 chat_input_area_c.py: 发送按钮被触发，消息内容: {message_content[:50] if message_content else 'None'}...")
         if not message_content or not message_content.strip():
             log.info('输入框为空，拒绝提交')
             return messages, message_content, False, False, dash.no_update
@@ -224,6 +225,21 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
     # 处理消息发送
     elif triggered_id in ['ai-chat-x-send-btn'] and message_content:
         log.info(f"🔍 发送按钮被触发，消息内容: {message_content[:50]}...")
+        
+        # 触发按钮状态更新为text_processing
+        try:
+            import dash_clientside
+            dash_clientside.set_props('button-event-trigger', {
+                'data': {
+                    'type': 'text_button_clicked', 
+                    'timestamp': int(time.time() * 1000),
+                    'metadata': {'from_scenario': 'text', 'auto_play': True}
+                }
+            })
+            log.info("🔍 已触发按钮状态更新: text_processing")
+        except Exception as e:
+            log.error(f"触发按钮状态更新失败: {e}")
+        
         # 去除消息前后空格
         message_content = message_content.strip()
         

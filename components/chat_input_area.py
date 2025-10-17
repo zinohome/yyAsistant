@@ -156,11 +156,9 @@ def render(
                                                 icon=fac.AntdIcon(icon="antd-arrow-up"),
                                                 id="ai-chat-x-send-btn",
                                                 type="primary",
-                                                shape="circle",
-                                                loading=False,
-                                                disabled=False,
+                                                size="large",
                                                 style=style(
-                                                    padding="0",
+                                                    padding="8px",
                                                     width="40px",
                                                     height="40px",
                                                     borderRadius="8px",

@@ -341,6 +341,15 @@ class VoiceWebSocketManager {
             // 使用正确的dash_clientside.set_props语法更新Store
             const updateDashStore = () => {
                 try {
+                    // 只在/core/chat页面更新WebSocket Store
+                    const currentPath = window.location.pathname;
+                    const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+                    
+                    if (!isChatPage) {
+                        console.log('当前页面不需要更新WebSocket Store:', currentPath);
+                        return;
+                    }
+                    
                     if (window.dash_clientside && window.dash_clientside.set_props) {
                         console.log('使用dash_clientside.set_props更新Store，clientId:', this.clientId);
                         

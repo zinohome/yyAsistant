@@ -294,28 +294,38 @@ class VoiceStateManager {
     /**
      * 处理按钮点击事件
      */
-    handleButtonClick() {
+    async handleButtonClick() {
         console.log('语音按钮被点击，当前状态:', this.currentState);
         
         if (this.currentState === this.STATES.IDLE) {
             // 空闲状态：开始录音
             console.log('开始录音');
-            this.startRecording();
             
-            // 触发录音器开始录音
-            if (window.voiceRecorderEnhanced) {
-                window.voiceRecorderEnhanced.startRecording();
+            // 先调用录音器开始录音，再更新状态
+            if (window.voiceRecorder) {
+                console.log('状态管理器调用录音器开始录音');
+                const success = await window.voiceRecorder.startRecording();
+                if (success) {
+                    this.startRecording();
+                    return true;
+                } else {
+                    console.error('录音器开始录音失败');
+                    return false;
+                }
+            } else {
+                console.error('录音器未找到: window.voiceRecorder');
+                return false;
             }
-            
-            return true;
         } else if (this.currentState === this.STATES.RECORDING) {
             // 录音中状态：停止录音
             console.log('停止录音');
             
             // 直接调用录音器的停止录音方法
-            if (window.voiceRecorderEnhanced) {
+            if (window.voiceRecorder) {
                 console.log('状态管理器调用录音器停止录音');
-                await window.voiceRecorderEnhanced.stopRecording();
+                await window.voiceRecorder.stopRecording();
+            } else {
+                console.error('录音器未找到: window.voiceRecorder');
             }
             
             return true;
@@ -332,7 +342,9 @@ class VoiceStateManager {
 }
 
 // 创建全局实例
+console.log('初始化语音状态管理器...');
 window.voiceStateManager = new VoiceStateManager();
+console.log('语音状态管理器初始化完成:', window.voiceStateManager);
 
 // 导出按钮点击处理方法到全局命名空间，供Dash客户端回调使用
 window.voiceStateManager.handleButtonClick = window.voiceStateManager.handleButtonClick.bind(window.voiceStateManager);
