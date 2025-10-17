@@ -185,6 +185,17 @@ def _handle_text_message_send(messages, message_content, current_session_id, def
         
         log.info(f"✅ 文本消息发送完成，触发SSE: {ai_message_id}")
         
+        # 触发按钮状态更新
+        try:
+            import dash_clientside
+            if dash_clientside.set_props:
+                dash_clientside.set_props('button-event-trigger', {
+                    'data': {'type': 'text_button_clicked', 'timestamp': time.time()}
+                })
+                log.info("✅ 已触发按钮状态更新事件")
+        except Exception as e:
+            log.error(f"触发按钮状态更新失败: {e}")
+        
         # 更新返回值
         result = default_returns.copy()
         result[0] = updated_messages  # messages
@@ -257,6 +268,17 @@ def _handle_voice_transcription(messages, transcription_data, current_session_id
         }
         
         log.info(f"✅ 语音转录处理完成，触发SSE: {ai_message_id}")
+        
+        # 触发按钮状态更新
+        try:
+            import dash_clientside
+            if dash_clientside.set_props:
+                dash_clientside.set_props('button-event-trigger', {
+                    'data': {'type': 'voice_transcription_complete', 'timestamp': time.time()}
+                })
+                log.info("✅ 已触发语音转录按钮状态更新事件")
+        except Exception as e:
+            log.error(f"触发语音转录按钮状态更新失败: {e}")
         
         # 更新返回值
         result = default_returns.copy()

@@ -119,11 +119,20 @@ class VoiceRecorderEnhanced {
         // 监听录音按钮点击事件 - 使用新的按钮ID
         document.addEventListener('click', async (event) => {
             console.log('文档点击事件触发，目标元素:', event.target);
+            
+            // 检查是否是录音按钮
             if (event.target.closest('#voice-record-button')) {
                 console.log('录音按钮被点击');
                 event.preventDefault();
                 event.stopPropagation();
                 await this.toggleRecording();
+            }
+            // 检查是否是实时语音对话按钮 - 不处理，让Dash回调处理
+            else if (event.target.closest('#realtime-start-btn') || 
+                     event.target.closest('#realtime-stop-btn') || 
+                     event.target.closest('#realtime-mute-btn')) {
+                console.log('实时语音对话按钮被点击，让Dash回调处理');
+                // 不阻止事件，让Dash的nClicks回调处理
             }
         });
         
@@ -218,7 +227,8 @@ class VoiceRecorderEnhanced {
             
             // 监听停止事件
             this.mediaRecorder.onstop = () => {
-                this.processRecording();
+                // 不在这里处理，避免重复调用
+                console.log('录音停止事件触发');
             };
             
             // 开始录音
@@ -339,9 +349,9 @@ class VoiceRecorderEnhanced {
             if (!window.voiceWebSocketManager || !window.voiceWebSocketManager.isConnected) {
                 console.warn('WebSocket未连接，尝试重连...');
                 window.voiceWebSocketManager.connect().then(() => {
-                    // 重连成功后，延迟一点时间再发送
+                    // 重连成功后，延迟一点时间再发送，避免递归调用
                     setTimeout(() => {
-                        this.sendAudioForTranscription(audioBlob).then(resolve).catch(reject);
+                        this._sendAudioData(audioBlob).then(resolve).catch(reject);
                     }, 1000);
                 }).catch(() => {
                     reject(new Error('WebSocket连接不可用'));
@@ -349,6 +359,13 @@ class VoiceRecorderEnhanced {
                 return;
             }
             
+            // 直接发送音频数据
+            this._sendAudioData(audioBlob).then(resolve).catch(reject);
+        });
+    }
+    
+    async _sendAudioData(audioBlob) {
+        return new Promise((resolve, reject) => {
             // 将音频转换为base64
             const reader = new FileReader();
             reader.onload = () => {
@@ -411,11 +428,15 @@ class VoiceRecorderEnhanced {
                 */
                     break;
                 case 'error':
-                    if (data && data.message) {
-                        this.showError(data.message);
+                    let errorMessage = '语音处理错误';
+                    if (data && data.error && data.error.message) {
+                        errorMessage = data.error.message;
+                    } else if (data && data.message) {
+                        errorMessage = data.message;
                     } else {
                         console.error('语音WebSocket错误(无详情)');
                     }
+                    this.showError(errorMessage);
                     break;
                 default:
                     console.log('收到WebSocket消息:', data);
@@ -472,6 +493,20 @@ class VoiceRecorderEnhanced {
             if (window.voiceStateManager) {
                 window.voiceStateManager.setState(window.voiceStateManager.STATES.IDLE);
             }
+            
+            // 触发状态更新事件，确保按钮状态回到空闲
+            const currentPath = window.location.pathname;
+            const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+            
+            if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props('button-event-trigger', {
+                    data: {type: 'stt_failed', timestamp: Date.now()}
+                });
+                console.log('STT失败，触发状态重置');
+            }
+            
+            // 隐藏处理状态
+            this.hideProcessingStatus();
         }
     }
     
@@ -511,16 +546,26 @@ class VoiceRecorderEnhanced {
         try {
             // 使用Dash的全局回调机制
             if (window.dash_clientside && window.dash_clientside.set_props) {
-                // 直接设置store数据，并带上时间戳确保变化
-                const ts = Date.now();
-                window.dash_clientside.set_props('voice-transcription-store', {
-                    data: { text: text, ts }
-                });
-                // 同步镜像到服务端可见的Store，确保触发服务端回调
-                window.dash_clientside.set_props('voice-transcription-store-server', {
-                    data: { text: text, ts }
-                });
-                console.log('已通过set_props更新voice-transcription-store 与 -server:', text);
+                try {
+                    // 直接设置store数据，并带上时间戳确保变化
+                    const ts = Date.now();
+                    window.dash_clientside.set_props('voice-transcription-store', {
+                        data: { text: text, ts }
+                    });
+                    // 同步镜像到服务端可见的Store，确保触发服务端回调
+                    window.dash_clientside.set_props('voice-transcription-store-server', {
+                        data: { text: text, ts }
+                    });
+                    console.log('已通过set_props更新voice-transcription-store 与 -server:', text);
+                } catch (setPropsError) {
+                    console.error('set_props调用失败:', setPropsError);
+                    // 使用备用方案
+                    const event = new CustomEvent('voiceTranscriptionComplete', {
+                        detail: { text: text }
+                    });
+                    document.dispatchEvent(event);
+                    console.log('已触发语音转录完成事件:', text);
+                }
             } else {
                 // 使用简单的事件触发
                 const event = new CustomEvent('voiceTranscriptionComplete', {

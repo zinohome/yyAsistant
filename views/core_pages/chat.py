@@ -16,6 +16,7 @@ from components.chat_input_area import render as render_chat_input_area
 from components.ai_chat_message_history import AiChatMessageHistory
 from components.my_info import render_my_info_drawer
 from components.preference import render as render_preference_drawer
+from components.realtime_voice_chat import create_realtime_voice_chat_component
 
 # 导入配置和用户相关模块
 from configs import BaseConfig
@@ -178,6 +179,18 @@ def _create_content_area():
                         "状态正常",
                         id="ai-chat-x-connection-status",
                         style=style(fontSize="12px", color="#52c41a", marginLeft="8px")
+                    ),
+                    fac.AntdDivider(direction="vertical", style=style(margin="0 8px")),
+                    # 音频可视化区域
+                    html.Canvas(
+                        id="audio-visualizer",
+                        style={
+                            "width": "60px",
+                            "height": "20px",
+                            "border": "1px solid #d9d9d9",
+                            "borderRadius": "4px",
+                            "backgroundColor": "#f5f5f5"
+                        }
                     )
                 ],
                 flex="auto"
@@ -265,10 +278,13 @@ def _create_content_area():
 
 def _create_input_content():
     """创建输入区域内容"""
-    return html.Div(
-        id='ai-chat-x-input-container',
-        children=render_chat_input_area()
-    )
+    return html.Div([
+        # 原有的聊天输入区域
+        html.Div(
+            id='ai-chat-x-input-container',
+            children=render_chat_input_area()
+        )
+    ])
 
 def _create_state_stores():
     """创建页面所需的状态存储组件"""

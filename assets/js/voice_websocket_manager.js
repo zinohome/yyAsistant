@@ -353,25 +353,31 @@ class VoiceWebSocketManager {
                     if (window.dash_clientside && window.dash_clientside.set_props) {
                         console.log('使用dash_clientside.set_props更新Store，clientId:', this.clientId);
                         
-                        // 更新WebSocket连接状态 - 使用正确的语法
-                        window.dash_clientside.set_props('voice-websocket-connection', {
-                            data: { 
-                                connected: true, 
-                                client_id: this.clientId, 
-                                timestamp: Date.now() 
-                            }
-                        });
-                        console.log('voice-websocket-connection 更新成功');
-                        
-                        // 更新语音开关状态 - 使用正确的语法
-                        window.dash_clientside.set_props('voice-enable-voice', {
-                            data: { 
-                                enable: true, 
-                                client_id: this.clientId, 
-                                ts: Date.now() 
-                            }
-                        });
-                        console.log('voice-enable-voice 更新成功');
+                        try {
+                            // 更新WebSocket连接状态 - 使用正确的语法
+                            window.dash_clientside.set_props('voice-websocket-connection', {
+                                data: { 
+                                    connected: true, 
+                                    client_id: this.clientId, 
+                                    timestamp: Date.now() 
+                                }
+                            });
+                            console.log('voice-websocket-connection 更新成功');
+                            
+                            // 更新语音开关状态 - 使用正确的语法
+                            window.dash_clientside.set_props('voice-enable-voice', {
+                                data: { 
+                                    enable: true, 
+                                    client_id: this.clientId, 
+                                    ts: Date.now() 
+                                }
+                            });
+                            console.log('voice-enable-voice 更新成功');
+                        } catch (setPropsError) {
+                            console.error('set_props调用失败:', setPropsError);
+                            // 延迟重试
+                            setTimeout(updateDashStore, 200);
+                        }
                     } else {
                         console.log('dash_clientside.set_props 不可用，延迟重试');
                         setTimeout(updateDashStore, 200);

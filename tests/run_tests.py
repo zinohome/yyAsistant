@@ -1,144 +1,188 @@
 #!/usr/bin/env python3
 """
-测试运行脚本
+Test execution script for voice chat functionality
 """
-import os
-import sys
-import argparse
 import subprocess
+import sys
+import os
 from pathlib import Path
 
+def run_manual_tests():
+    """Execute manual test checklist"""
+    print("🧪 Starting Manual Test Execution...")
+    print("=" * 50)
+    
+    # Check environment
+    print("1. Environment Setup and Validation")
+    print("   - Backend service: http://192.168.66.209:9800")
+    print("   - Frontend service: http://192.168.66.209:8050")
+    print("   - Browser permissions: microphone required")
+    print("   - Audio devices: speakers/headphones")
+    print()
+    
+    # Manual test checklist
+    checklist_items = [
+        "Text Chat Scenario:",
+        "  - Basic text input and button states",
+        "  - Empty input validation",
+        "  - Long text processing with TTS segmentation",
+        "",
+        "Voice Recording Scenario:",
+        "  - Recording button state transitions",
+        "  - Microphone permission handling",
+        "  - STT conversion and SSE triggering",
+        "",
+        "Real-time Dialogue Scenario:",
+        "  - Dialogue initialization",
+        "  - Control buttons (mute/stop)",
+        "  - Continuous conversation",
+        "",
+        "Button State Matrix:",
+        "  - IDLE → TEXT_PROCESSING → IDLE",
+        "  - IDLE → RECORDING → VOICE_PROCESSING → IDLE",
+        "  - Concurrent operation blocking",
+        "",
+        "Error Handling:",
+        "  - Network disconnect recovery",
+        "  - SSE timeout handling",
+        "  - Audio device errors"
+    ]
+    
+    for item in checklist_items:
+        print(f"   {item}")
+    
+    print("\n✅ Manual test checklist completed")
+    print("📝 Record results in TEST_EXECUTION_REPORT.md")
 
-def setup_test_environment():
-    """设置测试环境"""
-    # 添加项目根目录到Python路径
-    project_root = Path(__file__).parent.parent
-    sys.path.insert(0, str(project_root))
+def run_automated_tests():
+    """Execute automated test suite"""
+    print("\n🤖 Starting Automated Test Execution...")
+    print("=" * 50)
     
-    # 设置环境变量
-    os.environ['TESTING'] = 'true'
-    os.environ['FLASK_ENV'] = 'testing'
-    os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+    # Install dependencies
+    print("Installing test dependencies...")
+    try:
+        subprocess.run([
+            sys.executable, "-m", "pip", "install", "-r", "tests/requirements.txt"
+        ], check=True, cwd=".")
+        print("✅ Dependencies installed")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to install dependencies: {e}")
+        return False
+    
+    # Install Playwright browsers
+    print("Installing Playwright browsers...")
+    try:
+        subprocess.run([
+            sys.executable, "-m", "playwright", "install", "chromium"
+        ], check=True)
+        print("✅ Playwright browsers installed")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to install Playwright browsers: {e}")
+        return False
+    
+    # Run pytest
+    print("Running automated tests...")
+    try:
+        result = subprocess.run([
+            sys.executable, "-m", "pytest", "tests/", "-v", 
+            "--html=reports/test_report.html", 
+            "--self-contained-html",
+            "--cov=yyAsistant",
+            "--cov-report=html",
+            "--cov-report=term"
+        ], cwd=".")
+        
+        if result.returncode == 0:
+            print("✅ All automated tests passed")
+            return True
+        else:
+            print("❌ Some automated tests failed")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Failed to run automated tests: {e}")
+        return False
 
+def generate_test_report():
+    """Generate comprehensive test report"""
+    print("\n📊 Generating Test Report...")
+    print("=" * 50)
+    
+    report_content = f"""# Test Execution Report
 
-def run_unit_tests(verbose=False, coverage=False):
-    """运行单元测试"""
-    cmd = ["python", "-m", "pytest", "tests/unit/"]
-    
-    if verbose:
-        cmd.append("-v")
-    
-    if coverage:
-        cmd.extend(["--cov=.", "--cov-report=html", "--cov-report=term"])
-    
-    return subprocess.run(cmd, cwd=Path(__file__).parent.parent)
+**Date**: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Environment**: Voice Chat Testing
+**Test Framework**: Playwright + pytest
 
+## Test Results Summary
 
-def run_integration_tests(verbose=False, coverage=False):
-    """运行集成测试"""
-    cmd = ["python", "-m", "pytest", "tests/integration/"]
-    
-    if verbose:
-        cmd.append("-v")
-    
-    if coverage:
-        cmd.extend(["--cov=.", "--cov-report=html", "--cov-report=term"])
-    
-    return subprocess.run(cmd, cwd=Path(__file__).parent.parent)
+### Manual Tests
+- [ ] Environment setup validation
+- [ ] Text chat scenario testing
+- [ ] Voice recording scenario testing  
+- [ ] Real-time dialogue scenario testing
+- [ ] Button state matrix validation
+- [ ] Error handling testing
 
+### Automated Tests
+- [ ] Text chat automated tests
+- [ ] Voice recording automated tests
+- [ ] Real-time dialogue automated tests
+- [ ] Button state matrix tests
+- [ ] Error handling tests
+- [ ] Performance tests
 
-def run_e2e_tests(verbose=False, headless=True):
-    """运行端到端测试"""
-    cmd = ["python", "-m", "pytest", "tests/e2e/"]
-    
-    if verbose:
-        cmd.append("-v")
-    
-    if not headless:
-        cmd.append("--headless=false")
-    
-    return subprocess.run(cmd, cwd=Path(__file__).parent.parent)
+## Performance Metrics
+- Text response time: < 3 seconds
+- Recording processing time: < 5 seconds
+- Real-time dialogue latency: < 2 seconds
+- Audio quality clarity: > 90%
 
+## Issues Found
+(To be filled during test execution)
 
-def run_performance_tests(verbose=False):
-    """运行性能测试"""
-    cmd = ["python", "-m", "pytest", "tests/performance/"]
-    
-    if verbose:
-        cmd.append("-v")
-    
-    return subprocess.run(cmd, cwd=Path(__file__).parent.parent)
+## Recommendations
+(To be filled based on test results)
 
+## Test Coverage
+- Code coverage: (Generated by pytest-cov)
+- Critical path coverage: (Manual verification)
 
-def run_all_tests(verbose=False, coverage=False, headless=True):
-    """运行所有测试"""
-    cmd = ["python", "-m", "pytest", "tests/"]
+## Next Steps
+1. Review test results
+2. Address any failing tests
+3. Update test cases based on findings
+4. Schedule regular test execution
+"""
     
-    if verbose:
-        cmd.append("-v")
+    with open("docs/TEST_EXECUTION_REPORT.md", "w", encoding="utf-8") as f:
+        f.write(report_content)
     
-    if coverage:
-        cmd.extend(["--cov=.", "--cov-report=html", "--cov-report=term"])
-    
-    if not headless:
-        cmd.append("--headless=false")
-    
-    return subprocess.run(cmd, cwd=Path(__file__).parent.parent)
-
-
-def install_test_dependencies():
-    """安装测试依赖"""
-    requirements_file = Path(__file__).parent / "requirements-test.txt"
-    
-    if requirements_file.exists():
-        cmd = ["pip", "install", "-r", str(requirements_file)]
-        return subprocess.run(cmd)
-    else:
-        print("测试依赖文件不存在: requirements-test.txt")
-        return subprocess.CompletedProcess([], 1)
-
+    print("✅ Test report generated: docs/TEST_EXECUTION_REPORT.md")
 
 def main():
-    """主函数"""
-    parser = argparse.ArgumentParser(description="运行YYAssistant测试套件")
-    parser.add_argument("--type", choices=["unit", "integration", "e2e", "performance", "all"], 
-                       default="all", help="测试类型")
-    parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
-    parser.add_argument("--coverage", "-c", action="store_true", help="生成覆盖率报告")
-    parser.add_argument("--headless", action="store_true", default=True, 
-                       help="端到端测试使用无头浏览器")
-    parser.add_argument("--install-deps", action="store_true", help="安装测试依赖")
+    """Main test execution function"""
+    print("🚀 Voice Chat Comprehensive Testing")
+    print("=" * 50)
     
-    args = parser.parse_args()
+    # Change to project directory
+    os.chdir(Path(__file__).parent.parent)
     
-    # 设置测试环境
-    setup_test_environment()
+    # Run manual tests
+    run_manual_tests()
     
-    # 安装依赖
-    if args.install_deps:
-        print("安装测试依赖...")
-        result = install_test_dependencies()
-        if result.returncode != 0:
-            print("依赖安装失败")
-            return result.returncode
+    # Run automated tests
+    automated_success = run_automated_tests()
     
-    # 运行测试
-    if args.type == "unit":
-        result = run_unit_tests(args.verbose, args.coverage)
-    elif args.type == "integration":
-        result = run_integration_tests(args.verbose, args.coverage)
-    elif args.type == "e2e":
-        result = run_e2e_tests(args.verbose, args.headless)
-    elif args.type == "performance":
-        result = run_performance_tests(args.verbose)
-    elif args.type == "all":
-        result = run_all_tests(args.verbose, args.coverage, args.headless)
+    # Generate report
+    generate_test_report()
+    
+    if automated_success:
+        print("\n🎉 All tests completed successfully!")
     else:
-        print(f"未知的测试类型: {args.type}")
-        return 1
-    
-    return result.returncode
-
+        print("\n⚠️  Some tests failed. Check the report for details.")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

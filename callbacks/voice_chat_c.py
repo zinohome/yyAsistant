@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import dash
+import time
 from dash import callback, Input, Output, State, html, dcc, no_update
 import feffery_antd_components as fac
 from dash_iconify import DashIconify
@@ -16,19 +17,20 @@ from server import app
 # 语音按钮统一回调 - 处理录音和通话按钮的所有状态
 @app.callback(
     [
-        Output("voice-record-button", "type"),
-        Output("voice-record-button", "icon"),
-        Output("voice-record-button", "title"),
+        Output("voice-record-button", "type", allow_duplicate=True),
+        Output("voice-record-button", "icon", allow_duplicate=True),
+        Output("voice-record-button", "title", allow_duplicate=True),
         Output("voice-record-button", "style", allow_duplicate=True),
         Output("voice-record-button", "disabled", allow_duplicate=True),
-        Output("voice-call-btn", "type"),
-        Output("voice-call-btn", "icon"),
-        Output("voice-call-btn", "title"),
+        Output("voice-call-btn", "type", allow_duplicate=True),
+        Output("voice-call-btn", "icon", allow_duplicate=True),
+        Output("voice-call-btn", "title", allow_duplicate=True),
         Output("voice-call-btn", "style", allow_duplicate=True),
         Output("voice-call-btn", "disabled", allow_duplicate=True),
         Output("voice-recording-status", "data"),
         Output("voice-call-status", "data"),
-        Output("ai-chat-x-send-btn", "disabled", allow_duplicate=True)
+        Output("ai-chat-x-send-btn", "disabled", allow_duplicate=True),
+        Output("button-event-trigger", "data", allow_duplicate=True)
     ],
     [
         Input("voice-record-button", "nClicks"),
@@ -68,8 +70,7 @@ def handle_voice_buttons(record_clicks, call_clicks, is_loading, is_recording, i
             return (
                 "primary", DashIconify(icon="proicons:microphone", width=24, height=24), "语音输入", disabled_style, True,
                 "primary", DashIconify(icon="bi:telephone", width=24, height=24, rotate=2), "实时语音通话", disabled_style, True,
-                is_recording, is_calling, False
-            )
+                is_recording, is_calling, False, None            )
         
         # 处理录音按钮点击
         if triggered_id == "voice-record-button" and record_clicks:
@@ -106,24 +107,40 @@ def handle_voice_buttons(record_clicks, call_clicks, is_loading, is_recording, i
         # 处理通话按钮点击
         elif triggered_id == "voice-call-btn" and call_clicks:
             if not is_calling:
-                # 开始通话
+                # 开始实时语音通话
                 log.info("开始实时语音通话")
+                
+                # 通过button-event-trigger store触发前端实时语音对话
+                log.info("✅ 实时语音对话功能已启动（简化模式）")
+                # 触发前端JavaScript启动实时语音对话
+                realtime_trigger = {
+                    "type": "realtime_voice_start",
+                    "timestamp": time.time(),
+                    "action": "start_realtime_dialogue"
+                }
+                
                 record_style = {**base_style, "backgroundColor": "#1890ff", "borderColor": "#1890ff", "boxShadow": "0 2px 4px rgba(24, 144, 255, 0.2)"}
                 call_style = {**base_style, "backgroundColor": "#ff4d4f", "borderColor": "#ff4d4f", "boxShadow": "0 2px 4px rgba(255, 77, 79, 0.3)"}
                 return (
                     "primary", DashIconify(icon="proicons:microphone", width=24, height=24), "语音输入", disabled_style, True,
                     "primary", DashIconify(icon="mdi:phone-hangup", width=24, height=24), "结束通话", call_style, False,
-                    is_recording, True, True  # 禁用发送按钮
+                    is_recording, True, True, realtime_trigger  # 禁用发送按钮，触发实时语音
                 )
             else:
                 # 结束通话
                 log.info("结束实时语音通话")
+                # 触发前端JavaScript停止实时语音对话
+                realtime_trigger = {
+                    "type": "realtime_voice_stop",
+                    "timestamp": time.time(),
+                    "action": "stop_realtime_dialogue"
+                }
                 record_style = {**base_style, "backgroundColor": "#1890ff", "borderColor": "#1890ff", "boxShadow": "0 2px 4px rgba(24, 144, 255, 0.2)"}
                 call_style = {**base_style, "backgroundColor": "#52c41a", "borderColor": "#52c41a", "boxShadow": "0 2px 4px rgba(82, 196, 26, 0.2)"}
                 return (
                     "primary", DashIconify(icon="proicons:microphone", width=24, height=24), "语音输入", record_style, False,
                     "primary", DashIconify(icon="bi:telephone", width=24, height=24, rotate=2), "实时语音通话", call_style, False,
-                    is_recording, False, False  # 恢复发送按钮
+                    is_recording, False, False, realtime_trigger  # 恢复发送按钮，停止实时语音
                 )
         
         # 处理加载状态变化
@@ -133,8 +150,7 @@ def handle_voice_buttons(record_clicks, call_clicks, is_loading, is_recording, i
                 return (
                     "primary", DashIconify(icon="proicons:microphone", width=24, height=24), "语音输入", disabled_style, True,
                     "primary", DashIconify(icon="bi:telephone", width=24, height=24, rotate=2), "实时语音通话", disabled_style, True,
-                    is_recording, is_calling, False
-                )
+                    is_recording, is_calling, False, None                )
             else:
                 # 恢复按钮
                 record_style = {**base_style, "backgroundColor": "#1890ff", "borderColor": "#1890ff", "boxShadow": "0 2px 4px rgba(24, 144, 255, 0.2)"}
@@ -142,7 +158,7 @@ def handle_voice_buttons(record_clicks, call_clicks, is_loading, is_recording, i
                 return (
                     "primary", DashIconify(icon="proicons:microphone", width=24, height=24), "语音输入", record_style, False,
                     "primary", DashIconify(icon="bi:telephone", width=24, height=24, rotate=2), "实时语音通话", call_style, False,
-                    is_recording, is_calling, False  # 恢复发送按钮
+                    is_recording, is_calling, False, None  # 恢复发送按钮
                 )
         
         return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update

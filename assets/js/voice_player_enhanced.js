@@ -292,6 +292,10 @@ class VoicePlayerEnhanced {
                     this.handleSynthesisComplete(data);
                     break;
                 case 'error':
+                    // 统一错误消息格式处理
+                    if (data && data.error && data.error.message) {
+                        data.message = data.error.message;
+                    }
                     this.handleError(data);
                     break;
                 default:
@@ -488,10 +492,14 @@ class VoicePlayerEnhanced {
                 const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
                 
                 if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
-                    window.dash_clientside.set_props('button-event-trigger', {
-                        data: {type: 'tts_start', timestamp: Date.now()}
-                    });
-                    console.log('TTS播放开始，触发状态更新');
+                    try {
+                        window.dash_clientside.set_props('button-event-trigger', {
+                            data: {type: 'tts_start', timestamp: Date.now()}
+                        });
+                        console.log('TTS播放开始，触发状态更新');
+                    } catch (setPropsError) {
+                        console.error('set_props调用失败:', setPropsError);
+                    }
                 }
                 
                 console.log('开始播放音频');
@@ -516,10 +524,14 @@ class VoicePlayerEnhanced {
         const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
         
         if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
-            window.dash_clientside.set_props('button-event-trigger', {
-                data: {type: 'tts_complete', timestamp: Date.now()}
-            });
-            console.log('所有TTS播放完成，触发状态更新');
+            try {
+                window.dash_clientside.set_props('button-event-trigger', {
+                    data: {type: 'tts_complete', timestamp: Date.now()}
+                });
+                console.log('所有TTS播放完成，触发状态更新');
+            } catch (setPropsError) {
+                console.error('set_props调用失败:', setPropsError);
+            }
         }
     }
     
@@ -634,10 +646,14 @@ class VoicePlayerEnhanced {
                 const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
                 
                 if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
-                    window.dash_clientside.set_props('button-event-trigger', {
-                        data: {type: 'tts_stop', timestamp: Date.now()}
-                    });
-                    console.log('TTS播放停止，触发状态更新');
+                    try {
+                        window.dash_clientside.set_props('button-event-trigger', {
+                            data: {type: 'tts_stop', timestamp: Date.now()}
+                        });
+                        console.log('TTS播放停止，触发状态更新');
+                    } catch (setPropsError) {
+                        console.error('set_props调用失败:', setPropsError);
+                    }
                 }
                 
                 console.log('停止语音播放');

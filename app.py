@@ -50,10 +50,10 @@ register_voice_button_callback(app)
 # 回调 1: 状态更新回调 (多个Input → unified-button-state Store)
 app.clientside_callback(
     """
-        function(sse_event, recording_event, input_value, current_state) {
+        function(sse_event, recording_event, send_clicks, input_value, current_state) {
         console.log('🔍 状态管理callback被触发:', {sse_event, recording_event, input_value, current_state});
         const ctx = dash_clientside.callback_context;
-        if (!ctx.triggered || ctx.triggered.length === 0) {
+        if (!ctx.triggered || !Array.isArray(ctx.triggered) || ctx.triggered.length === 0) {
             console.log('🔍 没有触发事件，返回no_update');
             return window.dash_clientside.no_update;
         }
@@ -81,7 +81,7 @@ app.clientside_callback(
         const now = Date.now();
         let newState = current_state || {state: 'idle', timestamp: 0};
         
-        // 文本按钮点击
+        // 处理文本按钮点击
         if (triggeredId === 'ai-chat-x-send-btn') {
             console.log('Text button clicked, checking input content...');
             if (!manager.checkInputContent()) {
@@ -91,48 +91,50 @@ app.clientside_callback(
             console.log('Input content valid, setting state to text_processing');
             newState = {
                 state: 'text_processing',
+                scenario: 'text_chat',
                 timestamp: now,
                 metadata: {
                     from_scenario: 'text',
                     auto_play: manager.getAutoPlaySetting()
                 }
             };
+            console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
         }
-            // SSE流式处理 - 只在非TTS播放状态下更新
-            else if (triggeredId === 'ai-chat-x-sse-completed-receiver' && sse_event) {
-                const currentState = current_state?.state || 'idle';
-                
-                // 如果当前在TTS播放状态，忽略SSE事件
-                if (currentState === 'tts_playing' || currentState === 'voice_tts_playing') {
-                    console.log('🔍 SSE事件被忽略，当前在TTS播放状态');
-                    return window.dash_clientside.no_update;
-                }
-                
-                // 如果当前是idle状态，更新为text_processing
-                if (currentState === 'idle') {
-                    newState = {
-                        state: 'text_processing',
-                        scenario: 'text_chat',
-                        timestamp: now,
-                        metadata: {from_scenario: 'text', auto_play: true}
-                    };
-                    console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
-                } else {
-                    console.log('🔍 SSE事件被忽略，保持当前状态');
-                    return window.dash_clientside.no_update;
-                }
-            }
-            // SSE完成 - 不更新状态，继续等待TTS完成
-            else if (triggeredId === 'ai-chat-x-sse-completed-receiver') {
-                console.log('🔍 SSE完成事件被忽略，等待TTS完成');
+        // 处理SSE事件
+        else if (triggeredId === 'ai-chat-x-sse-completed-receiver' && sse_event) {
+            const currentState = current_state?.state || 'idle';
+            
+            // 如果当前在TTS播放状态，忽略SSE事件
+            if (currentState === 'tts_playing' || currentState === 'voice_tts_playing') {
+                console.log('🔍 SSE事件被忽略，当前在TTS播放状态');
                 return window.dash_clientside.no_update;
             }
+            
+            // 如果当前是idle状态，更新为text_processing
+            if (currentState === 'idle') {
+                newState = {
+                    state: 'text_processing',
+                    scenario: 'text_chat',
+                    timestamp: now,
+                    metadata: {from_scenario: 'text', auto_play: true}
+                };
+                console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+            } else {
+                console.log('🔍 SSE事件被忽略，保持当前状态');
+                return window.dash_clientside.no_update;
+            }
+        }
+        // SSE完成 - 不更新状态，继续等待TTS完成
+        else if (triggeredId === 'ai-chat-x-sse-completed-receiver') {
+            console.log('🔍 SSE完成事件被忽略，等待TTS完成');
+            return window.dash_clientside.no_update;
+        }
         // 外部事件 (录音/播放)
         else if (triggeredId === 'button-event-trigger' && recording_event) {
             const type = recording_event.type;
             
             if (type === 'text_button_clicked') {
-                console.log('Text button clicked, setting state to text_processing');
+                console.log('Text button clicked via event trigger, setting state to text_processing');
                 newState = {
                     state: 'text_processing',
                     scenario: 'text_chat',
@@ -140,6 +142,77 @@ app.clientside_callback(
                     metadata: recording_event.metadata || {from_scenario: 'text', auto_play: true}
                 };
                 console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+            }
+            else if (type === 'voice_transcription_complete') {
+                console.log('Voice transcription complete, setting state to text_processing');
+                newState = {
+                    state: 'text_processing',
+                    scenario: 'voice_recording',
+                    timestamp: now,
+                    metadata: {from_scenario: 'voice', auto_play: true}
+                };
+                console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+            }
+            else if (type === 'stt_failed') {
+                console.log('STT failed, returning to idle state');
+                newState = {
+                    state: 'idle',
+                    scenario: null,
+                    timestamp: now,
+                    metadata: {}
+                };
+                console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+            }
+            // 实时语音对话事件
+            else if (type === 'realtime_voice_start') {
+                console.log('Realtime voice start triggered, starting realtime dialogue...');
+                // 触发前端JavaScript启动实时语音对话
+                if (window.realtimeStateManager) {
+                    window.realtimeStateManager.startRealtimeDialogue();
+                } else {
+                    console.warn('RealtimeStateManager not available');
+                }
+                // 更新状态为场景三：语音实时对话的S1状态
+                const newState = {
+                    state: 'calling',
+                    scenario: 'voice_call',
+                    timestamp: Date.now(),
+                    metadata: {
+                        message: '实时语音对话已启动',
+                        button_states: {
+                            textButton: 'disabled',
+                            recordButton: 'disabled', 
+                            callButton: 'calling'
+                        }
+                    }
+                };
+                console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+                return newState;
+            }
+            else if (type === 'realtime_voice_stop') {
+                console.log('Realtime voice stop triggered, stopping realtime dialogue...');
+                // 触发前端JavaScript停止实时语音对话
+                if (window.realtimeStateManager) {
+                    window.realtimeStateManager.stopRealtimeDialogue();
+                } else {
+                    console.warn('RealtimeStateManager not available');
+                }
+                // 更新状态为场景三：语音实时对话的S3状态（回到空闲）
+                const newState = {
+                    state: 'idle',
+                    scenario: 'voice_call',
+                    timestamp: Date.now(),
+                    metadata: {
+                        message: '实时语音对话已停止',
+                        button_states: {
+                            textButton: 'enabled',
+                            recordButton: 'enabled',
+                            callButton: 'enabled'
+                        }
+                    }
+                };
+                console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+                return newState;
             }
             else if (type === 'recording_start') {
                 newState = {
@@ -177,7 +250,8 @@ app.clientside_callback(
     Output('unified-button-state', 'data'),
     [
         Input('ai-chat-x-sse-completed-receiver', 'data-completion-event'),
-        Input('button-event-trigger', 'data')
+        Input('button-event-trigger', 'data'),
+        Input('ai-chat-x-send-btn', 'n_clicks')
     ],
     [
         State('ai-chat-x-input', 'value'),
@@ -197,13 +271,25 @@ app.clientside_callback(
             
             const state = state_data.state || 'idle';
             const scenario = state_data.scenario || null;
-            const styles = window.unifiedButtonStateManager.getButtonStyles(state);
+            const styles = window.unifiedButtonStateManager.getStateStyles(state);
             
             // 显示状态信息
             const stateInfo = window.unifiedButtonStateManager.getStateInfo(state, scenario);
             console.log('🔍 UI更新:', stateInfo);
             
-            return styles;
+            // 确保返回正确的数组格式，并验证每个元素
+            const result = [
+                styles.textButton || {},
+                styles.textLoading || false,
+                styles.textDisabled || false,
+                styles.recordButton || {},
+                styles.recordDisabled || false,
+                styles.callButton || {},
+                styles.callDisabled || false
+            ];
+            
+            console.log('🔍 返回的样式数组:', result);
+            return result;
         }
     """,
     [
@@ -248,6 +334,7 @@ app.clientside_callback(
 
 # 导入语音回调函数（在app初始化后导入）
 import callbacks.voice_chat_c  # 临时注释，使用新的统一回调
+import callbacks.realtime_voice_c  # 导入实时语音对话回调
 
 # 注册完整的统一回调（处理所有聊天功能）
 #from callbacks.core_pages_c.core_chat_callback import register_core_chat_callback
