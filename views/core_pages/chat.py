@@ -191,6 +191,18 @@ def _create_content_area():
                             "borderRadius": "4px",
                             "backgroundColor": "#f5f5f5"
                         }
+                    ),
+                    # 实时语音状态指示器
+                    html.Div(
+                        id="realtime-voice-status",
+                        children=[
+                            fac.AntdBadge(
+                                dot=True,
+                                color="gray",
+                                children=html.Span("等待开始", id="realtime-status-text")
+                            )
+                        ],
+                        style={"marginLeft": "10px", "display": "none"}
                     )
                 ],
                 flex="auto"
@@ -346,8 +358,14 @@ def _create_state_stores():
             html.Script(src='/assets/js/voice_recorder_enhanced.js'),
                # 语音播放器
                html.Script(src='/assets/js/voice_player_enhanced.js'),
-               # 语音调试器（开发环境）
-               html.Script(src='/test/test_voice_debug.js'),
+            # 语音调试器（开发环境）
+            html.Script(src='/test/test_voice_debug.js'),
+            # 实时语音相关脚本
+            html.Script(src='/assets/js/realtime_api_client.js'),
+            html.Script(src='/assets/js/realtime_audio_processor.js'),
+            html.Script(src='/assets/js/realtime_adapter_client.js'),
+            html.Script(src='/assets/js/realtime_voice_manager.js'),
+            html.Script(src='/assets/js/realtime_voice_callbacks.js'),
             # 语音功能初始化脚本 - 动态从Python配置获取
             html.Script('''
                 // 语音功能初始化
