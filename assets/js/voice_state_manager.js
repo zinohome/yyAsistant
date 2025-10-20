@@ -182,69 +182,8 @@ class VoiceStateManager {
         }
     }
     
-    /**
-     * 更新按钮状态
-     */
-    updateButtonState(icon, text, clickable) {
-        // 更新按钮图标和文本
-        const button = document.getElementById('voice-record-button');
-        if (button) {
-            // 更新图标
-            const iconMap = {
-                'mic': '🎤',
-                'recording': '⏹️', // 录音中显示停止图标
-                'processing': '⏳',
-                'playing': '⏸️',
-                'interrupted': '⏹️'
-            };
-            
-            // 更新按钮内容
-            const iconElement = button.querySelector('svg');
-            if (iconElement) {
-                // 更新图标
-                iconElement.innerHTML = iconMap[icon] || '🎤';
-            } else {
-                // 如果没有SVG元素，直接更新按钮内容
-                button.innerHTML = iconMap[icon] || '🎤';
-            }
-            
-            // 更新按钮标题
-            button.title = text;
-            // 录音中状态应该可以点击停止录音
-            if (icon === 'recording') {
-                button.disabled = false; // 录音中状态允许点击停止
-            } else {
-                button.disabled = !clickable;
-            }
-            
-            // 更新按钮样式
-            button.className = `voice-button ${icon}`;
-            
-            // 更新按钮颜色 - 使用更清晰的配色
-            if (icon === 'recording') {
-                // 录音中：红色背景，白色图标
-                button.style.backgroundColor = '#ff4d4f';
-                button.style.borderColor = '#ff4d4f';
-                button.style.color = '#ffffff';
-            } else if (icon === 'playing') {
-                // 播放中：绿色背景，白色图标
-                button.style.backgroundColor = '#52c41a';
-                button.style.borderColor = '#52c41a';
-                button.style.color = '#ffffff';
-            } else if (icon === 'processing') {
-                // 处理中：橙色背景，白色图标
-                button.style.backgroundColor = '#faad14';
-                button.style.borderColor = '#faad14';
-                button.style.color = '#ffffff';
-            } else {
-                // 空闲状态：蓝色背景，白色图标
-                button.style.backgroundColor = '#1890ff';
-                button.style.borderColor = '#1890ff';
-                button.style.color = '#ffffff';
-            }
-        }
-        
-        // 更新全局状态
+    // 废弃：按钮由统一状态管理器与Dash组件控制，不再直接操作DOM或图标
+    updateButtonState() {
         if (window.voiceChatState) {
             window.voiceChatState.currentState = this.currentState;
             window.voiceChatState.isInterrupted = this.isInterrupted;

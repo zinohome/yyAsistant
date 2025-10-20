@@ -250,7 +250,11 @@ function showError(message) {
  */
 function checkBrowserSupport() {
     if (!RealtimeAudioProcessor.isSupported()) {
-        showError('您的浏览器不支持实时语音功能，请使用现代浏览器');
+        const reason = (typeof RealtimeAudioProcessor.getUnsupportedReason === 'function')
+            ? RealtimeAudioProcessor.getUnsupportedReason()
+            : '浏览器或运行环境不满足实时语音所需条件';
+        const hint = '请使用 HTTPS 域名或 localhost 访问，并允许麦克风权限。';
+        showError(`您的环境暂不支持实时语音：${reason}。${hint}`);
         return false;
     }
     

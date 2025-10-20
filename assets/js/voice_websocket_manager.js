@@ -30,7 +30,7 @@ class VoiceWebSocketManager {
         this.messageHandlers.set('synthesis_complete', () => {});
         
         // 从配置获取WebSocket URL，并附带持久化client_id
-        this.wsUrlBase = window.voiceConfig?.WS_URL || 'ws://192.168.66.209:9800/ws/chat';
+        this.wsUrlBase = window.voiceConfig?.WS_URL || 'ws://192.168.32.156:9800/ws/chat';
         this.persistentClientId = this.ensurePersistentClientId();
         this.wsUrl = this.appendClientId(this.wsUrlBase, this.persistentClientId);
         
@@ -242,7 +242,8 @@ class VoiceWebSocketManager {
             const encodedAudio = await this.encodeAudioData(audioData);
             const message = {
                 type: 'audio_input',
-                audio_data: encodedAudio,
+                // 兼容后端旧STT管线字段：使用 audio_base64
+                audio_base64: encodedAudio,
                 timestamp: Date.now() / 1000,
                 client_id: this.clientId,
                 session_id: this.sessionId,
@@ -261,7 +262,8 @@ class VoiceWebSocketManager {
     sendAudioStream(audioChunk, options = {}) {
         const message = {
             type: 'audio_stream',
-            audio_data: this.encodeAudioData(audioChunk),
+            // 兼容后端旧字段：使用 audio_base64
+            audio_base64: this.encodeAudioData(audioChunk),
             timestamp: Date.now() / 1000,
             client_id: this.clientId,
             session_id: this.sessionId,

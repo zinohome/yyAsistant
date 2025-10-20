@@ -19,7 +19,7 @@ class TestVoiceConfig:
     
     def test_voice_config_initialization(self):
         """测试语音配置初始化"""
-        assert VoiceConfig.WS_URL == "ws://192.168.66.209:9800/ws/chat"
+        assert VoiceConfig.WS_URL == "ws://192.168.32.156:9800/ws/chat"
         assert VoiceConfig.AUDIO_SAMPLE_RATE == 16000
         assert VoiceConfig.AUDIO_CHANNELS == 1
         assert VoiceConfig.VOICE_DEFAULT == "alloy"
@@ -74,7 +74,7 @@ class TestVoiceWebSocketClient:
     
     def test_client_initialization(self):
         """测试客户端初始化"""
-        assert voice_websocket_client.ws_url == "ws://192.168.66.209:9800/ws/chat"
+        assert voice_websocket_client.ws_url == "ws://192.168.32.156:9800/ws/chat"
         assert voice_websocket_client.reconnect_interval == 1000
         assert voice_websocket_client.max_reconnect_attempts == 5
     

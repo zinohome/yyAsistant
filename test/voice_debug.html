@@ -220,7 +220,7 @@
             statusDiv.innerHTML = '<div class="status warning">正在测试WebSocket连接...</div>';
             
             try {
-                const ws = new WebSocket('ws://192.168.66.209:9800/ws/chat');
+                const ws = new WebSocket('ws://192.168.32.156:9800/ws/chat');
                 
                 ws.onopen = function() {
                     statusDiv.innerHTML = '<div class="status success">✓ WebSocket连接成功</div>';

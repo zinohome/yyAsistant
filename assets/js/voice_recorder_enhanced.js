@@ -82,7 +82,7 @@ class VoiceRecorderEnhanced {
                 }
             } else {
                 // 从全局配置获取WebSocket URL
-                const wsUrl = window.voiceConfig?.WS_URL || 'ws://192.168.66.209:9800/ws/chat';
+                const wsUrl = window.voiceConfig?.WS_URL || 'ws://192.168.32.156:9800/ws/chat';
                 this.websocket = new WebSocket(wsUrl);
                 console.log('创建新的WebSocket连接');
                 // 仅在独立连接时设置本地 onmessage 处理

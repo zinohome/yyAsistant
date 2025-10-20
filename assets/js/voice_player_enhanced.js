@@ -14,6 +14,10 @@ class VoicePlayerEnhanced {
             speed: 1.0,
             volume: 0.8
         };
+        // 新增：合成完成与播放队列控制
+        this.synthesisDone = false;      // 服务端已完成合成标记
+        this.pendingSegments = 0;        // 待播放片段计数
+        this.idleDebounceTimer = null;   // 回idle防抖
         this.playedMessages = new Set(); // 记录已播放的消息ID，避免重复播放
         this.streamStates = new Map(); // message_id -> { chunks: [{seq, base64}], nextSeq, codec, session_id }
         
@@ -162,7 +166,7 @@ class VoicePlayerEnhanced {
                 }
             } else {
                 // 从全局配置获取WebSocket URL
-                const wsUrl = window.voiceConfig?.WS_URL || 'ws://192.168.66.209:9800/ws/chat';
+                const wsUrl = window.voiceConfig?.WS_URL || 'ws://192.168.32.156:9800/ws/chat';
                 this.websocket = new WebSocket(wsUrl);
                 console.log('创建新的WebSocket连接');
                 this.setupWebSocketHandlers();
@@ -325,13 +329,17 @@ class VoicePlayerEnhanced {
                     nextSeq: (seq !== null ? seq : 0),
                     codec: codec,
                     session_id: sessionId,
-                    playing: false
+                    playing: false,
+                    playingSources: 0,
+                    synthComplete: false,
+                    lastChunkTs: 0
                 });
             }
             const state = this.streamStates.get(messageId);
 
-            // 记录分片
+            // 记录分片并更新时间戳
             state.chunks.push({ seq: (seq !== null ? seq : state.chunks.length), base64 });
+            state.lastChunkTs = Date.now();
             // 根据seq排序，确保按序播放
             state.chunks.sort((a, b) => a.seq - b.seq);
 
@@ -356,13 +364,15 @@ class VoicePlayerEnhanced {
             // 取出最小seq的分片
             const chunk = state.chunks.shift();
             try {
-                await this.playAudioFromBase64(chunk.base64);
+                await this.playAudioFromBase64(chunk.base64, messageId);
             } catch (e) {
                 console.warn('播放分片失败，跳过该分片:', e);
             }
         }
 
         state.playing = false;
+        // 播放循环结束后尝试收尾
+        this.maybeFinalize(messageId);
     }
 
     enqueueSingleShot(base64, messageId, sessionId, codec) {
@@ -409,7 +419,7 @@ class VoicePlayerEnhanced {
         this.isPlaying = false;
     }
     
-    async playAudioFromBase64(base64Audio) {
+    async playAudioFromBase64(base64Audio, messageId = null) {
         try {
             console.log('开始播放音频，base64长度:', base64Audio.length);
             
@@ -446,7 +456,7 @@ class VoicePlayerEnhanced {
             console.log('音频解码成功，时长:', decodedAudio.duration, '秒');
             
             // 播放音频
-            await this.playAudioBuffer(decodedAudio);
+            await this.playAudioBuffer(decodedAudio, messageId);
             console.log('音频播放完成');
             
         } catch (error) {
@@ -454,7 +464,7 @@ class VoicePlayerEnhanced {
         }
     }
     
-    async playAudioBuffer(audioBuffer) {
+    async playAudioBuffer(audioBuffer, messageId = null) {
         return new Promise((resolve, reject) => {
             try {
                 const source = this.audioContext.createBufferSource();
@@ -470,15 +480,13 @@ class VoicePlayerEnhanced {
                 // 设置播放结束回调
                 source.onended = () => {
                     this.isPlaying = false;
-                    
-                    // 播放完成，更新状态
-                    if (window.voiceStateManager) {
-                        window.voiceStateManager.finishPlaying();
-                    }
-                    
-                    // 不在这里触发状态更新，等待synthesis_complete事件
                     console.log('TTS片段播放完成');
-                    
+                    // 记录声源计数并尝试最终收尾
+                    if (messageId && this.streamStates.has(messageId)) {
+                        const st = this.streamStates.get(messageId);
+                        st.playingSources = Math.max(0, (st.playingSources || 0) - 1);
+                        this.maybeFinalize(messageId);
+                    }
                     resolve();
                 };
                 
@@ -486,6 +494,11 @@ class VoicePlayerEnhanced {
                 source.start(0);
                 this.isPlaying = true;
                 this.currentAudio = source;
+                // 记录声源计数
+                if (messageId && this.streamStates.has(messageId)) {
+                    const st = this.streamStates.get(messageId);
+                    st.playingSources = (st.playingSources || 0) + 1;
+                }
                 
                 // 通知统一按钮状态管理器TTS播放开始 (通过dcc.Store) - 只在/core/chat页面
                 const currentPath = window.location.pathname;
@@ -514,24 +527,72 @@ class VoicePlayerEnhanced {
         console.log('语音合成完成');
         this.hidePlaybackStatus();
         
-        // 合成完成，如果当前没有播放，则重置状态
-        if (!this.isPlaying && window.voiceStateManager) {
-            window.voiceStateManager.finishPlaying();
+        // 标记对应message的合成完成
+        const messageId = data.message_id || 'unknown';
+        if (this.streamStates.has(messageId)) {
+            const state = this.streamStates.get(messageId);
+            state.synthComplete = true;
+            state.synthTs = Date.now();
+            this.maybeFinalize(messageId);
         }
         
-        // 通知统一按钮状态管理器所有TTS播放完成 (通过dcc.Store) - 只在/core/chat页面
-        const currentPath = window.location.pathname;
-        const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+        console.log('所有TTS数据已发送，等待最后一段播放结束再回idle');
+    }
+    
+    /**
+     * 尝试最终收尾：检查是否满足回idle条件
+     */
+    maybeFinalize(messageId) {
+        const state = this.streamStates.get(messageId);
+        if (!state) return;
         
-        if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
-            try {
-                window.dash_clientside.set_props('button-event-trigger', {
-                    data: {type: 'tts_complete', timestamp: Date.now()}
-                });
-                console.log('所有TTS播放完成，触发状态更新');
-            } catch (setPropsError) {
-                console.error('set_props调用失败:', setPropsError);
+        const now = Date.now();
+        const silenceWindow = 400; // 400ms静默窗口
+        const timeSinceLastChunk = now - (state.lastChunkTs || 0);
+        
+        // 三个条件同时满足才回idle
+        const synthComplete = state.synthComplete === true;
+        const noPlayingSources = (state.playingSources || 0) === 0;
+        const noPendingChunks = (state.chunks || []).length === 0;
+        const silenceElapsed = timeSinceLastChunk > silenceWindow;
+        
+        console.log(`maybeFinalize(${messageId}): synthComplete=${synthComplete}, playingSources=${state.playingSources}, chunks=${state.chunks.length}, silence=${timeSinceLastChunk}ms`);
+        
+        if (synthComplete && noPlayingSources && noPendingChunks && silenceElapsed) {
+            // 满足条件，回idle
+            console.log(`消息${messageId}播放完成，回idle状态`);
+            this.returnToIdle();
+            // 清理该消息状态
+            this.streamStates.delete(messageId);
+        } else if (synthComplete && noPlayingSources && noPendingChunks) {
+            // 合成完成且无播放源且无待播放分片，但静默窗口未到，延迟重试
+            const remaining = silenceWindow - timeSinceLastChunk;
+            if (remaining > 0) {
+                console.log(`消息${messageId}等待静默窗口，${remaining}ms后重试`);
+                setTimeout(() => this.maybeFinalize(messageId), Math.min(remaining + 50, 200));
             }
+        }
+    }
+    
+    /**
+     * 回idle状态
+     */
+    returnToIdle() {
+        try {
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props('button-event-trigger', { 
+                    data: { type: 'tts_complete', timestamp: Date.now() } 
+                });
+                window.dash_clientside.set_props('unified-button-state', { 
+                    data: { state: 'idle', scenario: null, timestamp: Date.now(), metadata: {} } 
+                });
+                window.dash_clientside.set_props('ai-chat-x-sse-completed-receiver', { 
+                    'data-completion-event': null 
+                });
+                console.log('已回idle状态');
+            }
+        } catch (e) {
+            console.error('回idle失败:', e);
         }
     }
     

@@ -226,19 +226,32 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
     elif triggered_id in ['ai-chat-x-send-btn'] and message_content:
         log.info(f"🔍 发送按钮被触发，消息内容: {message_content[:50]}...")
         
-        # 触发按钮状态更新为text_processing
+        # 触发按钮状态更新为text_processing（优先使用服务端set_props，避免dash_clientside依赖问题）
         try:
-            import dash_clientside
-            dash_clientside.set_props('button-event-trigger', {
+            from dash import set_props
+            set_props('button-event-trigger', {
                 'data': {
-                    'type': 'text_button_clicked', 
+                    'type': 'text_button_clicked',
                     'timestamp': int(time.time() * 1000),
                     'metadata': {'from_scenario': 'text', 'auto_play': True}
                 }
             })
-            log.info("🔍 已触发按钮状态更新: text_processing")
+            log.info("🔍 已触发按钮状态更新: text_processing (server set_props)")
         except Exception as e:
-            log.error(f"触发按钮状态更新失败: {e}")
+            log.error(f"触发按钮状态更新失败(set_props): {e}")
+            # 兜底：尝试dash_clientside.set_props（若可用）
+            try:
+                import dash_clientside
+                dash_clientside.set_props('button-event-trigger', {
+                    'data': {
+                        'type': 'text_button_clicked', 
+                        'timestamp': int(time.time() * 1000),
+                        'metadata': {'from_scenario': 'text', 'auto_play': True}
+                    }
+                })
+                log.info("🔍 已触发按钮状态更新: text_processing (clientside set_props)")
+            except Exception as e2:
+                log.error(f"触发按钮状态更新失败(dash_clientside): {e2}")
         
         # 去除消息前后空格
         message_content = message_content.strip()
@@ -377,7 +390,7 @@ def trigger_sse(messages, enable_voice, ws_connection, current_session_id):
             
             # 如果client_id为空，记录警告但不阻塞
             if not client_id:
-                log.warn("client_id为空，TTS将被禁用")
+                log.warning("client_id为空，TTS将被禁用")
                 log.debug("client_id为空，尝试其他方式获取")
 
             # 语音联动判定：即使缺少client_id也不要阻断SSE文本

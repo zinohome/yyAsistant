@@ -2,6 +2,7 @@ import re
 import dash
 from flask import request
 from dash import html, set_props, dcc
+from dash_iconify import DashIconify
 import feffery_antd_components as fac
 import feffery_utils_components as fuc
 from dash.dependencies import Input, Output, State
@@ -81,14 +82,9 @@ app.clientside_callback(
         const now = Date.now();
         let newState = current_state || {state: 'idle', timestamp: 0};
         
-        // 处理文本按钮点击
+        // 处理文本按钮点击（立即进入text_processing，避免在SSE开始前按钮保持可用）
         if (triggeredId === 'ai-chat-x-send-btn') {
-            console.log('Text button clicked, checking input content...');
-            if (!manager.checkInputContent()) {
-                console.log('Input content check failed, returning no_update');
-                return window.dash_clientside.no_update;
-            }
-            console.log('Input content valid, setting state to text_processing');
+            console.log('Text button clicked → force state to text_processing');
             newState = {
                 state: 'text_processing',
                 scenario: 'text_chat',
@@ -100,29 +96,10 @@ app.clientside_callback(
             };
             console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
         }
-        // 处理SSE事件
+        // 处理SSE事件（此回调仅用于完成/镜像，不再用来切入text_processing，避免TTS完成后被旧事件拉回S1）
         else if (triggeredId === 'ai-chat-x-sse-completed-receiver' && sse_event) {
-            const currentState = current_state?.state || 'idle';
-            
-            // 如果当前在TTS播放状态，忽略SSE事件
-            if (currentState === 'tts_playing' || currentState === 'voice_tts_playing') {
-                console.log('🔍 SSE事件被忽略，当前在TTS播放状态');
-                return window.dash_clientside.no_update;
-            }
-            
-            // 如果当前是idle状态，更新为text_processing
-            if (currentState === 'idle') {
-                newState = {
-                    state: 'text_processing',
-                    scenario: 'text_chat',
-                    timestamp: now,
-                    metadata: {from_scenario: 'text', auto_play: true}
-                };
-                console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
-            } else {
-                console.log('🔍 SSE事件被忽略，保持当前状态');
-                return window.dash_clientside.no_update;
-            }
+            console.log('🔍 收到SSE事件（镜像/完成），不改变当前状态');
+            return window.dash_clientside.no_update;
         }
         // SSE完成 - 不更新状态，继续等待TTS完成
         else if (triggeredId === 'ai-chat-x-sse-completed-receiver') {
@@ -277,14 +254,30 @@ app.clientside_callback(
             const stateInfo = window.unifiedButtonStateManager.getStateInfo(state, scenario);
             console.log('🔍 UI更新:', stateInfo);
             
-            // 确保返回正确的数组格式，并验证每个元素
+            // 合并样式：仅覆盖颜色，保留原有大小/圆角/字体等
+            function mergeButtonStyle(elId, override) {
+                const el = document.getElementById(elId);
+                const base = {};
+                if (el && el.style) {
+                    // 读取会影响外观的一些关键属性，保留它们
+                    const computed = window.getComputedStyle(el);
+                    ['width','height','padding','borderRadius','fontSize','lineHeight','boxShadow'].forEach(k => {
+                        if (computed && computed[k] && computed[k] !== '') {
+                            base[k] = computed[k];
+                        }
+                    });
+                }
+                // 仅覆盖背景色和边框色
+                return Object.assign({}, base, override || {});
+            }
+            
             const result = [
-                styles.textButton || {},
+                mergeButtonStyle('ai-chat-x-send-btn', styles.textButton),
                 styles.textLoading || false,
                 styles.textDisabled || false,
-                styles.recordButton || {},
+                mergeButtonStyle('voice-record-button', styles.recordButton),
                 styles.recordDisabled || false,
-                styles.callButton || {},
+                mergeButtonStyle('voice-call-btn', styles.callButton),
                 styles.callDisabled || false
             ];
             
