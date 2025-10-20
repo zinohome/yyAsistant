@@ -127,7 +127,10 @@ class VoiceStateManager {
      * 录音完成，开始处理
      */
     startProcessing() {
-        this.setState(this.STATES.PROCESSING);
+        // 延迟一点时间，让 recording 状态能够被 UI 回调处理
+        setTimeout(() => {
+            this.setState(this.STATES.PROCESSING);
+        }, 100);
     }
     
     /**

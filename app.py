@@ -254,12 +254,13 @@ app.clientside_callback(
             const stateInfo = window.unifiedButtonStateManager.getStateInfo(state, scenario);
             console.log('🔍 UI更新:', stateInfo);
             
-            // 合并样式：仅覆盖颜色，保留原有大小/圆角/字体等
+            
+            // 合并样式：保留原有大小/圆角/字体等，完全由状态管理器控制颜色
             function mergeButtonStyle(elId, override) {
                 const el = document.getElementById(elId);
                 const base = {};
                 if (el && el.style) {
-                    // 读取会影响外观的一些关键属性，保留它们
+                    // 只保留大小、圆角、字体等非颜色属性
                     const computed = window.getComputedStyle(el);
                     ['width','height','padding','borderRadius','fontSize','lineHeight','boxShadow'].forEach(k => {
                         if (computed && computed[k] && computed[k] !== '') {
@@ -267,8 +268,16 @@ app.clientside_callback(
                         }
                     });
                 }
-                // 仅覆盖背景色和边框色
+                // 完全应用状态管理器的颜色样式
                 return Object.assign({}, base, override || {});
+            }
+            
+            // 录音按钮图标映射 - 返回 DashIconify 组件
+            let recordButtonIcon = 'proicons:microphone'; // 默认麦克风
+            if (state === 'recording') {
+                recordButtonIcon = 'material-symbols:stop'; // 录音中显示停止
+            } else if (state === 'processing' || state === 'voice_processing') {
+                recordButtonIcon = 'eos-icons:loading'; // 处理中显示loading
             }
             
             const result = [
@@ -276,12 +285,12 @@ app.clientside_callback(
                 styles.textLoading || false,
                 styles.textDisabled || false,
                 mergeButtonStyle('voice-record-button', styles.recordButton),
+                recordButtonIcon, // 图标字符串，将在 Python 端转换为 DashIconify
                 styles.recordDisabled || false,
                 mergeButtonStyle('voice-call-btn', styles.callButton),
                 styles.callDisabled || false
             ];
             
-            console.log('🔍 返回的样式数组:', result);
             return result;
         }
     """,
@@ -290,6 +299,7 @@ app.clientside_callback(
         Output('ai-chat-x-send-btn', 'loading', allow_duplicate=True),
         Output('ai-chat-x-send-btn', 'disabled', allow_duplicate=True),
         Output('voice-record-button', 'style', allow_duplicate=True),
+        Output('voice-record-icon-store', 'data', allow_duplicate=True),
         Output('voice-record-button', 'disabled', allow_duplicate=True),
         Output('voice-call-btn', 'style', allow_duplicate=True),
         Output('voice-call-btn', 'disabled', allow_duplicate=True)
@@ -298,7 +308,20 @@ app.clientside_callback(
     prevent_initial_call=True
 )
 
-# 回调 3: 输入验证回调 (显示警告消息)
+# 回调 3: 录音按钮图标更新回调
+@app.callback(
+    Output('voice-record-button', 'icon', allow_duplicate=True),
+    Input('voice-record-icon-store', 'data'),
+    prevent_initial_call=True
+)
+def update_record_button_icon(icon_data):
+    """更新录音按钮图标"""
+    if not icon_data:
+        return DashIconify(icon="proicons:microphone", width=20, height=20)
+    
+    return DashIconify(icon=icon_data, width=20, height=20)
+
+# 回调 4: 输入验证回调 (显示警告消息)
 app.clientside_callback(
     """
     function(n_clicks, input_value) {

@@ -337,6 +337,7 @@ def _create_state_stores():
     # 添加语音功能相关的存储组件
     voice_recording_status = dcc.Store(id='voice-recording-status', data=False)
     voice_call_status = dcc.Store(id='voice-call-status', data=False)
+    voice_record_icon_store = dcc.Store(id='voice-record-icon-store', data='proicons:microphone')
     voice_websocket_connection = dcc.Store(id='voice-websocket-connection', data=None)
     voice_settings_store = dcc.Store(id='voice-settings-store', data=None)
     # 语音触发TTS开关（仅语音转写触发的那次SSE需要使能）
@@ -615,6 +616,7 @@ def _create_state_stores():
         # 语音功能相关组件
         voice_recording_status,
         voice_call_status,
+        voice_record_icon_store,
         voice_websocket_connection,
         voice_settings_store,
         voice_enable_voice_store,
@@ -630,6 +632,7 @@ def _create_state_stores():
 
 def render():
     """子页面：AntDesign X风格AI聊天界面"""
+    
     # 创建各个部分的内容
     header_content = _create_header_content()
     sider_content = _create_sider_content()

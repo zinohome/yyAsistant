@@ -163,7 +163,8 @@ def render(
                                                     height="40px",
                                                     borderRadius="8px",
                                                     backgroundColor="#1890ff",
-                                                    borderColor="#1890ff"
+                                                    borderColor="#1890ff",
+                                                    boxShadow="0 2px 4px rgba(24, 144, 255, 0.2)"
                                                 )
                                             )
                                         ] if enable_send_button else [] ),
@@ -173,6 +174,7 @@ def render(
                                             fac.AntdButton(
                                                 id="voice-record-button",
                                                 icon=DashIconify(
+                                                    id="voice-record-icon",
                                                     icon="proicons:microphone",
                                                     width=20,
                                                     height=20
@@ -185,9 +187,9 @@ def render(
                                                     width="40px",
                                                     height="40px",
                                                     borderRadius="8px",
-                                                    backgroundColor="#1890ff",
-                                                    borderColor="#1890ff",
-                                                    boxShadow="0 2px 4px rgba(24, 144, 255, 0.2)"
+                                                    backgroundColor="#dc2626",
+                                                    borderColor="#dc2626",
+                                                    boxShadow="0 2px 4px rgba(220, 38, 38, 0.2)"
                                                 )
                                             )
                                         ] if enable_voice_input else [] ),
