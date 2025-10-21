@@ -18,8 +18,11 @@ class VoicePlayerEnhanced {
         this.synthesisDone = false;      // 服务端已完成合成标记
         this.pendingSegments = 0;        // 待播放片段计数
         this.idleDebounceTimer = null;   // 回idle防抖
+        
+        // 流式播放：无需缓冲，收到音频立即播放
         this.playedMessages = new Set(); // 记录已播放的消息ID，避免重复播放
         this.streamStates = new Map(); // message_id -> { chunks: [{seq, base64}], nextSeq, codec, session_id }
+        this.shouldStop = false; // 停止标志
         
         // 异步初始化
         this.init().catch(error => {
@@ -127,39 +130,9 @@ class VoicePlayerEnhanced {
                     setTimeout(() => {
                         this.websocket = window.voiceWebSocketManager.getConnection();
                         if (this.websocket) {
-                            try {
-                                window.voiceWebSocketManager.registerMessageHandler('audio_stream', (data) => this.handleAudioStream(data));
-                                window.voiceWebSocketManager.registerMessageHandler('voice_response', (data) => {
-                                    console.log('收到voice_response消息（延迟注册）:', data);
-                                    
-                                    // 检查是否已经播放过这个消息
-                                    const messageId = data.message_id;
-                                    if (messageId && this.playedMessages.has(messageId)) {
-                                        console.log('消息已播放过，跳过:', messageId);
-                                        return;
-                                    }
-                                    
-                                    // 停止当前播放
-                                    this.stopCurrentAudio();
-                                    
-                                    if (data.audio) {
-                                        console.log('收到voice_response，音频长度:', data.audio.length);
-                                        this.enqueueSingleShot(data.audio, data.message_id, data.session_id, data.codec || 'audio/mpeg');
-                                        if (messageId) {
-                                            this.playedMessages.add(messageId);
-                                        }
-                                    } else if (data.audio_data) {
-                                        console.log('收到voice_response，音频长度:', data.audio_data.length);
-                                        this.enqueueSingleShot(data.audio_data, data.message_id, data.session_id, data.codec || 'audio/mpeg');
-                                        if (messageId) {
-                                            this.playedMessages.add(messageId);
-                                        }
-                                    } else {
-                                        console.warn('voice_response消息没有audio或audio_data字段（延迟注册）:', data);
-                                    }
-                                });
-                                window.voiceWebSocketManager.registerMessageHandler('synthesis_complete', (data) => this.handleSynthesisComplete(data));
-                            } catch (e) { console.warn('延迟注册播放器处理器失败:', e); }
+                            console.log('播放器延迟连接成功，消息处理器已在初始化时注册');
+                        } else {
+                            console.warn('延迟连接WebSocket管理器失败');
                         }
                     }, 1000);
                     return;
@@ -427,26 +400,84 @@ class VoicePlayerEnhanced {
     
     async playAudioFromBase64(base64Audio, messageId = null) {
         try {
-            console.log('开始播放音频，base64长度:', base64Audio.length);
-            
-            // 停止当前播放
-            this.stopCurrentAudio();
+            console.log('🎵 收到音频分片，base64长度:', base64Audio.length);
             
             // 初始化音频上下文
             if (!this.audioContext) {
-                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                console.log('音频上下文已创建');
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 24000, // 明确指定采样率
+                    latencyHint: 'interactive' // 低延迟模式
+                });
+                console.log('🎧 音频上下文已创建，采样率:', this.audioContext.sampleRate);
             }
             
             // 恢复音频上下文（如果被暂停）
             if (this.audioContext.state === 'suspended') {
                 await this.audioContext.resume();
-                console.log('音频上下文已恢复');
+                console.log('▶️ 音频上下文已恢复');
             }
             
-            console.log('音频上下文状态:', this.audioContext.state);
+            // 判断音频来源：语音通话 vs 录音聊天TTS
+            const isVoiceCall = messageId && messageId.includes('voice_call');
+            
+            if (isVoiceCall) {
+                // 语音通话：直接流式播放，参考Chainlit实现
+                console.log('🎧 语音通话音频，直接流式播放');
+                await this.playVoiceCallAudio(base64Audio, messageId);
+            } else {
+                // 录音聊天TTS：使用标准音频格式
+                console.log('🎧 录音聊天TTS，使用标准音频格式');
+                await this.playStandardAudio(base64Audio, messageId);
+            }
+            
+        } catch (error) {
+            console.error('❌ 处理音频分片失败:', error);
+        }
+    }
+    
+    // 语音通话音频播放（参考Chainlit实现）
+    async playVoiceCallAudio(base64Audio, messageId = null) {
+        try {
+            console.log('🎧 播放语音通话音频，base64长度:', base64Audio.length);
             
             // 解码base64音频数据
+            const binaryString = atob(base64Audio);
+            const audioBuffer = new ArrayBuffer(binaryString.length);
+            const view = new Uint8Array(audioBuffer);
+            
+            for (let i = 0; i < binaryString.length; i++) {
+                view[i] = binaryString.charCodeAt(i);
+            }
+            
+            // 转换为PCM16
+            const pcm16Data = new Int16Array(audioBuffer);
+            const float32Data = new Float32Array(pcm16Data.length);
+            
+            // PCM16到Float32转换
+            for (let i = 0; i < pcm16Data.length; i++) {
+                float32Data[i] = pcm16Data[i] / 32768.0;
+            }
+            
+            // 创建音频缓冲区
+            const audioBufferNode = this.audioContext.createBuffer(1, float32Data.length, 24000);
+            audioBufferNode.copyToChannel(float32Data, 0);
+            
+            console.log('🎵 语音通话音频准备完成，时长:', audioBufferNode.duration.toFixed(2), '秒');
+            
+            // 使用队列管理，避免重叠播放
+            this.addToPlayQueue(audioBufferNode, messageId);
+            
+        } catch (error) {
+            console.error('❌ 语音通话音频播放失败:', error);
+        }
+    }
+    
+    // 标准音频播放（用于录音聊天TTS）
+    async playStandardAudio(base64Audio, messageId = null) {
+        try {
+            console.log('🎧 播放标准音频格式，base64长度:', base64Audio.length);
+            
+            // 使用标准的音频解码
             const audioData = atob(base64Audio);
             const audioBuffer = new ArrayBuffer(audioData.length);
             const view = new Uint8Array(audioBuffer);
@@ -455,24 +486,175 @@ class VoicePlayerEnhanced {
                 view[i] = audioData.charCodeAt(i);
             }
             
-            console.log('音频数据长度:', audioBuffer.byteLength);
+            // 解码为AudioBuffer（标准格式）
+            const decodedBuffer = await this.audioContext.decodeAudioData(audioBuffer);
             
-            // 解码音频
-            const decodedAudio = await this.audioContext.decodeAudioData(audioBuffer);
-            console.log('音频解码成功，时长:', decodedAudio.duration, '秒');
+            console.log('🎵 标准音频解码完成，时长:', decodedBuffer.duration.toFixed(2), '秒');
             
-            // 播放音频
-            await this.playAudioBuffer(decodedAudio, messageId);
-            console.log('音频播放完成');
+            // 直接播放，不使用队列
+            await this.playAudioBuffer(decodedBuffer, messageId);
             
         } catch (error) {
-            console.error('播放音频失败:', error);
+            console.error('❌ 标准音频播放失败:', error);
+        }
+    }
+    
+    // 播放队列管理：确保音频顺序播放，避免重叠
+    addToPlayQueue(audioBuffer, messageId = null) {
+        // 🚀 检查是否应该停止，如果是则忽略新的音频
+        if (this.shouldStop) {
+            console.log('🛑 正在停止中，忽略新的音频数据');
+            return;
+        }
+        
+        // 添加到播放队列
+        this.audioQueue.push({
+            buffer: audioBuffer,
+            messageId: messageId,
+            timestamp: Date.now()
+        });
+        
+        console.log('📋 音频分片已添加到播放队列，队列长度:', this.audioQueue.length);
+        
+        // 如果当前没有播放，开始播放队列
+        if (!this.isPlaying) {
+            this.processPlayQueue();
+        }
+    }
+    
+    // 停止当前播放并清空队列（用于打断机制）
+    stopCurrentPlayback() {
+        console.log('🛑 立即停止当前播放并清空队列');
+        
+        // 🚀 设置停止标志 - 不要重置，保持停止状态
+        this.shouldStop = true;
+        
+        // 🚀 立即停止当前播放的音频源（最高优先级）
+        if (this.currentAudio) {
+            try {
+                this.currentAudio.stop(0); // 立即停止，不等待
+                this.currentAudio.disconnect();
+                console.log('🛑 当前音频源已立即停止');
+            } catch (error) {
+                console.log('当前音频已停止');
+            }
+            this.currentAudio = null;
+        }
+        
+        // 🚀 立即清空播放队列
+        this.playQueue = [];
+        this.audioQueue = []; // 清空所有队列
+        this.isPlaying = false;
+        
+        // 强制停止所有音频上下文中的音频源
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            try {
+                // 断开所有连接
+                const destination = this.audioContext.destination;
+                if (destination) {
+                    destination.disconnect();
+                }
+                
+                // 重新创建音频上下文以确保完全停止
+                this.audioContext.close();
+                this.audioContext = null;
+                console.log('🛑 音频上下文已强制关闭');
+            } catch (error) {
+                console.log('音频上下文清理完成');
+            }
+        }
+        
+        // 清空播放队列
+        this.audioQueue = [];
+        this.isPlaying = false;
+        
+        // 清空所有流状态
+        this.streamStates.clear();
+        
+        // 不要重置shouldStop标志，保持停止状态直到下次开始播放
+        console.log('✅ 播放已立即停止，队列已清空，状态已重置');
+    }
+    
+    async processPlayQueue() {
+        // 检查停止标志
+        if (this.shouldStop) {
+            console.log('🛑 检测到停止标志，停止队列处理');
+            this.isPlaying = false;
+            return;
+        }
+        
+        if (this.audioQueue.length === 0) {
+            console.log('📋 播放队列为空');
+            this.isPlaying = false;
+            return;
+        }
+        
+        if (this.isPlaying) {
+            console.log('🎵 正在播放中，等待当前音频完成');
+            return;
+        }
+        
+        this.isPlaying = true;
+        const audioItem = this.audioQueue.shift();
+        
+        console.log('🎵 开始播放队列中的音频，剩余队列长度:', this.audioQueue.length);
+        
+        try {
+            await this.playAudioBuffer(audioItem.buffer, audioItem.messageId);
+        } catch (error) {
+            console.error('❌ 播放队列音频失败:', error);
+        }
+        
+        // 播放完成后，检查停止标志
+        this.isPlaying = false;
+        if (!this.shouldStop && this.audioQueue.length > 0) {
+            this.processPlayQueue();
+        }
+    }
+    
+    async playPCM16Audio(audioBuffer, messageId = null) {
+        try {
+            console.log('🎧 播放PCM16音频，数据长度:', audioBuffer.byteLength);
+            
+            // 检查ArrayBuffer是否有效
+            if (!audioBuffer || audioBuffer.byteLength === 0) {
+                console.error('❌ 无效的音频缓冲区');
+                return;
+            }
+            
+            // 直接使用原始ArrayBuffer，避免不必要的拷贝
+            const pcm16Data = new Int16Array(audioBuffer);
+            const float32Data = new Float32Array(pcm16Data.length);
+            
+            // 高效的PCM16到Float32转换
+            for (let i = 0; i < pcm16Data.length; i++) {
+                float32Data[i] = pcm16Data[i] / 32768.0;
+            }
+            
+            // 创建音频缓冲区，使用正确的采样率
+            const audioBufferNode = this.audioContext.createBuffer(1, float32Data.length, 24000);
+            audioBufferNode.copyToChannel(float32Data, 0);
+            
+            console.log('🎵 音频缓冲区创建完成，时长:', audioBufferNode.duration.toFixed(2), '秒');
+            
+            // 顺序播放：等待当前音频播放完成
+            await this.playAudioBuffer(audioBufferNode, messageId);
+            
+        } catch (error) {
+            console.error('❌ PCM16播放失败:', error);
         }
     }
     
     async playAudioBuffer(audioBuffer, messageId = null) {
         return new Promise((resolve, reject) => {
             try {
+                // 检查停止标志
+                if (this.shouldStop) {
+                    console.log('🛑 播放前检测到停止标志，跳过播放');
+                    resolve();
+                    return;
+                }
+                
                 const source = this.audioContext.createBufferSource();
                 const gainNode = this.audioContext.createGain();
                 
@@ -485,6 +667,16 @@ class VoicePlayerEnhanced {
                 
                 // 设置播放结束回调
                 source.onended = () => {
+                    // 清理定时器
+                    clearInterval(stopCheckInterval);
+                    
+                    // 检查是否被停止
+                    if (this.shouldStop) {
+                        console.log('🛑 播放结束回调检测到停止标志');
+                        resolve();
+                        return;
+                    }
+                    
                     this.isPlaying = false;
                     console.log('TTS片段播放完成');
                     // 记录声源计数并尝试最终收尾
@@ -500,6 +692,21 @@ class VoicePlayerEnhanced {
                 source.start(0);
                 this.isPlaying = true;
                 this.currentAudio = source;
+                
+                // 设置定期检查停止标志 - 更频繁的检查
+                const stopCheckInterval = setInterval(() => {
+                    if (this.shouldStop) {
+                        console.log('🛑 播放过程中检测到停止标志，立即停止');
+                        try {
+                            source.stop(0);
+                            source.disconnect();
+                        } catch (error) {
+                            console.log('音频源已停止');
+                        }
+                        clearInterval(stopCheckInterval);
+                        resolve();
+                    }
+                }, 20); // 每20ms检查一次，提高响应速度
                 // 记录声源计数
                 if (messageId && this.streamStates.has(messageId)) {
                     const st = this.streamStates.get(messageId);
@@ -746,6 +953,49 @@ class VoicePlayerEnhanced {
 document.addEventListener('DOMContentLoaded', () => {
     window.voicePlayer = new VoicePlayerEnhanced();
 });
+
+// 🚀 超级激进的停止方法 - 直接销毁音频上下文
+VoicePlayerEnhanced.prototype.forceStopAllAudio = function() {
+    console.log('🛑 超级强制停止所有音频');
+    
+    // 设置停止标志
+    this.shouldStop = true;
+    
+    // 立即停止当前音频
+    if (this.currentAudio) {
+        try {
+            this.currentAudio.stop(0);
+            this.currentAudio.disconnect();
+        } catch (error) {
+            console.log('当前音频已停止');
+        }
+        this.currentAudio = null;
+    }
+    
+    // 清空所有队列
+    this.playQueue = [];
+    this.audioQueue = [];
+    this.isPlaying = false;
+    
+    // 🚀 强制销毁音频上下文
+    if (this.audioContext) {
+        try {
+            this.audioContext.close();
+            this.audioContext = null;
+            console.log('🛑 音频上下文已强制销毁');
+        } catch (error) {
+            console.log('音频上下文销毁完成');
+        }
+    }
+    
+    // 清理所有定时器
+    if (this.stopCheckInterval) {
+        clearInterval(this.stopCheckInterval);
+        this.stopCheckInterval = null;
+    }
+    
+    console.log('🛑 超级强制停止完成');
+};
 
 // 导出供其他模块使用
 if (typeof module !== 'undefined' && module.exports) {

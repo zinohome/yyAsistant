@@ -140,56 +140,48 @@ app.clientside_callback(
                 };
                 console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
             }
-            // 实时语音对话事件
-            else if (type === 'realtime_voice_start') {
-                console.log('Realtime voice start triggered, starting realtime dialogue...');
-                // 触发前端JavaScript启动实时语音对话
-                if (window.realtimeStateManager) {
-                    window.realtimeStateManager.startRealtimeDialogue();
-                } else {
-                    console.warn('RealtimeStateManager not available');
+            // 语音通话事件
+            else if (type === 'voice_call_start') {
+                console.log('Voice call start triggered, starting voice call...');
+                // 发送语音通话启动命令到后端
+                if (window.voiceWebSocketManager && window.voiceWebSocketManager.sendMessage) {
+                    window.voiceWebSocketManager.sendMessage({
+                        type: 'voice_command',
+                        command: 'start_voice_call',
+                        timestamp: Date.now()
+                    });
                 }
-                // 更新状态为场景三：语音实时对话的S1状态
-                const newState = {
+                // 更新状态为场景三：语音通话的S1状态
+                newState = {
                     state: 'calling',
                     scenario: 'voice_call',
                     timestamp: Date.now(),
                     metadata: {
-                        message: '实时语音对话已启动',
-                        button_states: {
-                            textButton: 'disabled',
-                            recordButton: 'disabled', 
-                            callButton: 'calling'
-                        }
+                        message: '语音通话已启动'
                     }
                 };
                 console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
-                return newState;
             }
-            else if (type === 'realtime_voice_stop') {
-                console.log('Realtime voice stop triggered, stopping realtime dialogue...');
-                // 触发前端JavaScript停止实时语音对话
-                if (window.realtimeStateManager) {
-                    window.realtimeStateManager.stopRealtimeDialogue();
-                } else {
-                    console.warn('RealtimeStateManager not available');
+            else if (type === 'voice_call_stop') {
+                console.log('Voice call stop triggered, stopping voice call...');
+                // 发送语音通话停止命令到后端
+                if (window.voiceWebSocketManager && window.voiceWebSocketManager.sendMessage) {
+                    window.voiceWebSocketManager.sendMessage({
+                        type: 'voice_command',
+                        command: 'stop_voice_call',
+                        timestamp: Date.now()
+                    });
                 }
-                // 更新状态为场景三：语音实时对话的S3状态（回到空闲）
-                const newState = {
+                // 更新状态为场景三：语音通话的S3状态（回到空闲）
+                newState = {
                     state: 'idle',
                     scenario: 'voice_call',
                     timestamp: Date.now(),
                     metadata: {
-                        message: '实时语音对话已停止',
-                        button_states: {
-                            textButton: 'enabled',
-                            recordButton: 'enabled',
-                            callButton: 'enabled'
-                        }
+                        message: '语音通话已停止'
                     }
                 };
                 console.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
-                return newState;
             }
             else if (type === 'recording_start') {
                 newState = {

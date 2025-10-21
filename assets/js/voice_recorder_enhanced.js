@@ -73,9 +73,7 @@ class VoiceRecorderEnhanced {
                     try {
                         window.voiceWebSocketManager.registerMessageHandler('transcription_result', (data) => this.handleTranscriptionResult(data));
                         window.voiceWebSocketManager.registerMessageHandler('audio_processing_start', () => this.showProcessingStatus());
-                        window.voiceWebSocketManager.registerMessageHandler('error', (data) => {
-                            if (data && data.message) this.showError(data.message);
-                        });
+                        // 错误处理已由 voice_websocket_manager.js 统一处理，无需重复注册
                     } catch (e) { console.warn('注册录音器消息处理器失败:', e); }
                 } else {
                     console.warn('录音器无法获取WebSocket连接');
@@ -118,7 +116,7 @@ class VoiceRecorderEnhanced {
         
         // 监听录音按钮点击事件 - 使用新的按钮ID
         document.addEventListener('click', async (event) => {
-            console.log('文档点击事件触发，目标元素:', event.target);
+            // console.log('文档点击事件触发，目标元素:', event.target);
             
             // 检查是否是录音按钮
             if (event.target.closest('#voice-record-button')) {
@@ -768,11 +766,7 @@ class VoiceRecorderEnhanced {
         if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
             // 使用Dash的global-message组件显示toast提示
             window.dash_clientside.set_props('global-message', {
-                children: {
-                    'content': message,
-                    'type': 'warning',
-                    'duration': 3
-                }
+                children: message
             });
             console.log('已发送toast提示:', message);
         } else {

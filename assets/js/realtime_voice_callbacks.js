@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
         window.realtimeVoiceManager = new RealtimeVoiceManager();
     }
     
-    // 绑定通话按钮事件
-    bindVoiceCallButton();
+    // 使用事件委托绑定通话按钮事件
+    bindVoiceCallButtonWithDelegate();
     
     // 绑定状态更新事件
     bindStatusUpdateEvents();
@@ -25,7 +25,92 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * 绑定通话按钮事件
+ * 使用事件委托绑定通话按钮事件
+ */
+function bindVoiceCallButtonWithDelegate() {
+    // 使用事件委托，监听整个文档的点击事件
+    document.addEventListener('click', function(event) {
+        // 检查点击的是否是语音通话按钮
+        if (event.target && event.target.closest('#voice-call-btn')) {
+            console.log('语音通话按钮被点击');
+            
+            // 触发语音通话事件
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                // 检查当前状态（通过按钮的disabled属性和背景色）
+                const button = event.target.closest('#voice-call-btn');
+                const isCalling = button && (
+                    button.style.backgroundColor.includes('rgb(220, 38, 38)') || // 红色表示通话中
+                    button.style.backgroundColor.includes('red') || // 红色
+                    button.getAttribute('data-calling') === 'true' // 数据属性
+                );
+                
+                console.log('🔍 按钮状态检测:', {
+                    button: !!button,
+                    backgroundColor: button?.style.backgroundColor,
+                    isCalling: isCalling
+                });
+                
+                if (isCalling) {
+                    // 停止语音通话
+                    console.log('🛑 停止语音通话 - 按钮被点击');
+                    
+                    // 🚀 立即停止所有语音播放（最高优先级）
+                    if (window.voicePlayerEnhanced) {
+                        console.log('🛑 强制停止当前语音播放并清空队列');
+                        window.voicePlayerEnhanced.forceStopAllAudio();
+                    }
+                    
+                    // 🚀 立即停止音频流处理（不等待网络消息）
+                    if (window.voiceWebSocketManager) {
+                        console.log('🛑 强制停止音频流处理');
+                        window.voiceWebSocketManager.stopAudioStreaming();
+                    }
+                    
+                    // 🚀 异步发送中断信号到后端（不阻塞UI）
+                    if (window.voiceWebSocketManager) {
+                        console.log('🛑 发送中断信号到后端');
+                        window.voiceWebSocketManager.sendMessage({
+                            type: 'interrupt',
+                            timestamp: Date.now() / 1000,
+                            client_id: window.voiceWebSocketManager.clientId
+                        });
+                        
+                        // 🚀 延迟断开WebSocket连接，确保消息发送
+                        setTimeout(() => {
+                            if (window.voiceWebSocketManager.ws) {
+                                window.voiceWebSocketManager.ws.close();
+                            }
+                        }, 100);
+                    }
+                    
+                    // 发送停止信号
+                    window.dash_clientside.set_props('button-event-trigger', {
+                        data: {
+                            type: 'voice_call_stop',
+                            timestamp: Date.now()
+                        }
+                    });
+                } else {
+                    // 启动语音通话
+                    console.log('启动语音通话');
+                    window.dash_clientside.set_props('button-event-trigger', {
+                        data: {
+                            type: 'voice_call_start',
+                            timestamp: Date.now()
+                        }
+                    });
+                }
+            } else {
+                console.warn('Dash clientside not available');
+            }
+        }
+    });
+    
+    console.log('语音通话按钮事件委托绑定完成');
+}
+
+/**
+ * 绑定通话按钮事件（旧方法，保留作为备用）
  */
 function bindVoiceCallButton() {
     const voiceCallBtn = document.getElementById('voice-call-btn');
@@ -243,11 +328,7 @@ function showError(message) {
     if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
         // 使用Dash的global-message组件显示toast提示
         window.dash_clientside.set_props('global-message', {
-            children: {
-                'content': message,
-                'type': 'error',
-                'duration': 3
-            }
+            children: message
         });
         console.log('已发送toast提示:', message);
     } else {

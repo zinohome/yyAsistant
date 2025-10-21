@@ -115,7 +115,11 @@ class UnifiedButtonStateManager {
                 textLoading: false, textDisabled: true,
                 recordButton: { backgroundColor: this.COLORS.DISABLED, borderColor: this.COLORS.DISABLED },
                 recordDisabled: true,
-                callButton: { backgroundColor: this.COLORS.CALL, borderColor: this.COLORS.CALL },
+                callButton: { 
+                    backgroundColor: this.COLORS.RECORD, 
+                    borderColor: this.COLORS.RECORD, 
+                    color: '#ffffff' 
+                },
                 callDisabled: false
             }
         };

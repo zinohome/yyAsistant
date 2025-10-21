@@ -16,7 +16,6 @@ from components.chat_input_area import render as render_chat_input_area
 from components.ai_chat_message_history import AiChatMessageHistory
 from components.my_info import render_my_info_drawer
 from components.preference import render as render_preference_drawer
-from components.realtime_voice_chat import create_realtime_voice_chat_component
 
 # 导入配置和用户相关模块
 from configs import BaseConfig
@@ -184,25 +183,22 @@ def _create_content_area():
                     # 音频可视化区域
                     html.Canvas(
                         id="audio-visualizer",
+                        width=80,
+                        height=20,
                         style={
-                            "width": "60px",
+                            "width": "80px",
                             "height": "20px",
                             "border": "1px solid #d9d9d9",
                             "borderRadius": "4px",
-                            "backgroundColor": "#f5f5f5"
+                            "backgroundColor": "#000000"
                         }
                     ),
+                    fac.AntdDivider(direction="vertical", style=style(margin="0 8px")),
                     # 实时语音状态指示器
-                    html.Div(
-                        id="realtime-voice-status",
-                        children=[
-                            fac.AntdBadge(
-                                dot=True,
-                                color="gray",
-                                children=html.Span("等待开始", id="realtime-status-text")
-                            )
-                        ],
-                        style={"marginLeft": "10px", "display": "none"}
+                    fac.AntdText(
+                        "等待开始",
+                        id="realtime-status-text",
+                        style=style(fontSize="12px", color="#666666")
                     )
                 ],
                 flex="auto"
@@ -353,6 +349,8 @@ def _create_state_stores():
     voice_js_integration = html.Div(
         id='voice-js-integration',
         children=[
+            # 语音配置文件（最先加载）
+            html.Script(src='/configs/voice_config.js'),
             # WebSocket管理器（最先加载）
             html.Script(src='/assets/js/voice_websocket_manager.js'),
             # 语音录制器
