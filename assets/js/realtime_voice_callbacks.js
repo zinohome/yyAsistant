@@ -236,12 +236,23 @@ function updateVisualizationState(state) {
 function showError(message) {
     console.error(message);
     
-    // 这里可以添加更友好的错误显示方式
-    // 比如使用Ant Design的message组件
-    if (window.antd && window.antd.message) {
-        window.antd.message.error(message);
+    // 使用toast提示而不是alert弹出框
+    const currentPath = window.location.pathname;
+    const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+    
+    if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
+        // 使用Dash的global-message组件显示toast提示
+        window.dash_clientside.set_props('global-message', {
+            children: {
+                'content': message,
+                'type': 'error',
+                'duration': 3
+            }
+        });
+        console.log('已发送toast提示:', message);
     } else {
-        alert(message);
+        // 如果不在聊天页面或Dash不可用，使用console.warn
+        console.warn('实时语音提示:', message);
     }
 }
 

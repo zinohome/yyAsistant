@@ -268,8 +268,19 @@ app.clientside_callback(
                         }
                     });
                 }
-                // 完全应用状态管理器的颜色样式
-                return Object.assign({}, base, override || {});
+                // 完全应用状态管理器的颜色样式，包括颜色属性
+                const result = Object.assign({}, base, override || {});
+                // 确保颜色属性被正确应用
+                if (override && override.backgroundColor) {
+                    result.backgroundColor = override.backgroundColor;
+                }
+                if (override && override.borderColor) {
+                    result.borderColor = override.borderColor;
+                }
+                if (override && override.color) {
+                    result.color = override.color;
+                }
+                return result;
             }
             
             // 录音按钮图标映射 - 返回 DashIconify 组件

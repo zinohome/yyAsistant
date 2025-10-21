@@ -360,13 +360,19 @@ class VoicePlayerEnhanced {
         const state = this.streamStates.get(messageId);
         if (!state) return;
 
-        while (state.chunks.length > 0) {
-            // 取出最小seq的分片
-            const chunk = state.chunks.shift();
-            try {
-                await this.playAudioFromBase64(chunk.base64, messageId);
-            } catch (e) {
-                console.warn('播放分片失败，跳过该分片:', e);
+        // 持续处理音频分片，直到合成完成且无更多分片
+        while (state.chunks.length > 0 || !state.synthComplete) {
+            if (state.chunks.length > 0) {
+                // 取出最小seq的分片
+                const chunk = state.chunks.shift();
+                try {
+                    await this.playAudioFromBase64(chunk.base64, messageId);
+                } catch (e) {
+                    console.warn('播放分片失败，跳过该分片:', e);
+                }
+            } else {
+                // 没有分片但合成未完成，等待新分片
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
         }
 

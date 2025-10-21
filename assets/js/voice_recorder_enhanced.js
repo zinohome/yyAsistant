@@ -168,12 +168,7 @@ class VoiceRecorderEnhanced {
         console.log('准备开始录音');
         
         try {
-            // 更新状态为录音中
-            if (window.voiceStateManager) {
-                window.voiceStateManager.startRecording();
-            }
-            
-            // 通知统一按钮状态管理器 (通过dcc.Store) - 只在/core/chat页面
+            // 立即通知统一按钮状态管理器 (通过dcc.Store) - 只在/core/chat页面
             const currentPath = window.location.pathname;
             const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
             
@@ -181,7 +176,12 @@ class VoiceRecorderEnhanced {
                 window.dash_clientside.set_props('button-event-trigger', {
                     data: {type: 'recording_start', timestamp: Date.now()}
                 });
-                console.log('录音开始，触发状态更新');
+                console.log('录音开始，立即触发状态更新');
+            }
+            
+            // 更新状态为录音中
+            if (window.voiceStateManager) {
+                window.voiceStateManager.startRecording();
             }
             
             // 请求麦克风权限
@@ -760,8 +760,25 @@ class VoiceRecorderEnhanced {
     
     showError(message) {
         console.error('语音功能错误:', message);
-        // 这里可以显示用户友好的错误提示
-        alert(`语音功能错误: ${message}`);
+        
+        // 使用toast提示而不是alert弹出框
+        const currentPath = window.location.pathname;
+        const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+        
+        if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
+            // 使用Dash的global-message组件显示toast提示
+            window.dash_clientside.set_props('global-message', {
+                children: {
+                    'content': message,
+                    'type': 'warning',
+                    'duration': 3
+                }
+            });
+            console.log('已发送toast提示:', message);
+        } else {
+            // 如果不在聊天页面或Dash不可用，使用console.warn
+            console.warn('语音功能提示:', message);
+        }
     }
 }
 

@@ -165,14 +165,15 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
                     del active_sse_connections[message_id]
                     # log.debug(f"清理SSE连接: {message_id}")
                 
-                # 返回更新后的消息存储和恢复按钮状态
-                return updated_messages, message_content, False, False, dash.no_update
+                # 返回更新后的消息存储，但保持按钮状态由统一状态管理器控制
+                # 注意：不在这里重置按钮状态，让统一状态管理器控制到TTS完成
+                return updated_messages, message_content, dash.no_update, dash.no_update, dash.no_update
             except Exception as e:
                 log.error(f"处理SSE完成事件时出错: {e}")
-                return messages, message_content, False, False, dash.no_update
+                return messages, message_content, dash.no_update, dash.no_update, dash.no_update
         else:
             # log.debug("SSE完成事件数据不完整，跳过处理")
-            return messages, message_content, False, False, dash.no_update
+            return messages, message_content, dash.no_update, dash.no_update, dash.no_update
 
     # 处理语音转录触发的发送（镜像Store）
     elif triggered_id == 'voice-transcription-store-server' and transcription_data and transcription_data.get('text'):
