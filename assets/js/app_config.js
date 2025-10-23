@@ -83,7 +83,10 @@ class AppConfig {
             LOCALHOST_HOSTNAMES: ['localhost', '127.0.0.1', '::1'],
             
             // ==================== 麦克风权限提示 ====================
-            MICROPHONE_PERMISSION_HINT: '请使用 HTTPS 域名或 localhost 访问，并允许麦克风权限。'
+            MICROPHONE_PERMISSION_HINT: '请使用 HTTPS 域名或 localhost 访问，并允许麦克风权限。',
+            
+            // ==================== 按钮状态管理配置 ====================
+            ENABLE_BUTTON_STATE_MANAGER: true
         };
         
         // 配置验证规则
@@ -98,7 +101,8 @@ class AppConfig {
             PLAYBACK_RATE: { type: 'number', min: 0.25, max: 4.0 },
             VAD_THRESHOLD: { type: 'number', min: 0.001, max: 1.0 },
             VOICE_DEFAULT: { type: 'string', values: ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'] },
-            LOG_LEVEL: { type: 'string', values: ['debug', 'info', 'warn', 'error'] }
+            LOG_LEVEL: { type: 'string', values: ['debug', 'info', 'warn', 'error'] },
+            ENABLE_BUTTON_STATE_MANAGER: { type: 'boolean' }
         };
         
         this.config = { ...this.defaults };
