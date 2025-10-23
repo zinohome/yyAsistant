@@ -1223,6 +1223,13 @@ class VoiceWebSocketManager {
         // 注册语音通话相关消息处理器
         this.registerMessageHandler('voice_call_started', (data) => {
             console.log('语音通话已启动:', data);
+            
+            // 🎨 确保按钮处于激活状态
+            const voiceCallBtn = document.getElementById('voice-call-btn');
+            if (voiceCallBtn) {
+                voiceCallBtn.classList.add('active');
+            }
+            
             // 显示音频可视化区域
             this.showAudioVisualizer();
             // 启动音频流处理
@@ -1233,6 +1240,12 @@ class VoiceWebSocketManager {
         
         this.registerMessageHandler('voice_call_stopped', (data) => {
             console.log('语音通话已停止:', data);
+            
+            // 🎨 移除按钮激活状态
+            const voiceCallBtn = document.getElementById('voice-call-btn');
+            if (voiceCallBtn) {
+                voiceCallBtn.classList.remove('active');
+            }
             
             // 完全清理语音通话相关状态
             this.cleanupVoiceCallState();

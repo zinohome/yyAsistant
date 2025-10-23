@@ -1,5 +1,59 @@
 /* 语音按钮样式增强 */
 
+/* 语音通话按钮基础样式 */
+#voice-call-btn {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 语音通话按钮图标样式 */
+#voice-call-btn svg,
+#voice-call-btn .voice-call-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+}
+
+/* 语音通话按钮激活状态 - 旋转45度 */
+#voice-call-btn.active {
+    background-color: #dc2626 !important;
+    border-color: #dc2626 !important;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2) !important;
+}
+
+#voice-call-btn.active svg,
+#voice-call-btn.active .voice-call-icon {
+    transform: rotate(-45deg);
+}
+
+/* 语音通话按钮悬停效果 */
+#voice-call-btn:hover:not(:disabled) {
+    box-shadow: 0 4px 8px rgba(82, 196, 26, 0.3) !important;
+}
+
+#voice-call-btn.active:hover:not(:disabled) {
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3) !important;
+}
+
+/* 语音通话按钮激活效果 */
+#voice-call-btn:active:not(:disabled) {
+    box-shadow: 0 2px 4px rgba(82, 196, 26, 0.2) !important;
+}
+
+#voice-call-btn.active:active:not(:disabled) {
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2) !important;
+}
+
+/* 语音通话按钮禁用样式 */
+#voice-call-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
 /* 录音按钮基础样式 */
 #voice-record-button {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
