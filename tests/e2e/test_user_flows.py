@@ -39,8 +39,7 @@ class TestUserFlowBase:
     
     def login_user(self, driver, wait, username="testuser", password="testpassword"):
         """用户登录"""
-        from configs.app_config import app_config
-        driver.get(f"{app_config.TEST_LOCALHOST_URL}/login")
+        driver.get("http://localhost:8050/login")
         
         # 等待登录表单加载
         username_input = wait.until(
@@ -82,8 +81,7 @@ class TestLoginFlow(TestUserFlowBase):
     
     def test_failed_login(self, driver, wait):
         """测试登录失败"""
-        from configs.app_config import app_config
-        driver.get(f"{app_config.TEST_LOCALHOST_URL}/login")
+        driver.get("http://localhost:8050/login")
         
         # 输入错误凭据
         username_input = wait.until(
@@ -104,8 +102,7 @@ class TestLoginFlow(TestUserFlowBase):
     
     def test_login_form_validation(self, driver, wait):
         """测试登录表单验证"""
-        from configs.app_config import app_config
-        driver.get(f"{app_config.TEST_LOCALHOST_URL}/login")
+        driver.get("http://localhost:8050/login")
         
         login_button = wait.until(
             EC.presence_of_element_located((By.ID, "login-button"))

@@ -590,8 +590,8 @@ def duplicate_login_check(n_intervals, pathname):
 
 if __name__ == "__main__":
     # 非正式环境下开发调试预览用
-    from configs.app_config import app_config
-    app.run(debug=app_config.APP_DEBUG, host=app_config.APP_HOST, port=app_config.APP_PORT)
+    app.run(debug=True, host='0.0.0.0', port=8050)
+    #app.run(host='0.0.0.0', port=8050)
     # 生产环境推荐使用gunicorn启动
     #gunicorn -w 4 -b 0.0.0.0:8050 app:server
 

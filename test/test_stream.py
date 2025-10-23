@@ -32,13 +32,11 @@ def test_stream_endpoint():
         "role": "assistant"
     }
     
-    from configs.app_config import app_config
-    
     try:
         # 发送POST请求到/stream端点
         log.info(f"发送请求到/stream端点: {request_data}")
         response = requests.post(
-            f"{app_config.TEST_LOCALHOST_URL}/stream",
+            "http://localhost:8050/stream",
             json=request_data,
             stream=True  # 启用流式响应
         )

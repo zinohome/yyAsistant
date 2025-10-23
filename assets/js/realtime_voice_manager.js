@@ -22,8 +22,8 @@ class RealtimeVoiceManager {
         
         // 配置
         this.config = {
-            backendUrl: window.appConfig?.getBackendUrl() || window.voiceConfig?.BACKEND_URL || 'http://localhost:9800',
-            apiKey: window.appConfig?.getApiKey() || window.voiceConfig?.API_KEY || 'yk-1aB2cD3eF4gH5iJ6kL7mN8oP9qR0sT1uV2wX3yZ4',
+            backendUrl: window.voiceConfig?.BACKEND_URL || 'http://localhost:9800',
+            apiKey: window.voiceConfig?.API_KEY || 'yk-1aB2cD3eF4gH5iJ6kL7mN8oP9qR0sT1uV2wX3yZ4',
             personalityId: window.voiceConfig?.PERSONALITY_ID || 'default',
             conversationId: null
         };

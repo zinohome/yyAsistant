@@ -1033,9 +1033,9 @@ def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, canc
                 # 触发发送按钮点击
                 new_send_clicks = send_btn_clicks + 1 if send_btn_clicks else 1
                 
-                return dash.no_update, user_content, new_send_clicks, dash.no_update
+                return dash.no_update, user_content, new_send_clicks, dash.no_update, dash.no_update
             else:
-                return [dash.no_update] * 3 + [fac.AntdMessage(type="error", content="无法重新生成：未找到目标用户消息")]
+                return [dash.no_update] * 4 + [fac.AntdMessage(type="error", content="无法重新生成：未找到目标用户消息")]
         
         # 处理取消发送消息
         elif '"type":"ai-chat-x-cancel"' in prop_id:
@@ -1075,14 +1075,14 @@ def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, canc
                 )
                 
                 log.debug(f"取消发送消息: {target_message_id}")
-                return updated_messages, dash.no_update, dash.no_update, success_message
+                return updated_messages, dash.no_update, dash.no_update, None, success_message
             else:
                 # 未找到目标消息
                 error_message = fac.AntdMessage(
                     type="warning", 
                     content="无法取消：未找到正在发送的消息"
                 )
-                return [dash.no_update] * 3 + [error_message]
+                return [dash.no_update] * 4 + [error_message]
         
         else:
             return [dash.no_update] * 4
@@ -1093,7 +1093,7 @@ def handle_message_operations(ai_regenerate_clicks, user_regenerate_clicks, canc
             type="error", 
             content=f"操作失败: {str(e)}"
         )
-        return [dash.no_update] * 3 + [error_message]
+        return [dash.no_update] * 4 + [error_message]
 
 # 复制消息的客户端回调
 app.clientside_callback(

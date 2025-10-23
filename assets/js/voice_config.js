@@ -26,7 +26,7 @@ class VoiceConfig {
             audioSendInterval: 300,
             
             // WebSocket设置
-            wsUrl: window.appConfig?.get('WS_URL') || 'ws://192.168.32.168:9800/ws/chat',
+            wsUrl: 'ws://192.168.32.168:9800/ws/chat',
             reconnectAttempts: 5,
             reconnectInterval: 1000,
             heartbeatInterval: 30000,

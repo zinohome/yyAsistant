@@ -76,9 +76,6 @@ function bindVoiceCallButtonWithDelegate() {
                     // 停止语音通话
                     console.log('🛑 停止语音通话 - 按钮被点击');
                     
-                    // 🎨 移除激活状态，恢复初始样式
-                    button.classList.remove('active');
-                    
                     // 🚀 立即停止所有语音播放（最高优先级）
                     if (window.voicePlayerEnhanced) {
                         console.log('🛑 强制停止当前语音播放并清空队列');
@@ -131,9 +128,6 @@ function bindVoiceCallButtonWithDelegate() {
                 } else {
                     // 启动语音通话
                     console.log('启动语音通话');
-                    
-                    // 🎨 添加激活状态，显示旋转和红色样式
-                    button.classList.add('active');
                     window.dash_clientside.set_props('button-event-trigger', {
                         data: {
                             type: 'voice_call_start',
@@ -383,7 +377,7 @@ function checkBrowserSupport() {
         const reason = (typeof RealtimeAudioProcessor.getUnsupportedReason === 'function')
             ? RealtimeAudioProcessor.getUnsupportedReason()
             : '浏览器或运行环境不满足实时语音所需条件';
-        const hint = window.appConfig?.getMicrophonePermissionHint() || '请使用 HTTPS 域名或 localhost 访问，并允许麦克风权限。';
+        const hint = '请使用 HTTPS 域名或 localhost 访问，并允许麦克风权限。';
         showError(`您的环境暂不支持实时语音：${reason}。${hint}`);
         return false;
     }

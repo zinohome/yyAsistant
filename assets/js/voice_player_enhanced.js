@@ -231,8 +231,7 @@ class VoicePlayerEnhanced {
     async requestSpeechSynthesis(text) {
         return new Promise((resolve, reject) => {
             if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-                console.warn('🎧 WebSocket连接不可用，跳过TTS请求');
-                resolve(); // 静默处理，不显示错误
+                reject(new Error('WebSocket连接不可用'));
                 return;
             }
             

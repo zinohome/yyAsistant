@@ -21,7 +21,7 @@ class VoiceConfig:
     
     # UI配置
     AUTO_PLAY_DEFAULT = True
-    VOICE_DEFAULT = "shimmer"
+    VOICE_DEFAULT = "alloy"
     VOLUME_DEFAULT = 80
     
     # 音频格式配置
