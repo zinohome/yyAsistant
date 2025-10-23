@@ -353,7 +353,9 @@ def _create_state_stores():
     voice_js_integration = html.Div(
         id='voice-js-integration',
         children=[
-            # 语音配置文件（最先加载）
+            # 统一应用配置文件（最先加载）
+            html.Script(src='/assets/js/app_config.js'),
+            # 语音配置文件（兼容性）
             html.Script(src='/configs/voice_config.js'),
             # WebSocket管理器（最先加载）
             html.Script(src='/assets/js/voice_websocket_manager.js'),

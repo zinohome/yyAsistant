@@ -1,68 +1,56 @@
+# -*- coding: utf-8 -*-
 # 语音功能配置
 from typing import Dict, Any
+from .app_config import app_config
 
 
 class VoiceConfig:
-    """语音功能配置类"""
+    """语音功能配置类 - 使用统一配置"""
     
     # WebSocket配置 - 直连yychat后端的WebSocket端点
-    WS_URL = "ws://192.168.32.168:9800/ws/chat"
-    WS_RECONNECT_INTERVAL = 1000  # 毫秒
-    WS_MAX_RECONNECT_ATTEMPTS = 5
+    WS_URL = app_config.WS_URL
+    WS_RECONNECT_INTERVAL = app_config.WS_RECONNECT_INTERVAL  # 毫秒
+    WS_MAX_RECONNECT_ATTEMPTS = app_config.WS_MAX_RECONNECT_ATTEMPTS
     
     # 音频配置
-    AUDIO_SAMPLE_RATE = 16000
-    AUDIO_CHANNELS = 1
-    AUDIO_BIT_RATE = 128000
+    AUDIO_SAMPLE_RATE = app_config.AUDIO_SAMPLE_RATE
+    AUDIO_CHANNELS = app_config.AUDIO_CHANNELS
+    AUDIO_BIT_RATE = app_config.AUDIO_BIT_RATE
     
     # 语音活动检测
-    VAD_THRESHOLD = 0.01
-    VAD_SILENCE_DURATION = 1000  # 毫秒
+    VAD_THRESHOLD = app_config.VAD_THRESHOLD
+    VAD_SILENCE_DURATION = app_config.VAD_SILENCE_DURATION  # 毫秒
     
     # UI配置
-    AUTO_PLAY_DEFAULT = True
-    VOICE_DEFAULT = "shimmer"
-    VOLUME_DEFAULT = 80
+    AUTO_PLAY_DEFAULT = app_config.AUTO_PLAY_DEFAULT
+    VOICE_DEFAULT = app_config.VOICE_DEFAULT
+    VOLUME_DEFAULT = app_config.VOLUME_DEFAULT
     
     # 音频格式配置
-    AUDIO_FORMAT = "webm"
-    AUDIO_MIME_TYPE = "audio/webm;codecs=opus"
+    AUDIO_FORMAT = app_config.AUDIO_FORMAT
+    AUDIO_MIME_TYPE = app_config.AUDIO_MIME_TYPE
     
     # 录音配置
-    RECORDING_CHUNK_SIZE = 1024
-    RECORDING_MAX_DURATION = 30000  # 毫秒，最大录音时长30秒
+    RECORDING_CHUNK_SIZE = app_config.RECORDING_CHUNK_SIZE
+    RECORDING_MAX_DURATION = app_config.RECORDING_MAX_DURATION  # 毫秒，最大录音时长30秒
     
     # 播放配置
-    PLAYBACK_VOLUME = 0.8
-    PLAYBACK_RATE = 1.0
+    PLAYBACK_VOLUME = app_config.PLAYBACK_VOLUME
+    PLAYBACK_RATE = app_config.PLAYBACK_RATE
     
     # 错误处理配置
-    ERROR_RETRY_ATTEMPTS = 3
-    ERROR_RETRY_DELAY = 1000  # 毫秒
+    ERROR_RETRY_ATTEMPTS = app_config.ERROR_RETRY_ATTEMPTS
+    ERROR_RETRY_DELAY = app_config.ERROR_RETRY_DELAY  # 毫秒
     
     @classmethod
     def get_voice_options(cls) -> list:
         """获取可用的语音选项"""
-        return [
-            {"label": "Alloy (中性)", "value": "alloy"},
-            {"label": "Echo (男性)", "value": "echo"},
-            {"label": "Fable (女性)", "value": "fable"},
-            {"label": "Onyx (男性)", "value": "onyx"},
-            {"label": "Nova (女性)", "value": "nova"},
-            {"label": "Shimmer (女性)", "value": "shimmer"}
-        ]
+        return app_config.get_voice_options()
     
     @classmethod
     def get_default_settings(cls) -> Dict[str, Any]:
         """获取默认语音设置"""
-        return {
-            "voice": cls.VOICE_DEFAULT,
-            "rate": cls.PLAYBACK_RATE,
-            "volume": cls.VOLUME_DEFAULT,
-            "auto_play": cls.AUTO_PLAY_DEFAULT,
-            "sample_rate": cls.AUDIO_SAMPLE_RATE,
-            "channels": cls.AUDIO_CHANNELS
-        }
+        return app_config.get_default_voice_settings()
     
     @classmethod
     def validate_settings(cls, settings: Dict[str, Any]) -> Dict[str, Any]:

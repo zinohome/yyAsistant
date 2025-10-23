@@ -228,7 +228,7 @@ class RealtimeAdapterClient {
      */
     getApiKey() {
         // 从全局配置或环境变量获取API密钥
-        return window.voiceConfig?.API_KEY || 'yk-1aB2cD3eF4gH5iJ6kL7mN8oP9qR0sT1uV2wX3yZ4';
+        return window.appConfig?.getApiKey() || window.voiceConfig?.API_KEY || 'yk-1aB2cD3eF4gH5iJ6kL7mN8oP9qR0sT1uV2wX3yZ4';
     }
     
     /**

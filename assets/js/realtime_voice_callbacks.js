@@ -383,7 +383,7 @@ function checkBrowserSupport() {
         const reason = (typeof RealtimeAudioProcessor.getUnsupportedReason === 'function')
             ? RealtimeAudioProcessor.getUnsupportedReason()
             : '浏览器或运行环境不满足实时语音所需条件';
-        const hint = '请使用 HTTPS 域名或 localhost 访问，并允许麦克风权限。';
+        const hint = window.appConfig?.getMicrophonePermissionHint() || '请使用 HTTPS 域名或 localhost 访问，并允许麦克风权限。';
         showError(`您的环境暂不支持实时语音：${reason}。${hint}`);
         return false;
     }

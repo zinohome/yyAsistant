@@ -14,8 +14,9 @@ def run_manual_tests():
     
     # Check environment
     print("1. Environment Setup and Validation")
-    print("   - Backend service: http://192.168.32.168:9800")
-    print("   - Frontend service: http://192.168.32.168:8050")
+    from configs.app_config import app_config
+    print(f"   - Backend service: {app_config.TEST_BACKEND_URL}")
+    print(f"   - Frontend service: {app_config.TEST_BASE_URL}")
     print("   - Browser permissions: microphone required")
     print("   - Audio devices: speakers/headphones")
     print()

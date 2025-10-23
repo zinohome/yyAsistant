@@ -300,7 +300,7 @@ class RealtimeAudioProcessor {
                  navigator.mediaDevices.getUserMedia &&
                  (window.AudioContext || window.webkitAudioContext));
         // 在非安全上下文中，大多数浏览器不提供getUserMedia
-        const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+        const isLocalhost = window.appConfig?.isLocalhost() || ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
         const secureOK = (window.isSecureContext === true) || isLocalhost;
         return hasAPIs && secureOK;
     }
@@ -316,7 +316,7 @@ class RealtimeAudioProcessor {
         if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
             reasons.push('缺少麦克风 API (getUserMedia) 支持');
         }
-        const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+        const isLocalhost = window.appConfig?.isLocalhost() || ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
         if (!(window.isSecureContext === true) && !isLocalhost) {
             reasons.push('页面未通过 HTTPS 或 localhost 提供，浏览器禁止麦克风访问');
         }
