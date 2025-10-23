@@ -1,5 +1,6 @@
 /**
  * 增强版语音录制器 - 支持录音波形显示和语音转文本
+ * 使用公共工具类优化代码复用和状态管理
  */
 
 class VoiceRecorderEnhanced {
@@ -14,16 +15,16 @@ class VoiceRecorderEnhanced {
         this.websocket = null;
         this.animationId = null;
         
-        // 录音配置
+        // 使用配置类获取录音配置
         this.config = {
-            sampleRate: 16000,
-            channels: 1,
-            bitRate: 128000
+            sampleRate: window.voiceConfig?.get('sampleRate') || 16000,
+            channels: window.voiceConfig?.get('channels') || 1,
+            bitRate: window.voiceConfig?.get('bitRate') || 128000
         };
         
         // 异步初始化
         this.init().catch(error => {
-            console.error('录音器初始化失败:', error);
+            VoiceUtils.handleError(error, '录音器初始化');
         });
     }
     
@@ -39,55 +40,65 @@ class VoiceRecorderEnhanced {
     }
     
     /**
-     * 初始化状态监听
+     * 初始化状态监听 - 使用状态协调器
      */
     initStateListener() {
-        // 监听全局状态变化
-        window.addEventListener('voiceStateChange', (event) => {
-            const { oldState, newState } = event.detail;
-            this.onStateChange(oldState, newState);
-        });
+        // 注册到状态协调器
+        if (window.voiceStateCoordinator) {
+            window.voiceStateCoordinator.registerStateListener('voiceRecorder', (oldState, newState, oldScenario, scenario, metadata) => {
+                this.onStateChange(oldState, newState, oldScenario, scenario, metadata);
+            });
+        } else {
+            // 回退到原有方式
+            window.addEventListener('voiceStateChange', (event) => {
+                const { oldState, newState } = event.detail;
+                this.onStateChange(oldState, newState);
+            });
+        }
     }
     
     /**
      * 状态变化处理
      */
-    onStateChange(oldState, newState) {
-        console.log(`录音器状态变化: ${oldState} → ${newState}`);
+    onStateChange(oldState, newState, oldScenario = null, scenario = null, metadata = {}) {
+        console.log(`录音器状态变化: ${oldState} → ${newState} (${scenario})`);
         
         // 如果状态变为中断，停止录音
         if (newState === 'interrupted' && this.isRecording) {
             this.stopRecording();
         }
+        
+        // 如果状态变为空闲，清理资源
+        if (newState === 'idle') {
+            this.cleanup();
+        }
+    }
+    
+    /**
+     * 清理资源
+     */
+    cleanup() {
+        // 停止录音
+        if (this.isRecording) {
+            this.stopRecording();
+        }
+        // 清理音频块
+        this.audioChunks = [];
+        console.log('录音器资源已清理');
     }
     
     async initWebSocket() {
         try {
-            // 使用全局WebSocket管理器，避免重复连接
-            if (window.voiceWebSocketManager) {
-                // 等待连接建立
-                this.websocket = await window.voiceWebSocketManager.waitForConnection();
-                if (this.websocket) {
-                    console.log('录音器使用共享WebSocket连接');
-                    // 通过管理器注册消息处理器，避免共享连接相互覆盖 onmessage
-                    try {
-                        window.voiceWebSocketManager.registerMessageHandler('transcription_result', (data) => this.handleTranscriptionResult(data));
-                        window.voiceWebSocketManager.registerMessageHandler('audio_processing_start', () => this.showProcessingStatus());
-                        // 错误处理已由 voice_websocket_manager.js 统一处理，无需重复注册
-                    } catch (e) { console.warn('注册录音器消息处理器失败:', e); }
-                } else {
-                    console.warn('录音器无法获取WebSocket连接');
-                }
-            } else {
-                // 从全局配置获取WebSocket URL
-                const wsUrl = window.voiceConfig?.WS_URL || 'ws://192.168.32.156:9800/ws/chat';
-                this.websocket = new WebSocket(wsUrl);
-                console.log('创建新的WebSocket连接');
-                // 仅在独立连接时设置本地 onmessage 处理
-                this.setupWebSocketHandlers();
-            }
+            // 使用公共工具初始化WebSocket连接
+            const messageHandlers = {
+                'transcription_result': (data) => this.handleTranscriptionResult(data),
+                'audio_processing_start': () => this.showProcessingStatus()
+            };
+            
+            this.websocket = await VoiceUtils.initWebSocket(window.voiceWebSocketManager, messageHandlers);
+            console.log('录音器WebSocket连接已建立');
         } catch (error) {
-            console.error('初始化WebSocket失败:', error);
+            VoiceUtils.handleError(error, '录音器WebSocket初始化');
         }
     }
     
@@ -166,21 +177,9 @@ class VoiceRecorderEnhanced {
         console.log('准备开始录音');
         
         try {
-            // 立即通知统一按钮状态管理器 (通过dcc.Store) - 只在/core/chat页面
-            const currentPath = window.location.pathname;
-            const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
-            
-            if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
-                window.dash_clientside.set_props('button-event-trigger', {
-                    data: {type: 'recording_start', timestamp: Date.now()}
-                });
-                console.log('录音开始，立即触发状态更新');
-            }
-            
-            // 更新状态为录音中
-            if (window.voiceStateManager) {
-                window.voiceStateManager.startRecording();
-            }
+            // 使用公共工具触发录音开始事件
+            VoiceUtils.triggerEvent('recording_start', { timestamp: Date.now() });
+            VoiceUtils.updateState('recording', 'voice_recording', {});
             
             // 请求麦克风权限
             console.log('正在请求麦克风权限...');
@@ -275,16 +274,9 @@ class VoiceRecorderEnhanced {
             this.mediaRecorder.stop();
             this.isRecording = false;
             
-            // 通知统一按钮状态管理器 (通过dcc.Store) - 只在/core/chat页面
-            const currentPath = window.location.pathname;
-            const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
-            
-            if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
-                window.dash_clientside.set_props('button-event-trigger', {
-                    data: {type: 'recording_stop', timestamp: Date.now()}
-                });
-                console.log('录音停止，触发状态更新');
-            }
+            // 使用公共工具触发录音停止事件
+            VoiceUtils.triggerEvent('recording_stop', { timestamp: Date.now() });
+            VoiceUtils.updateState('voice_processing', 'voice_recording', {});
             
             // 停止波形动画
             this.stopWaveformAnimation();
@@ -448,16 +440,11 @@ class VoiceRecorderEnhanced {
         console.log('收到转录结果:', data);
         
         if (data.text && data.text.trim()) {
-            // 通知统一按钮状态管理器STT完成 (通过dcc.Store) - 只在/core/chat页面
-            const currentPath = window.location.pathname;
-            const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
-            
-            if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
-                window.dash_clientside.set_props('button-event-trigger', {
-                    data: {type: 'stt_complete', timestamp: Date.now()}
-                });
-                console.log('STT完成，触发状态更新');
-            }
+            // 使用公共工具触发STT完成事件
+            VoiceUtils.triggerEvent('voice_transcription_complete', { 
+                timestamp: Date.now(),
+                text: data.text.trim()
+            });
             
             // 立即将 client_id 推送到 Store 与 语音开关，确保随后的 SSE 能带上 client_id
             try {
@@ -487,10 +474,8 @@ class VoiceRecorderEnhanced {
             console.log('转录结果为空或无效:', data);
             this.showError('未识别到语音内容');
             
-            // 转录失败，重置状态为空闲
-            if (window.voiceStateManager) {
-                window.voiceStateManager.setState(window.voiceStateManager.STATES.IDLE);
-            }
+            // 使用公共工具重置状态
+            VoiceUtils.updateState('idle', null, {});
             
             // 触发状态更新事件，确保按钮状态回到空闲
             const currentPath = window.location.pathname;

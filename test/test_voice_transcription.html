@@ -120,7 +120,7 @@
             log('开始测试WebSocket连接');
             
             try {
-                const ws = new WebSocket('ws://192.168.32.156:9800/ws/chat');
+                const ws = new WebSocket('ws://192.168.32.168:9800/ws/chat');
                 
                 ws.onopen = function() {
                     statusDiv.innerHTML = '<div class="status success">✓ WebSocket连接成功</div>';
@@ -233,7 +233,7 @@
         // 页面加载完成后的初始化
         document.addEventListener('DOMContentLoaded', function() {
             log('语音转文本测试页面已加载');
-            log('WebSocket地址: ws://192.168.32.156:9800/ws/chat');
+            log('WebSocket地址: ws://192.168.32.168:9800/ws/chat');
         });
     </script>
 </body>

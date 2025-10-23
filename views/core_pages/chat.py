@@ -174,31 +174,35 @@ def _create_content_area():
                         color="green",
                         icon=fac.AntdIcon(icon="antd-check-circle", style=style(fontSize="12px"))
                     ),
+                    # 隐藏状态正常文字，只使用图标
                     fac.AntdText(
                         "状态正常",
                         id="ai-chat-x-connection-status",
-                        style=style(fontSize="12px", color="#52c41a", marginLeft="8px")
+                        style=style(fontSize="12px", color="#52c41a", marginLeft="8px", display="none")
                     ),
-                    fac.AntdDivider(direction="vertical", style=style(margin="0 8px")),
-                    # 音频可视化区域
-                    html.Canvas(
-                        id="audio-visualizer",
-                        width=80,
-                        height=20,
-                        style={
-                            "width": "80px",
-                            "height": "20px",
-                            "border": "1px solid #d9d9d9",
-                            "borderRadius": "4px",
-                            "backgroundColor": "#000000"
-                        }
-                    ),
-                    fac.AntdDivider(direction="vertical", style=style(margin="0 8px")),
-                    # 实时语音状态指示器
+                    # 音频可视化区域（包含状态指示）- 默认隐藏
+                    html.Div([
+                        fac.AntdDivider(direction="vertical", style=style(margin="0 8px")),
+                        html.Canvas(
+                            id="audio-visualizer",
+                            width=80,
+                            height=20,
+                            style={
+                                "width": "80px",
+                                "height": "20px",
+                                "border": "1px solid #d9d9d9",
+                                "borderRadius": "4px",
+                                "backgroundColor": "#fff",
+                                "verticalAlign": "middle",
+                                "display": "inline-block"
+                            }
+                        )
+                    ], id="audio-visualizer-container", style={"display": "none"}),
+                    # 保留文本状态指示器作为备用（隐藏）
                     fac.AntdText(
                         "等待开始",
                         id="realtime-status-text",
-                        style=style(fontSize="12px", color="#666666")
+                        style=style(fontSize="12px", color="#666666", display="none")
                     )
                 ],
                 flex="auto"

@@ -19,6 +19,38 @@ from feffery_dash_utils.style_utils import style
 # 添加用于SSE连接的存储
 active_sse_connections = {}
 
+def save_messages_to_database(current_session_id, user_message, ai_message):
+    """保存用户消息和AI消息到数据库的公共函数"""
+    if current_session_id:
+        try:
+            from models.conversations import Conversations
+            conv = Conversations.get_conversation_by_conv_id(current_session_id)
+            if conv:
+                # 获取现有消息
+                existing_messages = conv.conv_memory.get('messages', []) if conv.conv_memory else []
+                # 添加用户消息和AI消息
+                existing_messages.append({
+                    'role': 'user',
+                    'content': user_message['content'],
+                    'timestamp': user_message['timestamp'],
+                    'id': user_message['id']
+                })
+                existing_messages.append({
+                    'role': 'assistant',
+                    'content': '正在思考中...',
+                    'timestamp': ai_message['timestamp'],
+                    'id': ai_message['id'],
+                    'is_streaming': True
+                })
+                # 更新数据库
+                Conversations.update_conversation_by_conv_id(
+                    current_session_id,
+                    conv_memory={'messages': existing_messages}
+                )
+                log.info(f"✅ 消息已保存到数据库: {current_session_id}")
+        except Exception as e:
+            log.error(f"保存消息到数据库失败: {e}")
+
 # 聊天交互处理函数
 @app.callback(
     [
@@ -102,8 +134,11 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
         if messages:
             try:
                 if completion_event_json:
-                    # 解析JSON字符串
-                    completion_event = json.loads(completion_event_json)
+                    # 解析JSON字符串（如果已经是字典则直接使用）
+                    if isinstance(completion_event_json, str):
+                        completion_event = json.loads(completion_event_json)
+                    else:
+                        completion_event = completion_event_json
                     
                     # 获取消息ID和完整内容
                     message_id = completion_event.get('messageId')
@@ -205,6 +240,9 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
             }
             updated_messages.append(ai_message)
 
+            # 保存消息到数据库
+            save_messages_to_database(current_session_id, user_message, ai_message)
+
             # 组装语音开关数据，携带client_id用于SSE payload
             enable_voice_payload = True
             try:
@@ -242,7 +280,7 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
             log.error(f"触发按钮状态更新失败(set_props): {e}")
             # 兜底：尝试dash_clientside.set_props（若可用）
             try:
-                import dash_clientside
+                from dash import dash_clientside
                 dash_clientside.set_props('button-event-trigger', {
                     'data': {
                         'type': 'text_button_clicked', 
@@ -284,36 +322,8 @@ def handle_chat_interactions(topic_clicks, send_button_clicks, completion_event_
             # 添加空白AI消息到消息列表
             updated_messages.append(ai_message)
             
-            # 保存用户消息到数据库
-            if current_session_id:
-                try:
-                    from models.conversations import Conversations
-                    conv = Conversations.get_conversation_by_conv_id(current_session_id)
-                    if conv:
-                        # 获取现有消息
-                        existing_messages = conv.conv_memory.get('messages', []) if conv.conv_memory else []
-                        # 添加用户消息和AI消息
-                        existing_messages.append({
-                            'role': 'user',
-                            'content': message_content,
-                            'timestamp': user_message['timestamp'],
-                            'id': usr_message_id
-                        })
-                        existing_messages.append({
-                            'role': 'assistant',
-                            'content': '正在思考中...',
-                            'timestamp': ai_message['timestamp'],
-                            'id': ai_message_id,
-                            'is_streaming': True
-                        })
-                        # 更新数据库
-                        Conversations.update_conversation_by_conv_id(
-                            current_session_id,
-                            conv_memory={'messages': existing_messages}
-                        )
-                        # log.debug(f"用户消息和AI消息已保存到数据库: {current_session_id}")
-                except Exception as e:
-                    log.error(f"保存用户消息到数据库失败: {e}")
+            # 保存消息到数据库
+            save_messages_to_database(current_session_id, user_message, ai_message)
             
             # log.debug(f"创建用户消息和AI消息: {user_message}, {ai_message}")
             log.info(f"✅ 发送按钮处理完成，更新后消息数量: {len(updated_messages)}, 返回给ai-chat-x-messages-store")
@@ -821,8 +831,8 @@ def manage_connection_status(sse_url, completion_event, tag_clicks):
         return (
             "blue",  # 蓝色表示连接中
             fac.AntdIcon(icon="antd-loading", style=style(fontSize="12px")),
-            "连接中...",
-            style(fontSize="12px", color="#1890ff", marginLeft="8px")
+            "",  # 隐藏文字，只显示图标
+            style(fontSize="12px", color="#1890ff", marginLeft="8px", display="none")
         )
     
     # SSE连接完成
@@ -830,8 +840,8 @@ def manage_connection_status(sse_url, completion_event, tag_clicks):
         return (
             "green",  # 绿色表示正常
             fac.AntdIcon(icon="antd-check-circle", style=style(fontSize="12px")),
-            "状态正常",
-            style(fontSize="12px", color="#52c41a", marginLeft="8px")
+            "",  # 隐藏文字，只显示图标
+            style(fontSize="12px", color="#52c41a", marginLeft="8px", display="none")
         )
     
     # 点击重试
@@ -850,8 +860,8 @@ def manage_connection_status(sse_url, completion_event, tag_clicks):
         return (
             "orange",  # 橙色表示重试中
             fac.AntdIcon(icon="antd-reload", style=style(fontSize="12px")),
-            "重试中...",
-            style(fontSize="12px", color="#fa8c16", marginLeft="8px")
+            "",  # 隐藏文字，只显示图标
+            style(fontSize="12px", color="#fa8c16", marginLeft="8px", display="none")
         )
     
     return dash.no_update, dash.no_update, dash.no_update, dash.no_update

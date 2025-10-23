@@ -24,6 +24,11 @@ from views import core_pages, login
 from views.status_pages import _403, _404, _500
 from configs import BaseConfig, RouterConfig, AuthConfig
 
+# 导入数据库初始化
+from models.init_db import db
+from models.conversations import Conversations
+from models.logs import LoginLogs
+
 # 检查Python版本
 check_python_version(min_version="3.8", max_version="3.13")
 # 检查关键依赖库版本
@@ -593,3 +598,14 @@ if __name__ == "__main__":
 # 注册完整的统一回调
 from callbacks.core_pages_c.core_chat_callback import register_core_chat_callback
 register_core_chat_callback(app)
+
+# 数据库初始化 - 确保表存在
+try:
+    with db.connection_context():
+        # 创建所有必要的表
+        db.create_tables([Users, Conversations, LoginLogs], safe=True)
+        print("✅ 数据库表初始化完成")
+except Exception as e:
+    print(f"❌ 数据库初始化失败: {e}")
+    import traceback
+    traceback.print_exc()

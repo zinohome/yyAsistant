@@ -19,23 +19,23 @@ class TestVoiceConfig:
     
     def test_voice_config_initialization(self):
         """测试语音配置初始化"""
-        assert VoiceConfig.WS_URL == "ws://192.168.32.156:9800/ws/chat"
+        assert VoiceConfig.WS_URL == "ws://192.168.32.168:9800/ws/chat"
         assert VoiceConfig.AUDIO_SAMPLE_RATE == 16000
         assert VoiceConfig.AUDIO_CHANNELS == 1
-        assert VoiceConfig.VOICE_DEFAULT == "alloy"
+        assert VoiceConfig.VOICE_DEFAULT == "shimmer"
         assert VoiceConfig.VOLUME_DEFAULT == 80
     
     def test_voice_options(self):
         """测试语音选项"""
         options = VoiceConfig.get_voice_options()
         assert len(options) == 6
-        assert any(opt["value"] == "alloy" for opt in options)
+        assert any(opt["value"] == "shimmer" for opt in options)
         assert any(opt["value"] == "echo" for opt in options)
     
     def test_default_settings(self):
         """测试默认设置"""
         settings = VoiceConfig.get_default_settings()
-        assert settings["voice"] == "alloy"
+        assert settings["voice"] == "shimmer"
         assert settings["rate"] == 1.0
         assert settings["volume"] == 80
         assert settings["auto_play"] == True
@@ -44,13 +44,13 @@ class TestVoiceConfig:
         """测试设置验证"""
         # 测试有效设置
         valid_settings = {
-            "voice": "echo",
+            "voice": "shimmer",
             "rate": 1.5,
             "volume": 90,
             "auto_play": False
         }
         validated = VoiceConfig.validate_settings(valid_settings)
-        assert validated["voice"] == "echo"
+        assert validated["voice"] == "shimmer"
         assert validated["rate"] == 1.5
         assert validated["volume"] == 90
         assert validated["auto_play"] == False
@@ -63,7 +63,7 @@ class TestVoiceConfig:
             "auto_play": 0  # 数字0，应该转换为False
         }
         validated = VoiceConfig.validate_settings(invalid_settings)
-        assert validated["voice"] == "alloy"  # 默认值
+        assert validated["voice"] == "shimmer"  # 默认值
         assert validated["rate"] == 2.0  # 限制在范围内
         assert validated["volume"] == 100  # 限制在范围内
         assert validated["auto_play"] == False  # 转换为布尔值
@@ -74,7 +74,7 @@ class TestVoiceWebSocketClient:
     
     def test_client_initialization(self):
         """测试客户端初始化"""
-        assert voice_websocket_client.ws_url == "ws://192.168.32.156:9800/ws/chat"
+        assert voice_websocket_client.ws_url == "ws://192.168.32.168:9800/ws/chat"
         assert voice_websocket_client.reconnect_interval == 1000
         assert voice_websocket_client.max_reconnect_attempts == 5
     

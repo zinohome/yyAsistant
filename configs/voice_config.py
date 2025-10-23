@@ -6,7 +6,7 @@ class VoiceConfig:
     """语音功能配置类"""
     
     # WebSocket配置 - 直连yychat后端的WebSocket端点
-    WS_URL = "ws://192.168.32.156:9800/ws/chat"
+    WS_URL = "ws://192.168.32.168:9800/ws/chat"
     WS_RECONNECT_INTERVAL = 1000  # 毫秒
     WS_MAX_RECONNECT_ATTEMPTS = 5
     
@@ -21,7 +21,7 @@ class VoiceConfig:
     
     # UI配置
     AUTO_PLAY_DEFAULT = True
-    VOICE_DEFAULT = "alloy"
+    VOICE_DEFAULT = "shimmer"
     VOLUME_DEFAULT = 80
     
     # 音频格式配置

@@ -1,11 +1,23 @@
 /**
  * 实时语音回调处理
  * 处理前端JavaScript事件绑定和状态管理
+ * 使用公共工具类优化DOM操作和状态管理
  */
+
+// DOM元素缓存
+const DOM_CACHE = {
+    voiceCallBtn: null,
+    statusElement: null,
+    statusTextElement: null,
+    audioVisualizer: null
+};
 
 // 等待DOM加载完成
 document.addEventListener('DOMContentLoaded', function() {
     console.log('实时语音回调初始化...');
+    
+    // 初始化DOM缓存
+    initDOMCache();
     
     // 初始化实时语音管理器
     if (!window.realtimeVoiceManager) {
@@ -23,6 +35,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('实时语音回调初始化完成');
 });
+
+/**
+ * 初始化DOM缓存
+ */
+function initDOMCache() {
+    DOM_CACHE.voiceCallBtn = document.getElementById('voice-call-btn');
+    DOM_CACHE.statusElement = document.getElementById('realtime-voice-status');
+    DOM_CACHE.statusTextElement = document.getElementById('realtime-status-text');
+    DOM_CACHE.audioVisualizer = document.getElementById('audio-visualizer');
+}
 
 /**
  * 使用事件委托绑定通话按钮事件
@@ -64,6 +86,8 @@ function bindVoiceCallButtonWithDelegate() {
                     if (window.voiceWebSocketManager) {
                         console.log('🛑 强制停止音频流处理');
                         window.voiceWebSocketManager.stopAudioStreaming();
+                        // 隐藏音频可视化区域
+                        window.voiceWebSocketManager.hideAudioVisualizer();
                     }
                     
                     // 🚀 异步发送中断信号到后端（不阻塞UI）
@@ -90,6 +114,17 @@ function bindVoiceCallButtonWithDelegate() {
                             timestamp: Date.now()
                         }
                     });
+                    
+                    // 立即重置按钮状态到idle
+                    window.dash_clientside.set_props('unified-button-state', {
+                        data: {
+                            state: 'idle',
+                            scenario: null,
+                            timestamp: Date.now(),
+                            metadata: {}
+                        }
+                    });
+                    console.log('语音通话停止，按钮状态已重置为idle');
                 } else {
                     // 启动语音通话
                     console.log('启动语音通话');
@@ -187,36 +222,43 @@ function bindAudioVisualizationEvents() {
 }
 
 /**
- * 更新状态显示
+ * 更新状态显示 - 使用DOM缓存和批量操作优化
  */
 function updateStatusDisplay(state) {
-    const statusElement = document.getElementById('realtime-voice-status');
-    const statusTextElement = document.getElementById('realtime-status-text');
-    
-    if (!statusElement || !statusTextElement) {
+    if (!DOM_CACHE.statusElement || !DOM_CACHE.statusTextElement) {
         console.warn('未找到状态元素');
         return;
     }
     
     const statusConfig = getStatusConfig(state);
     
-    // 更新状态文本
-    statusTextElement.textContent = statusConfig.text;
-    
-    // 更新状态颜色
-    const badgeElement = statusElement.querySelector('.ant-badge');
-    if (badgeElement) {
-        // 移除旧的颜色类
-        badgeElement.className = badgeElement.className.replace(/ant-badge-status-\w+/g, '');
-        // 添加新的颜色类
-        badgeElement.classList.add(`ant-badge-status-${statusConfig.color}`);
-        
-        const dotElement = badgeElement.querySelector('.ant-badge-status-dot');
-        if (dotElement) {
-            dotElement.className = dotElement.className.replace(/ant-badge-status-dot-\w+/g, '');
-            dotElement.classList.add(`ant-badge-status-dot-${statusConfig.color}`);
-        }
-    }
+    // 使用requestAnimationFrame优化DOM更新
+    requestAnimationFrame(() => {
+        // 批量更新DOM
+        VoiceUtils.batchDOMOperations([
+            {
+                selector: '#realtime-status-text',
+                callback: (element) => {
+                    element.textContent = statusConfig.text;
+                }
+            },
+            {
+                selector: '#realtime-voice-status .ant-badge',
+                callback: (badgeElement) => {
+                    // 移除旧的颜色类
+                    badgeElement.className = badgeElement.className.replace(/ant-badge-status-\w+/g, '');
+                    // 添加新的颜色类
+                    badgeElement.classList.add(`ant-badge-status-${statusConfig.color}`);
+                    
+                    const dotElement = badgeElement.querySelector('.ant-badge-status-dot');
+                    if (dotElement) {
+                        dotElement.className = dotElement.className.replace(/ant-badge-status-dot-\w+/g, '');
+                        dotElement.classList.add(`ant-badge-status-dot-${statusConfig.color}`);
+                    }
+                }
+            }
+        ]);
+    });
 }
 
 /**
@@ -236,57 +278,62 @@ function getStatusConfig(state) {
 }
 
 /**
- * 更新按钮状态
+ * 更新按钮状态 - 使用DOM缓存优化
  */
 function updateButtonState(isActive) {
-    const voiceCallBtn = document.getElementById('voice-call-btn');
-    
-    if (voiceCallBtn) {
-        voiceCallBtn.disabled = isActive;
-        voiceCallBtn.textContent = isActive ? '停止实时对话' : '开始实时对话';
-    }
-}
-
-/**
- * 更新音频可视化
- */
-function updateAudioVisualization(audioLevel, dataArray) {
-    const canvas = document.getElementById('audio-visualizer');
-    
-    if (!canvas) {
+    if (!DOM_CACHE.voiceCallBtn) {
+        console.warn('未找到通话按钮元素');
         return;
     }
     
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
-    
-    // 清除画布
-    ctx.clearRect(0, 0, width, height);
-    
-    // 根据音频级别绘制可视化
-    const barWidth = width / dataArray.length;
-    const maxBarHeight = height * 0.8;
-    
-    for (let i = 0; i < dataArray.length; i++) {
-        const barHeight = (dataArray[i] / 255) * maxBarHeight;
-        const x = i * barWidth;
-        const y = height - barHeight;
-        
-        // 根据音频级别选择颜色
-        const intensity = dataArray[i] / 255;
-        if (intensity > 0.7) {
-            ctx.fillStyle = '#ff4d4f'; // 红色 - 高音量
-        } else if (intensity > 0.4) {
-            ctx.fillStyle = '#faad14'; // 橙色 - 中音量
-        } else if (intensity > 0.1) {
-            ctx.fillStyle = '#52c41a'; // 绿色 - 低音量
-        } else {
-            ctx.fillStyle = '#d9d9d9'; // 灰色 - 静音
-        }
-        
-        ctx.fillRect(x, y, barWidth - 1, barHeight);
+    // 使用requestAnimationFrame优化DOM更新
+    requestAnimationFrame(() => {
+        DOM_CACHE.voiceCallBtn.disabled = isActive;
+        DOM_CACHE.voiceCallBtn.textContent = isActive ? '停止实时对话' : '开始实时对话';
+    });
+}
+
+/**
+ * 更新音频可视化 - 使用DOM缓存和性能优化
+ */
+function updateAudioVisualization(audioLevel, dataArray) {
+    if (!DOM_CACHE.audioVisualizer) {
+        return;
     }
+    
+    // 使用requestAnimationFrame优化绘制性能
+    requestAnimationFrame(() => {
+        const ctx = DOM_CACHE.audioVisualizer.getContext('2d');
+        const width = DOM_CACHE.audioVisualizer.width;
+        const height = DOM_CACHE.audioVisualizer.height;
+        
+        // 清除画布
+        ctx.clearRect(0, 0, width, height);
+        
+        // 根据音频级别绘制可视化
+        const barWidth = width / dataArray.length;
+        const maxBarHeight = height * 0.8;
+        
+        for (let i = 0; i < dataArray.length; i++) {
+            const barHeight = (dataArray[i] / 255) * maxBarHeight;
+            const x = i * barWidth;
+            const y = height - barHeight;
+            
+            // 根据音频级别选择颜色
+            const intensity = dataArray[i] / 255;
+            if (intensity > 0.7) {
+                ctx.fillStyle = '#ff4d4f'; // 红色 - 高音量
+            } else if (intensity > 0.4) {
+                ctx.fillStyle = '#faad14'; // 橙色 - 中音量
+            } else if (intensity > 0.1) {
+                ctx.fillStyle = '#52c41a'; // 绿色 - 低音量
+            } else {
+                ctx.fillStyle = '#d9d9d9'; // 灰色 - 静音
+            }
+            
+            ctx.fillRect(x, y, barWidth - 1, barHeight);
+        }
+    });
 }
 
 /**
@@ -316,25 +363,10 @@ function updateVisualizationState(state) {
 }
 
 /**
- * 显示错误消息
+ * 显示错误消息 - 使用公共工具优化
  */
 function showError(message) {
-    console.error(message);
-    
-    // 使用toast提示而不是alert弹出框
-    const currentPath = window.location.pathname;
-    const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
-    
-    if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
-        // 使用Dash的global-message组件显示toast提示
-        window.dash_clientside.set_props('global-message', {
-            children: message
-        });
-        console.log('已发送toast提示:', message);
-    } else {
-        // 如果不在聊天页面或Dash不可用，使用console.warn
-        console.warn('实时语音提示:', message);
-    }
+    VoiceUtils.showError(message);
 }
 
 /**
@@ -371,7 +403,10 @@ function initializeChecks() {
     
     for (const elementId of requiredElements) {
         if (!document.getElementById(elementId)) {
-            console.warn(`未找到必要元素: ${elementId}`);
+            // 减少警告输出，只在调试模式下显示
+            if (window.DEBUG_VOICE_CALLBACKS) {
+                console.warn(`未找到必要元素: ${elementId}`);
+            }
         }
     }
     

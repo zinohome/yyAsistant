@@ -87,8 +87,8 @@ pytest-cov>=4.1.0
 ### Test Configuration (`tests/config/test_config.py`)
 ```python
 class TestConfig:
-    BASE_URL = "http://192.168.32.156:8050"
-    BACKEND_URL = "http://192.168.32.156:9800"
+    BASE_URL = "http://192.168.32.168:8050"
+    BACKEND_URL = "http://192.168.32.168:9800"
     TIMEOUT = 30000  # 30 seconds
     HEADLESS = False  # Set True for CI
     AUDIO_SAMPLE_FILE = "tests/fixtures/test_audio.wav"
@@ -192,8 +192,8 @@ python -m pytest tests/ -v \
 The framework includes comprehensive manual testing procedures:
 
 ### Environment Setup
-- [ ] Backend service running on http://192.168.32.156:9800
-- [ ] Frontend service running on http://192.168.32.156:8050
+- [ ] Backend service running on http://192.168.32.168:9800
+- [ ] Frontend service running on http://192.168.32.168:8050
 - [ ] Browser microphone permissions granted
 - [ ] Audio output devices (speakers/headphones) working
 

@@ -33,6 +33,11 @@ class UnifiedButtonStateManager {
             PROCESSING: '#faad14' // 橙色
         };
         
+        // 状态更新防抖
+        this.updateTimer = null;
+        this.lastState = null;
+        this.lastScenario = null;
+        
         this.initializeStateHandlers();
         console.log('Unified Button State Manager loaded successfully');
     }
@@ -42,6 +47,74 @@ class UnifiedButtonStateManager {
      */
     initializeStateHandlers() {
         // 可以在这里添加状态变化时的处理逻辑
+    }
+    
+    /**
+     * 防抖状态更新
+     * @param {string} state - 状态
+     * @param {string} scenario - 场景
+     * @param {Object} metadata - 元数据
+     */
+    debouncedStateUpdate(state, scenario, metadata) {
+        // 检查状态是否真的发生了变化
+        if (this.lastState === state && this.lastScenario === scenario) {
+            return; // 状态没有变化，跳过更新
+        }
+        
+        // 清除之前的定时器
+        if (this.updateTimer) {
+            clearTimeout(this.updateTimer);
+        }
+        
+        // 设置新的定时器
+        this.updateTimer = setTimeout(() => {
+            this.performStateUpdate(state, scenario, metadata);
+        }, 16); // 约60fps
+    }
+    
+    /**
+     * 执行状态更新
+     * @param {string} state - 状态
+     * @param {string} scenario - 场景
+     * @param {Object} metadata - 元数据
+     */
+    performStateUpdate(state, scenario, metadata) {
+        try {
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props('unified-button-state', {
+                    data: {
+                        state,
+                        scenario,
+                        timestamp: Date.now(),
+                        metadata
+                    }
+                });
+                
+                // 更新最后状态
+                this.lastState = state;
+                this.lastScenario = scenario;
+                
+                console.log('状态已更新:', { state, scenario, metadata });
+            }
+        } catch (error) {
+            console.error('状态更新失败:', error);
+        }
+    }
+    
+    /**
+     * 开始播放TTS - 使用公共工具优化
+     */
+    startPlayingTTS() {
+        console.log('🎵 开始播放TTS，更新按钮状态');
+        VoiceUtils.updateState('processing', 'voice_recording', { tts_playing: true });
+    }
+    
+    /**
+     * 停止播放或完成 - 使用公共工具优化
+     */
+    stopPlayingOrComplete() {
+        console.log('🎵 停止播放TTS，重置按钮状态');
+        VoiceUtils.updateState('idle', null, {});
     }
     
     /**

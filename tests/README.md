@@ -111,8 +111,8 @@ python -m pytest tests/ -v \
 
 ```python
 class TestConfig:
-    BASE_URL = "http://192.168.32.156:8050"
-    BACKEND_URL = "http://192.168.32.156:9800"
+    BASE_URL = "http://192.168.32.168:8050"
+    BACKEND_URL = "http://192.168.32.168:9800"
     TIMEOUT = 30000  # 30 seconds
     HEADLESS = False  # Set True for CI
     AUDIO_SAMPLE_FILE = "tests/fixtures/test_audio.wav"
@@ -134,8 +134,8 @@ addopts = --html=reports/test_report.html --self-contained-html --cov=yyAsistant
 
 ### Environment Setup
 
-1. **Backend Service**: Ensure running on http://192.168.32.156:9800
-2. **Frontend Service**: Ensure running on http://192.168.32.156:8050
+1. **Backend Service**: Ensure running on http://192.168.32.168:9800
+2. **Frontend Service**: Ensure running on http://192.168.32.168:8050
 3. **Browser Permissions**: Grant microphone access
 4. **Audio Devices**: Test speakers/headphones
 

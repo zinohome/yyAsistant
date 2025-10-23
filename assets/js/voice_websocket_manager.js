@@ -31,8 +31,8 @@ class VoiceWebSocketManager {
         this.messageHandlers.set('interrupt_confirmed', () => {});
         this.messageHandlers.set('stop_playback', () => {});
         
-        // 从配置获取WebSocket URL，并附带持久化client_id
-        this.wsUrlBase = window.voiceConfig?.WS_URL || 'ws://192.168.32.156:9800/ws/chat';
+        // 使用配置类获取WebSocket URL，并附带持久化client_id
+        this.wsUrlBase = window.voiceConfig?.get('wsUrl') || 'ws://192.168.32.168:9800/ws/chat';
         this.persistentClientId = this.ensurePersistentClientId();
         this.wsUrl = this.appendClientId(this.wsUrlBase, this.persistentClientId);
         
@@ -240,15 +240,54 @@ class VoiceWebSocketManager {
             this.audioStream = stream;
             this.startAudioProcessing();
             // 更新状态指示器
-            this.updateStatusIndicator('正在说话', 'blue');
+            this.updateStatusIndicator('通话中，等待用户说话', 'blue');
             // 启动音频可视化
             if (window.audioVisualizer) {
+                console.log('🎨 启动音频可视化');
                 window.audioVisualizer.startVisualization(stream);
+            } else {
+                console.warn('❌ 音频可视化器未找到');
             }
         })
         .catch(error => {
             console.error('获取音频流失败:', error);
         });
+    }
+    
+    /**
+     * 完全清理语音通话相关状态
+     */
+    cleanupVoiceCallState() {
+        console.log('🧹 完全清理语音通话状态');
+        
+        // 清理播放器状态
+        if (window.voicePlayerEnhanced) {
+            window.voicePlayerEnhanced.forceStopAllAudio();
+            console.log('🧹 播放器状态已清理');
+        }
+        
+        // 清理WebSocket状态
+        this.isInterrupting = false;
+        this.isUserSpeaking = false;
+        this.userSpeakingCount = 0;
+        
+        // 清理音频流
+        if (this.audioStream) {
+            this.audioStream.getTracks().forEach(track => track.stop());
+            this.audioStream = null;
+        }
+        
+        // 清理音频上下文
+        if (this.audioContext) {
+            try {
+                this.audioContext.close();
+            } catch (error) {
+                console.log('音频上下文清理完成');
+            }
+            this.audioContext = null;
+        }
+        
+        console.log('🧹 语音通话状态清理完成');
     }
     
     /**
@@ -265,11 +304,13 @@ class VoiceWebSocketManager {
         this.silenceDuration = 0;
         this.audioBuffer = [];
         
+        // 🚀 停止麦克风音频流（用户声音输入）
         if (this.audioStream) {
             this.audioStream.getTracks().forEach(track => track.stop());
             this.audioStream = null;
         }
         
+        // 🚀 关闭音频上下文（用户声音处理）
         if (this.audioContext) {
             this.audioContext.close();
             this.audioContext = null;
@@ -277,8 +318,14 @@ class VoiceWebSocketManager {
         
         // 停止音频可视化
         if (window.audioVisualizer) {
+            console.log('🛑 停止音频可视化');
             window.audioVisualizer.stopVisualization();
         }
+        
+        // 重置状态指示器
+        this.updateStatusIndicator('等待开始', 'gray');
+        
+        console.log('🛑 用户声音处理已完全停止');
     }
     
     /**
@@ -504,7 +551,7 @@ class VoiceWebSocketManager {
                     this.submitAudioBuffer();
                     this.isSpeaking = false;
                     this.silenceDuration = 0;
-                    this.updateStatusIndicator('处理中', 'orange');
+                    this.updateStatusIndicator('AI思考中...', 'orange');
                 }
                 // 注意：静音期间不添加到音频缓冲区，也不发送数据
             }
@@ -520,12 +567,32 @@ class VoiceWebSocketManager {
         
         // 🔍 快速检测用户是否在说话（用于打断检测）
         const volume = this.calculateVolume(audioData);
-        const isUserSpeaking = volume > 0.005; // 降低阈值，提高敏感度
+        const isUserSpeaking = volume > 0.05; // 进一步提高阈值，减少误触发
         
-        // 🛑 如果用户开始说话且AI正在回复，立即打断
-        if (isUserSpeaking && this.isAIResponding()) {
-            console.log('🛑 检测到用户说话，立即打断AI回复');
-            this.interruptAIResponse();
+        // 🛑 智能打断：需要连续检测到用户说话才触发打断
+        if (isUserSpeaking && this.isAIResponding() && !this.isInterrupting) {
+            // 增加连续说话检测，避免单次误触发
+            if (!this.userSpeakingCount) {
+                this.userSpeakingCount = 0;
+            }
+            this.userSpeakingCount++;
+            
+            // 需要连续3次检测到用户说话才触发打断
+            if (this.userSpeakingCount >= 3) {
+                console.log('🛑 连续检测到用户说话，立即打断AI回复');
+                this.interruptAIResponse();
+                this.userSpeakingCount = 0; // 重置计数
+            }
+        } else {
+            // 重置计数
+            this.userSpeakingCount = 0;
+            
+            // 🚀 如果用户停止说话且不在打断状态，恢复状态
+            if (!isUserSpeaking && !this.isInterrupting && this.isSpeaking) {
+                this.isSpeaking = false;
+                this.updateStatusIndicator('AI思考中...', 'orange');
+                console.log('🛑 用户停止说话，AI开始思考');
+            }
         }
         
         // 应用音频增益，提高低音量音频的检测率
@@ -734,7 +801,7 @@ class VoiceWebSocketManager {
                     this.submitAudioBuffer();
                     this.isSpeaking = false;
                     this.silenceDuration = 0;
-                    this.updateStatusIndicator('处理中', 'orange');
+                    this.updateStatusIndicator('AI思考中...', 'orange');
                 } else {
                     // 继续添加到音频缓冲区，直到静音时间达到阈值
                     this.audioBuffer.push(audioData);
@@ -768,6 +835,11 @@ class VoiceWebSocketManager {
             return true;
         }
         
+        // 检查是否有音频源正在播放（更准确的检测）
+        if (window.voicePlayerEnhanced && window.voicePlayerEnhanced.currentAudio) {
+            return true;
+        }
+        
         return false;
     }
     
@@ -777,9 +849,12 @@ class VoiceWebSocketManager {
     interruptAIResponse() {
         console.log('🛑 用户开始说话，立即打断AI回复');
         
-        // 🚀 立即停止当前播放的音频（最高优先级）
+        // 🚀 设置打断标志，防止重复触发
+        this.isInterrupting = true;
+        
+        // 🚀 立即停止AI播放（出方向）
         if (window.voicePlayerEnhanced) {
-            console.log('🛑 强制停止语音播放');
+            console.log('🛑 强制停止AI语音播放');
             window.voicePlayerEnhanced.forceStopAllAudio();
         }
         
@@ -797,21 +872,92 @@ class VoiceWebSocketManager {
         this.audioBuffer = [];
         this.isSpeaking = true; // 保持说话状态，准备新的输入
         
-        // 🚀 设置打断标志，防止重复触发
-        this.isInterrupting = true;
-        setTimeout(() => {
-            this.isInterrupting = false;
-        }, 1000); // 1秒后重置
+        // 🚀 立即恢复状态和功能
+        this.restoreAfterInterrupt();
         
-        // 强制停止所有音频处理
-        if (this.audioContext && this.audioContext.state !== 'closed') {
-            try {
-                this.audioContext.suspend();
-                console.log('🛑 音频上下文已暂停');
-            } catch (error) {
-                console.log('音频上下文暂停失败:', error);
-            }
+        // 🚀 关键：用户声音处理（入方向）应该持续进行，不被停止
+        // 只有AI播放（出方向）被停止，用户声音处理应该继续
+        console.log('🛑 用户声音处理继续，只停止AI播放');
+    }
+    
+    /**
+     * 打断后恢复状态和功能
+     */
+    restoreAfterInterrupt() {
+        console.log('🔄 开始恢复打断后的状态和功能');
+        
+        // 🚀 立即重置打断标志
+        this.isInterrupting = false;
+        
+        // 🚀 恢复状态指示器
+        this.updateStatusIndicator('等待用户说话', 'blue');
+        
+        // 🚀 强制重新启动音频可视化
+        this.restartAudioVisualization();
+        
+        // 🚀 延迟检查并确保一切正常
+        setTimeout(() => {
+            this.verifySystemHealth();
+        }, 1000);
+    }
+    
+    /**
+     * 重新启动音频可视化
+     */
+    restartAudioVisualization() {
+        if (!window.audioVisualizer) {
+            console.warn('❌ 音频可视化器未找到');
+            return;
         }
+        
+        if (!this.audioStream) {
+            console.warn('❌ 音频流未找到');
+            return;
+        }
+        
+        try {
+            // 先停止现有的可视化
+            window.audioVisualizer.stopVisualization();
+            
+            // 等待一小段时间后重新启动
+            setTimeout(() => {
+                try {
+                    window.audioVisualizer.startVisualization(this.audioStream);
+                    console.log('✅ 音频可视化已重新启动');
+                } catch (error) {
+                    console.error('❌ 重新启动音频可视化失败:', error);
+                }
+            }, 100);
+        } catch (error) {
+            console.error('❌ 停止音频可视化失败:', error);
+        }
+    }
+    
+    /**
+     * 验证系统健康状态
+     */
+    verifySystemHealth() {
+        console.log('🔍 验证系统健康状态');
+        
+        // 检查音频可视化器
+        if (window.audioVisualizer && !window.audioVisualizer.isActive) {
+            console.log('⚠️ 音频可视化器未活跃，尝试重新启动');
+            this.restartAudioVisualization();
+        }
+        
+        // 检查音频流
+        if (!this.audioStream) {
+            console.warn('⚠️ 音频流丢失');
+        }
+        
+        // 检查状态指示器
+        const statusElement = document.getElementById('realtime-status-text');
+        if (statusElement && (statusElement.textContent === 'AI思考中...' || statusElement.textContent === '等待用户输入')) {
+            console.log('⚠️ 状态指示器未正确更新，强制更新');
+            this.updateStatusIndicator('等待用户说话', 'blue');
+        }
+        
+        console.log('✅ 系统健康检查完成');
     }
     
     /**
@@ -899,18 +1045,62 @@ class VoiceWebSocketManager {
     }
     
     /**
+     * 显示音频可视化区域
+     */
+    showAudioVisualizer() {
+        const container = document.getElementById('audio-visualizer-container');
+        if (container) {
+            container.style.display = 'inline-block';
+            console.log('🎨 音频可视化区域已显示');
+            
+            // 重新初始化音频可视化器
+            if (window.audioVisualizer) {
+                console.log('🎨 重新初始化音频可视化器');
+                window.audioVisualizer.init();
+            }
+        }
+    }
+    
+    /**
+     * 隐藏音频可视化区域
+     */
+    hideAudioVisualizer() {
+        const container = document.getElementById('audio-visualizer-container');
+        if (container) {
+            container.style.display = 'none';
+            console.log('🎨 音频可视化区域已隐藏');
+        }
+    }
+    
+    /**
      * 更新状态指示器
+     * 统一状态颜色方案：
+     * - 蓝色(blue): 等待/准备状态 (等待用户说话、正在说话、通话中)
+     * - 绿色(green): AI回复/成功状态 (AI回复中、已停止回复)
+     * - 橙色(orange): 处理中/思考状态 (AI思考中...)
+     * - 红色(red): 错误/打断状态 (用户打断)
+     * - 灰色(gray): 停止/结束状态 (等待开始、通话已停止)
      */
     updateStatusIndicator(text, color) {
         const statusElement = document.getElementById('realtime-status-text');
+        const canvasElement = document.getElementById('audio-visualizer');
         
+        // 更新文本状态指示器
         if (statusElement) {
             statusElement.textContent = text;
-            // 更新颜色
             statusElement.style.color = color === 'green' ? '#52c41a' : 
                                       color === 'blue' ? '#1890ff' : 
-                                      color === 'red' ? '#ff4d4f' : '#666666';
+                                      color === 'orange' ? '#fa8c16' :
+                                      color === 'red' ? '#ff4d4f' : 
+                                      color === 'gray' ? '#8c8c8c' : '#333333';
         }
+        
+        // 在音频可视化画布上显示状态文字
+        if (canvasElement && window.audioVisualizer) {
+            window.audioVisualizer.updateStatusText(text, color);
+        }
+        
+        console.log('🔄 状态指示器已更新:', {text, color});
     }
     
     /**
@@ -1033,18 +1223,41 @@ class VoiceWebSocketManager {
         // 注册语音通话相关消息处理器
         this.registerMessageHandler('voice_call_started', (data) => {
             console.log('语音通话已启动:', data);
+            // 显示音频可视化区域
+            this.showAudioVisualizer();
             // 启动音频流处理
             this.startAudioStreaming();
             // 更新状态指示器
-            this.updateStatusIndicator('通话中', 'green');
+            this.updateStatusIndicator('通话中，等待用户说话', 'blue');
         });
         
         this.registerMessageHandler('voice_call_stopped', (data) => {
             console.log('语音通话已停止:', data);
+            
+            // 完全清理语音通话相关状态
+            this.cleanupVoiceCallState();
+            
+            // 隐藏音频可视化区域
+            this.hideAudioVisualizer();
+            
             // 停止音频流处理
             this.stopAudioStreaming();
+            
             // 更新状态指示器
             this.updateStatusIndicator('等待开始', 'gray');
+            
+            // 重置按钮状态到idle
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props('unified-button-state', {
+                    data: {
+                        state: 'idle',
+                        scenario: null,
+                        timestamp: Date.now(),
+                        metadata: {}
+                    }
+                });
+                console.log('语音通话停止，按钮状态已重置为idle');
+            }
         });
         
         // 注册AI音频响应处理器
@@ -1057,15 +1270,38 @@ class VoiceWebSocketManager {
                 return;
             }
             
+            // 🚀 更新状态指示器，表示AI开始回复
+            this.updateStatusIndicator('AI回复中', 'green');
+            console.log('🔄 状态已更新为: AI回复中');
+            
+            // 🚀 确保音频可视化器正常工作
+            if (window.audioVisualizer && !window.audioVisualizer.isActive && this.audioStream) {
+                console.log('🔄 AI回复时检测到音频可视化器停止，重新启动');
+                this.restartAudioVisualization();
+            }
+            
             // 播放AI的音频回复
             if (data.audio && window.voicePlayerEnhanced) {
                 console.log('🎵 开始播放AI音频，数据长度:', data.audio.length);
-                window.voicePlayerEnhanced.playAudioFromBase64(data.audio);
+                // 传递messageId，确保语音通话音频使用正确的播放方式
+                window.voicePlayerEnhanced.playAudioFromBase64(data.audio, data.message_id);
             } else {
                 console.warn('🎵 无法播放AI音频：', {
                     hasAudio: !!data.audio,
                     hasPlayer: !!window.voicePlayerEnhanced
                 });
+            }
+        });
+        
+        // 注册AI回复完成处理器
+        this.registerMessageHandler('synthesis_complete', (data) => {
+            console.log('🎵 AI回复完成:', data);
+            // 🚀 更新状态指示器，表示AI回复完成，等待用户输入
+            this.updateStatusIndicator('等待用户说话', 'blue');
+            
+            // 调用播放器的handleSynthesisComplete方法
+            if (window.voicePlayerEnhanced && window.voicePlayerEnhanced.handleSynthesisComplete) {
+                window.voicePlayerEnhanced.handleSynthesisComplete(data);
             }
         });
         
@@ -1088,6 +1324,18 @@ class VoiceWebSocketManager {
         // 注册停止播放消息处理器
         this.registerMessageHandler('stop_playback', (data) => {
             this.handleStopPlayback(data);
+        });
+
+        // 注册处理开始消息处理器
+        this.registerMessageHandler('processing_start', (data) => {
+            console.log('🔄 开始处理:', data);
+            this.updateStatusIndicator('AI思考中...', 'orange');
+        });
+
+        // 注册中断通知消息处理器
+        this.registerMessageHandler('interrupt_notification', (data) => {
+            console.log('🛑 收到中断通知:', data);
+            this.updateStatusIndicator('用户打断', 'red');
         });
                 
                 // 立即写入 Dash Store，便于 SSE 侧携带一致的 client_id

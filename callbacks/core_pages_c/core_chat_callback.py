@@ -187,7 +187,7 @@ def _handle_text_message_send(messages, message_content, current_session_id, def
         
         # 触发按钮状态更新
         try:
-            import dash_clientside
+            from dash import dash_clientside
             if dash_clientside.set_props:
                 dash_clientside.set_props('button-event-trigger', {
                     'data': {'type': 'text_button_clicked', 'timestamp': time.time()}
@@ -271,7 +271,7 @@ def _handle_voice_transcription(messages, transcription_data, current_session_id
         
         # 触发按钮状态更新
         try:
-            import dash_clientside
+            from dash import dash_clientside
             if dash_clientside.set_props:
                 dash_clientside.set_props('button-event-trigger', {
                     'data': {'type': 'voice_transcription_complete', 'timestamp': time.time()}

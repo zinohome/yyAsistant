@@ -35,7 +35,7 @@ def test_voice_config():
         # 测试设置验证
         test_settings = {
             "auto_play": True,
-            "voice": "alloy",
+            "voice": "shimmer",
             "volume": 80,
             "playback_rate": 1.0
         }

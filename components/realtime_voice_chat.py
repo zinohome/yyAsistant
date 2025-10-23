@@ -224,7 +224,7 @@ class RealtimeVoiceChatComponent:
                 data={
                     "volume": 80,
                     "rate": 1.0,
-                    "voice": "alloy",
+                    "voice": "shimmer",
                     "muted": False
                 }
             ),
@@ -288,7 +288,7 @@ REALTIME_VOICE_CHAT_CONFIG = {
     "audio_settings": {
         "default_volume": 80,
         "default_rate": 1.0,
-        "default_voice": "alloy",
+        "default_voice": "shimmer",
         "visualizer_fps": 60
     }
 }
