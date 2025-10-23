@@ -200,6 +200,7 @@ def render(
                                                 id="voice-call-btn",
                                                 icon=DashIconify(
                                                     icon="bi:telephone",
+                                                    rotate=2,
                                                     width=20,
                                                     height=20
                                                 ),
