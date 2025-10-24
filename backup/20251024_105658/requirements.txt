@@ -21,5 +21,3 @@ dash-iconify>=0.1.2
 dash_socketio>=1.1.1
 dash-extensions>=0.1.0
 python-dotenv>=1.1.1
-websockets>=11.0.0
-psutil>=5.9.0

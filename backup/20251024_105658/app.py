@@ -29,18 +29,6 @@ from models.init_db import db
 from models.conversations import Conversations
 from models.logs import LoginLogs
 
-# 导入新的核心管理器
-from core.state_manager.state_manager import StateManager, State as AppState
-from core.event_manager.event_manager import EventManager, Event
-from core.event_manager.event_handlers import EventHandlers
-from core.websocket_manager.websocket_manager import WebSocketManager
-from core.timeout_manager.timeout_manager import TimeoutManager, TimeoutType
-from core.error_handler.error_handler import ErrorHandler, ErrorType, ErrorSeverity
-from core.performance_monitor.performance_monitor import performance_monitor, start_performance_monitoring
-from core.resource_manager.resource_manager import resource_manager, start_resource_cleanup
-from core.health_checker.health_checker import health_checker, add_health_check, start_health_checking
-from config.config import config
-
 # 检查Python版本
 check_python_version(min_version="3.8", max_version="3.13")
 # 检查关键依赖库版本
@@ -52,41 +40,6 @@ check_dependencies_version(
         {"name": "feffery_dash_utils", "specifier": ">=0.2.6"},
     ]
 )
-
-# ============================================================================
-# 全局核心管理器实例
-# ============================================================================
-
-# 创建全局管理器实例
-state_manager = StateManager()
-event_manager = EventManager()
-websocket_manager = WebSocketManager()
-timeout_manager = TimeoutManager()
-error_handler = ErrorHandler()
-
-# 创建事件处理器
-event_handlers = EventHandlers(state_manager, event_manager)
-
-# 将管理器实例添加到app的全局属性中，以便在回调中访问
-app.state_manager = state_manager
-app.event_manager = event_manager
-app.websocket_manager = websocket_manager
-app.timeout_manager = timeout_manager
-app.error_handler = error_handler
-app.event_handlers = event_handlers
-app.performance_monitor = performance_monitor
-app.resource_manager = resource_manager
-app.health_checker = health_checker
-
-print("✅ 核心管理器已初始化")
-print(f"   - 状态管理器: {state_manager.get_state().value}")
-print(f"   - 事件管理器: {len(event_manager.get_registered_handlers())} 个处理器")
-print(f"   - WebSocket管理器: {websocket_manager.get_connection_state().value}")
-print(f"   - 超时管理器: {len(timeout_manager.get_manager_info())} 个配置")
-print(f"   - 错误处理器: {len(error_handler.get_error_stats())} 个错误类型")
-print(f"   - 性能监控器: 已启动")
-print(f"   - 资源管理器: 已启动")
-print(f"   - 健康检查器: 已启动")
 
 # 注册聊天输入区域回调
 register_chat_input_callbacks(app)  # 临时注释，使用新的统一回调
@@ -440,15 +393,7 @@ app.layout = lambda: fuc.FefferyTopProgress(
         html.Div(
             id="root-container",
         ),
-        # 统一配置文件
-        html.Script(src="/assets/js/config.js"),
-        # 新的状态管理器
-        html.Script(src="/assets/js/state_manager.js"),
-        # 新的状态管理器V2
-        html.Script(src="/assets/js/state_manager_v2.js"),
-        # 新的WebSocket管理器V2
-        html.Script(src="/assets/js/websocket_manager_v2.js"),
-        # 统一按钮状态管理器脚本（保持兼容性）
+        # 统一按钮状态管理器脚本
         html.Script(src="/assets/js/unified_button_state_manager.js"),
         # 语音状态管理器脚本
         html.Script(src="/assets/js/voice_state_manager.js"),
@@ -644,27 +589,6 @@ def duplicate_login_check(n_intervals, pathname):
 
 
 if __name__ == "__main__":
-    # 启动性能监控
-    start_performance_monitoring(interval=10.0)
-    
-    # 启动资源清理
-    start_resource_cleanup()
-    
-    # 添加健康检查项
-    add_health_check('state_manager', lambda: state_manager.get_state() is not None)
-    add_health_check('event_manager', lambda: len(event_manager.get_registered_handlers()) > 0)
-    add_health_check('websocket_manager', lambda: websocket_manager.get_connection_state() is not None)
-    add_health_check('timeout_manager', lambda: len(timeout_manager.get_manager_info()) > 0)
-    add_health_check('error_handler', lambda: len(error_handler.get_error_stats()) >= 0)
-    
-    # 启动健康检查
-    start_health_checking(interval=30.0)
-    
-    print("🚀 所有系统已启动")
-    print("   - 性能监控: 10秒间隔")
-    print("   - 资源清理: 5分钟间隔")
-    print("   - 健康检查: 30秒间隔")
-    
     # 非正式环境下开发调试预览用
     app.run(debug=True, host='0.0.0.0', port=8050)
     #app.run(host='0.0.0.0', port=8050)
