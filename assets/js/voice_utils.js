@@ -130,6 +130,37 @@ class VoiceUtils {
      */
     static showError(message) {
         try {
+            // 检查是否是WebSocket连接错误
+            if (message.includes('WebSocket连接不可用')) {
+                // 尝试自动重连
+                if (window.voiceWebSocketManager) {
+                    console.log('🔄 检测到WebSocket连接错误，尝试自动重连...');
+                    window.voiceWebSocketManager.connect().then(() => {
+                        console.log('✅ WebSocket自动重连成功');
+                        // 显示重连成功提示
+                        this.showSuccess('语音连接已恢复');
+                    }).catch((error) => {
+                        console.error('❌ WebSocket自动重连失败:', error);
+                        // 显示更友好的错误信息
+                        const friendlyMessage = '语音服务暂时不可用，请稍后重试或刷新页面';
+                        this._showErrorMessage(friendlyMessage);
+                    });
+                    return;
+                }
+            }
+            
+            this._showErrorMessage(message);
+        } catch (error) {
+            console.error('显示错误消息失败:', error);
+        }
+    }
+    
+    /**
+     * 内部错误消息显示方法
+     * @param {string} message - 错误消息
+     */
+    static _showErrorMessage(message) {
+        try {
             if (window.dash_clientside && window.dash_clientside.set_props) {
                 window.dash_clientside.set_props('global-message', {
                     children: message

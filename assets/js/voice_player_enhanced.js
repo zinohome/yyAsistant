@@ -229,10 +229,30 @@ class VoicePlayerEnhanced {
     }
     
     async requestSpeechSynthesis(text) {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
+            // 检查WebSocket连接状态，如果未连接则尝试重连
             if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-                reject(new Error('WebSocket连接不可用'));
-                return;
+                console.log('🔌 WebSocket未连接，尝试重新连接...');
+                try {
+                    // 尝试通过全局WebSocket管理器重新连接
+                    if (window.voiceWebSocketManager) {
+                        await window.voiceWebSocketManager.connect();
+                        this.websocket = window.voiceWebSocketManager.ws;
+                        
+                        // 等待连接建立
+                        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                            console.log('✅ WebSocket重连成功');
+                        } else {
+                            throw new Error('WebSocket重连失败');
+                        }
+                    } else {
+                        throw new Error('WebSocket管理器不可用');
+                    }
+                } catch (error) {
+                    console.error('❌ WebSocket重连失败:', error);
+                    reject(new Error(`语音合成失败: WebSocket连接不可用 (${error.message})`));
+                    return;
+                }
             }
             
             // 使用后端支持的text_message类型，并启用语音

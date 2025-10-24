@@ -329,32 +329,32 @@ def update_record_button_icon(icon_data):
     
     return DashIconify(icon=icon_data, width=20, height=20)
 
-# 回调 4: 输入验证回调 (显示警告消息)
-app.clientside_callback(
-    """
-    function(n_clicks, input_value) {
-        if (!n_clicks || !window.unifiedButtonStateManager) {
-            return window.dash_clientside.no_update;
-        }
-        
-        if (!window.unifiedButtonStateManager.checkInputContent()) {
-            console.log('Empty input warning');
-            // 返回Ant Design Message格式
-            return {
-                'content': '请输入消息内容',
-                'type': 'warning',
-                'duration': 2
-            };
-        }
-        
-        return window.dash_clientside.no_update;
-    }
-    """,
-    Output('global-message', 'children'),
-    Input('ai-chat-x-send-btn', 'n_clicks'),
-    State('ai-chat-x-input', 'value'),
-    prevent_initial_call=True
-)
+# 回调 4: 输入验证回调 (显示警告消息) - 暂时禁用以避免与重新生成功能冲突
+# app.clientside_callback(
+#     """
+#     function(n_clicks, input_value) {
+#         if (!n_clicks || !window.unifiedButtonStateManager) {
+#             return window.dash_clientside.no_update;
+#         }
+#         
+#         if (!window.unifiedButtonStateManager.checkInputContent()) {
+#             console.log('Empty input warning');
+#             // 返回Ant Design Message格式
+#             return {
+#                 'content': '请输入消息内容',
+#                 'type': 'warning',
+#                 'duration': 2
+#             };
+#         }
+#         
+#         return window.dash_clientside.no_update;
+#     }
+#     """,
+#     Output('global-message', 'children'),
+#     Input('ai-chat-x-send-btn', 'n_clicks'),
+#     State('ai-chat-x-input', 'value'),
+#     prevent_initial_call=True
+# )
 
 # 导入语音回调函数（在app初始化后导入）
 import callbacks.voice_chat_c  # 临时注释，使用新的统一回调

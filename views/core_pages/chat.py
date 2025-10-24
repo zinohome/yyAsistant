@@ -362,7 +362,7 @@ def _create_state_stores():
                # 语音播放器
                html.Script(src='/assets/js/voice_player_enhanced.js'),
             # 语音调试器（开发环境）
-            html.Script(src='/test/test_voice_debug.js'),
+            #html.Script(src='/test/test_voice_debug.js'),
             # 实时语音相关脚本
             html.Script(src='/assets/js/realtime_api_client.js'),
             html.Script(src='/assets/js/realtime_audio_processor.js'),

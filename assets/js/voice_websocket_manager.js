@@ -201,6 +201,27 @@ class VoiceWebSocketManager {
     }
     
     /**
+     * 检查连接状态
+     */
+    isWebSocketConnected() {
+        return this.ws && this.ws.readyState === WebSocket.OPEN && this.isConnected;
+    }
+    
+    /**
+     * 获取连接状态信息
+     */
+    getConnectionStatus() {
+        return {
+            connected: this.isConnected,
+            connecting: this.isConnecting,
+            readyState: this.ws ? this.ws.readyState : null,
+            clientId: this.clientId,
+            sessionId: this.sessionId,
+            reconnectAttempts: this.reconnectAttempts
+        };
+    }
+    
+    /**
      * 断开WebSocket连接
      */
     disconnect() {
@@ -1496,12 +1517,19 @@ class VoiceWebSocketManager {
      */
     startHeartbeat() {
         this.heartbeatInterval = setInterval(() => {
-            if (this.isConnected) {
+            if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
                 this.sendMessage({
                     type: 'heartbeat',
                     timestamp: Date.now() / 1000,
                     client_id: this.clientId
                 });
+            } else {
+                // 连接状态异常，尝试重连
+                console.warn('⚠️ 心跳检测发现连接异常，尝试重连...');
+                this.isConnected = false;
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.scheduleReconnect();
+                }
             }
         }, 30000); // 30秒心跳
     }
@@ -1524,9 +1552,22 @@ class VoiceWebSocketManager {
         const delay = this.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1);
         console.log(`将在 ${delay}ms 后尝试重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
         
-        setTimeout(() => {
-            if (!this.isConnected) {
-                this.connect();
+        setTimeout(async () => {
+            if (!this.isConnected && !this.isConnecting) {
+                try {
+                    console.log('🔄 开始自动重连...');
+                    await this.connect();
+                    console.log('✅ 自动重连成功');
+                } catch (error) {
+                    console.error('❌ 自动重连失败:', error);
+                    // 如果重连失败且未达到最大重试次数，继续重试
+                    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                        this.scheduleReconnect();
+                    } else {
+                        console.error('❌ 已达到最大重连次数，停止重连');
+                        this.notifyConnectionHandlers(false);
+                    }
+                }
             }
         }, delay);
     }
