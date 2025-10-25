@@ -922,23 +922,37 @@ class VoiceRecorderEnhanced {
             if (this.analyser && this.dataArray) {
                 this.analyser.getByteFrequencyData(this.dataArray);
                 
-                // 绘制波形
-                const barWidth = width / this.dataArray.length;
-                let x = 0;
+                // 🔧 修改：录音聊天时也使用居中的红色波形（类似语音通话的样式）
+                const barCount = 8;
+                const barWidth = 2;
+                const barSpacing = 1;
+                const startX = width / 2 - (barCount * (barWidth + barSpacing)) / 2;
                 
+                // 计算平均音频强度
+                let totalIntensity = 0;
                 for (let i = 0; i < this.dataArray.length; i++) {
-                    const barHeight = (this.dataArray[i] / 255) * height;
+                    totalIntensity += this.dataArray[i];
+                }
+                const avgIntensity = totalIntensity / this.dataArray.length;
+                
+                // 绘制居中的红色波形条
+                for (let i = 0; i < barCount; i++) {
+                    // 使用音频强度和时间创建动态高度
+                    const time = Date.now() * 0.01;
+                    const baseHeight = Math.sin(time + i * 0.5) * 3 + 4;
+                    const intensityMultiplier = avgIntensity / 255;
+                    const barHeight = baseHeight * (0.5 + intensityMultiplier * 0.5);
                     
-                    // 创建渐变
-                    const gradient = ctx.createLinearGradient(0, height, 0, height - barHeight);
-                    gradient.addColorStop(0, '#ff6b6b');
-                    gradient.addColorStop(0.5, '#4ecdc4');
-                    gradient.addColorStop(1, '#45b7d1');
+                    const x = startX + i * (barWidth + barSpacing);
+                    const y = height / 2 - barHeight / 2;
+                    
+                    // 使用红色渐变
+                    const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
+                    gradient.addColorStop(0, '#ff4444');  // 亮红色
+                    gradient.addColorStop(1, '#cc0000');  // 深红色
                     
                     ctx.fillStyle = gradient;
-                    ctx.fillRect(x, height - barHeight, barWidth - 1, barHeight);
-                    
-                    x += barWidth;
+                    ctx.fillRect(x, y, barWidth, barHeight);
                 }
             }
             
@@ -1003,6 +1017,11 @@ class VoiceRecorderEnhanced {
     showError(message) {
         console.error('语音功能错误:', message);
         
+        // 🔧 隐藏错误弹出框，只在控制台记录
+        console.warn('🔧 语音功能错误（已隐藏弹出框）:', message);
+        
+        // 注释掉原来的toast提示
+        /*
         // 使用toast提示而不是alert弹出框
         const currentPath = window.location.pathname;
         const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
@@ -1017,6 +1036,7 @@ class VoiceRecorderEnhanced {
             // 如果不在聊天页面或Dash不可用，使用console.warn
             console.warn('语音功能提示:', message);
         }
+        */
     }
 }
 

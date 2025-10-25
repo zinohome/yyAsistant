@@ -212,6 +212,14 @@ class SmartErrorHandler {
      * 显示智能错误提示
      */
     showSmartError(analysis) {
+        // 🔧 默认隐藏错误弹出框，只在控制台记录
+        console.warn('🔧 智能错误处理（已隐藏弹出框）:', analysis);
+        
+        // 只记录错误历史，不显示弹出框
+        this.recordError(analysis);
+        
+        // 注释掉原来的弹出框逻辑
+        /*
         const errorId = `error-${Date.now()}`;
         const container = this.createErrorContainer(errorId, analysis);
         
@@ -225,6 +233,7 @@ class SmartErrorHandler {
                 this.hideError(errorId);
             }, hideDelay);
         }
+        */
     }
     
     /**

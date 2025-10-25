@@ -193,76 +193,132 @@ class StateManagerAdapter {
             'idle': {
                 textButton: { backgroundColor: '#1890ff', color: 'white' },
                 recordButton: { backgroundColor: '#ff4d4f', color: 'white' },
-                callButton: { backgroundColor: '#52c41a', color: 'white' }
+                callButton: { backgroundColor: '#52c41a', color: 'white' },
+                textLoading: false,
+                textDisabled: false,
+                recordDisabled: false,
+                callDisabled: false
             },
             // 场景一：文本聊天
             'text_processing': {
                 textButton: { backgroundColor: '#faad14', color: 'white' }, // 文本busy
                 recordButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 录音灰色
-                callButton: { backgroundColor: '#d9d9d9', color: '#666' } // 通话灰色
+                callButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 通话灰色
+                textLoading: true,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: true
             },
             'text_sse': {
                 textButton: { backgroundColor: '#faad14', color: 'white' }, // 文本busy
                 recordButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 录音灰色
-                callButton: { backgroundColor: '#d9d9d9', color: '#666' } // 通话灰色
+                callButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 通话灰色
+                textLoading: true,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: true
             },
             'text_tts': {
                 textButton: { backgroundColor: '#faad14', color: 'white' }, // 文本busy
                 recordButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 录音灰色禁用
-                callButton: { backgroundColor: '#d9d9d9', color: '#666' } // 通话灰色禁用
+                callButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 通话灰色禁用
+                textLoading: true,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: true
             },
             // 场景二：录音聊天
             'recording': {
                 textButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 文本灰色
                 recordButton: { backgroundColor: '#ff4d4f', color: 'white' }, // 录音红色录音
-                callButton: { backgroundColor: '#d9d9d9', color: '#666' } // 通话灰色
+                callButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 通话灰色
+                textLoading: false,
+                textDisabled: true,
+                recordDisabled: false, // 录音按钮可以点击停止
+                callDisabled: true
             },
             'voice_stt': {
                 textButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 文本灰色
                 recordButton: { backgroundColor: '#faad14', color: 'white' }, // 录音黄色处理
-                callButton: { backgroundColor: '#d9d9d9', color: '#666' } // 通话灰色
+                callButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 通话灰色
+                textLoading: false,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: true
             },
             'voice_sse': {
                 textButton: { backgroundColor: '#faad14', color: 'white' }, // 文本busy
                 recordButton: { backgroundColor: '#faad14', color: 'white' }, // 录音黄色处理
-                callButton: { backgroundColor: '#d9d9d9', color: '#666' } // 通话灰色
+                callButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 通话灰色
+                textLoading: true,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: true
             },
             'voice_tts': {
                 textButton: { backgroundColor: '#faad14', color: 'white' }, // 文本busy
                 recordButton: { backgroundColor: '#faad14', color: 'white' }, // 录音黄色播放
-                callButton: { backgroundColor: '#d9d9d9', color: '#666' } // 通话灰色
+                callButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 通话灰色
+                textLoading: true,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: true
             },
             // 场景三：语音通话
             'voice_call': {
                 textButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 文本灰色
                 recordButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 录音灰色
-                callButton: { backgroundColor: '#ff4d4f', color: 'white' } // 通话红色通话
+                callButton: { backgroundColor: '#ff4d4f', color: 'white' }, // 通话红色通话
+                textLoading: false,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: false // 通话按钮可以点击停止
             },
             'calling': {
                 textButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 文本灰色
                 recordButton: { backgroundColor: '#d9d9d9', color: '#666' }, // 录音灰色
-                callButton: { backgroundColor: '#ff4d4f', color: 'white' } // 通话红色通话
+                callButton: { backgroundColor: '#ff4d4f', color: 'white' }, // 通话红色通话
+                textLoading: false,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: false // 通话按钮可以点击停止
             },
             // 其他状态
             'voice_processing': {
                 textButton: { backgroundColor: '#d9d9d9', color: '#666' },
                 recordButton: { backgroundColor: '#faad14', color: 'white' },
-                callButton: { backgroundColor: '#d9d9d9', color: '#666' }
+                callButton: { backgroundColor: '#d9d9d9', color: '#666' },
+                textLoading: false,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: true
             },
             'processing': {
                 textButton: { backgroundColor: '#d9d9d9', color: '#666' },
                 recordButton: { backgroundColor: '#faad14', color: 'white' },
-                callButton: { backgroundColor: '#d9d9d9', color: '#666' }
+                callButton: { backgroundColor: '#d9d9d9', color: '#666' },
+                textLoading: false,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: true
             },
             'playing': {
                 textButton: { backgroundColor: '#d9d9d9', color: '#666' },
                 recordButton: { backgroundColor: '#faad14', color: 'white' },
-                callButton: { backgroundColor: '#d9d9d9', color: '#666' }
+                callButton: { backgroundColor: '#d9d9d9', color: '#666' },
+                textLoading: false,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: true
             },
             'error': {
                 textButton: { backgroundColor: '#ff4d4f', color: 'white' },
                 recordButton: { backgroundColor: '#ff4d4f', color: 'white' },
-                callButton: { backgroundColor: '#ff4d4f', color: 'white' }
+                callButton: { backgroundColor: '#ff4d4f', color: 'white' },
+                textLoading: false,
+                textDisabled: true,
+                recordDisabled: true,
+                callDisabled: true
             }
         };
         

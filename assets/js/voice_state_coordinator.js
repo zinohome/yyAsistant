@@ -245,11 +245,23 @@ class VoiceStateCoordinator {
      * 清理资源
      */
     cleanup() {
-        // 清理音频上下文
+        // 🔧 关键修复：只清理语音通话相关的状态，保留其他场景的状态
         if (window.voicePlayerEnhanced && window.voicePlayerEnhanced.audioContext) {
-            // 不关闭音频上下文，只清理状态
-            window.voicePlayerEnhanced.streamStates.clear();
-            window.voicePlayerEnhanced.playedMessages.clear();
+            // 只清理包含 'voice_call' 的流状态
+            for (const [messageId, state] of window.voicePlayerEnhanced.streamStates.entries()) {
+                if (messageId.includes('voice_call')) {
+                    window.voicePlayerEnhanced.streamStates.delete(messageId);
+                    console.log('🧹 状态协调器清理语音通话流状态:', messageId);
+                }
+            }
+            
+            // 只清理包含 'voice_call' 的播放消息
+            for (const messageId of window.voicePlayerEnhanced.playedMessages) {
+                if (messageId.includes('voice_call')) {
+                    window.voicePlayerEnhanced.playedMessages.delete(messageId);
+                    console.log('🧹 状态协调器清理语音通话播放消息:', messageId);
+                }
+            }
         }
     }
     

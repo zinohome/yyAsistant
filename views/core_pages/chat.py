@@ -185,10 +185,10 @@ def _create_content_area():
                         fac.AntdDivider(direction="vertical", style=style(margin="0 8px")),
                         html.Canvas(
                             id="audio-visualizer",
-                            width=80,
+                            width=120,
                             height=20,
                             style={
-                                "width": "80px",
+                                "width": "120px",
                                 "height": "20px",
                                 "border": "1px solid #d9d9d9",
                                 "borderRadius": "4px",

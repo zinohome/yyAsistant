@@ -160,6 +160,11 @@ class VoiceUtils {
      * @param {string} message - 错误消息
      */
     static _showErrorMessage(message) {
+        // 🔧 隐藏错误弹出框，只在控制台记录
+        console.warn('🔧 语音系统错误（已隐藏弹出框）:', message);
+        
+        // 注释掉原来的错误消息显示
+        /*
         try {
             if (window.dash_clientside && window.dash_clientside.set_props) {
                 window.dash_clientside.set_props('global-message', {
@@ -172,6 +177,7 @@ class VoiceUtils {
         } catch (error) {
             console.error('显示错误消息失败:', error);
         }
+        */
     }
     
     /**

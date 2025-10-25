@@ -61,6 +61,9 @@ class EnhancedPlaybackStatus {
         this.updateDisplay(config, message, options);
         this.recordState(state, message);
         
+        // 🔧 强制显示调试日志，帮助诊断问题
+        console.log(`🔊 播放状态更新: ${state} - ${message}`);
+        
         // 只在调试模式下显示状态更新日志
         if (window.DEBUG_UI_OPTIMIZATION) {
             console.log(`🔊 播放状态更新: ${state} - ${message}`);
@@ -73,14 +76,14 @@ class EnhancedPlaybackStatus {
         // 使用 voice_player_enhanced.js 的漂亮样式
         this.container.style.cssText = `
             position: fixed;
-            top: 60px;
+            top: 25px;
             left: 50%;
             transform: translateX(-50%);
             background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
             color: white;
-            padding: 12px 20px;
-            border-radius: 20px;
-            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-size: 12px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -105,8 +108,8 @@ class EnhancedPlaybackStatus {
         // 使用 voice_player_enhanced.js 的样式风格
         this.container.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                <div style="width: 16px; height: 16px; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; flex-shrink: 0;"></div>
-                <div style="flex: 1; color: white; font-size: 14px; line-height: 1.4; font-weight: 600; letter-spacing: 0.5px;">${message}</div>
+                <div style="width: 14px; height: 14px; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; flex-shrink: 0;"></div>
+                <div style="flex: 1; color: white; font-size: 12px; line-height: 1.4; font-weight: 600; letter-spacing: 0.3px;">${message}</div>
                 ${options.showProgress ? this.createProgressBar() : ''}
                 ${options.showRetry ? this.createRetryButton() : ''}
                 ${options.showCancel ? this.createCancelButton() : ''}

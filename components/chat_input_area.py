@@ -126,7 +126,7 @@ def render(
                                     mode="text-area",
                                     placeholder=placeholder,
                                     autoSize={"minRows": 1, "maxRows": 6},
-                                    showCount=True,
+                                    showCount=False,
                                     maxLength=max_length,
                                     variant='borderless',
                                     styles={
