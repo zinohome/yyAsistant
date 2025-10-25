@@ -61,9 +61,11 @@ function bindVoiceCallButtonWithDelegate() {
                 // 检查当前状态（通过按钮的disabled属性和背景色）
                 const button = event.target.closest('#voice-call-btn');
                 const isCalling = button && (
-                    button.style.backgroundColor.includes('rgb(220, 38, 38)') || // 红色表示通话中
+                    button.style.backgroundColor.includes('rgb(255, 77, 79)') || // 红色表示通话中
+                    button.style.backgroundColor.includes('#ff4d4f') || // 红色
                     button.style.backgroundColor.includes('red') || // 红色
-                    button.getAttribute('data-calling') === 'true' // 数据属性
+                    button.getAttribute('data-calling') === 'true' || // 数据属性
+                    button.disabled === true // 按钮被禁用表示通话中
                 );
                 
                 console.log('🔍 按钮状态检测:', {
@@ -88,6 +90,16 @@ function bindVoiceCallButtonWithDelegate() {
                         window.voiceWebSocketManager.stopAudioStreaming();
                         // 隐藏音频可视化区域
                         window.voiceWebSocketManager.hideAudioVisualizer();
+                        
+                        // 🔧 立即释放麦克风资源
+                        console.log('🎤 语音通话停止，立即释放麦克风');
+                        if (window.voiceWebSocketManager.audioStream) {
+                            window.voiceWebSocketManager.audioStream.getTracks().forEach(track => {
+                                track.stop();
+                                console.log('🎤 音频轨道已停止');
+                            });
+                            window.voiceWebSocketManager.audioStream = null;
+                        }
                     }
                     
                     // 🚀 异步发送中断信号到后端（不阻塞UI）
@@ -115,6 +127,12 @@ function bindVoiceCallButtonWithDelegate() {
                         }
                     });
                     
+                    // 立即隐藏音频可视化区域
+                    if (window.voiceWebSocketManager) {
+                        window.voiceWebSocketManager.hideAudioVisualizer();
+                        console.log('🎨 语音通话：点击挂断图标后隐藏音频可视化区域');
+                    }
+                    
                     // 立即重置按钮状态到idle
                     window.dash_clientside.set_props('unified-button-state', {
                         data: {
@@ -128,6 +146,13 @@ function bindVoiceCallButtonWithDelegate() {
                 } else {
                     // 启动语音通话
                     console.log('启动语音通话');
+                    
+                    // 立即显示音频可视化区域
+                    if (window.voiceWebSocketManager) {
+                        window.voiceWebSocketManager.showAudioVisualizer();
+                        console.log('🎨 语音通话：立即显示音频可视化区域');
+                    }
+                    
                     window.dash_clientside.set_props('button-event-trigger', {
                         data: {
                             type: 'voice_call_start',

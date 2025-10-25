@@ -98,6 +98,18 @@ class StateManager:
         """
         return self.current_state
     
+    def transition_to(self, new_state: State) -> bool:
+        """
+        转换到新状态（set_state的别名）
+        
+        Args:
+            new_state: 新状态
+        
+        Returns:
+            是否转换成功
+        """
+        return self.set_state(new_state)
+    
     def can_transition(self, new_state: State) -> bool:
         """
         检查状态转换是否合法

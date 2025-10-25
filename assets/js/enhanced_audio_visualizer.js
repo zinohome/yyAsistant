@@ -54,6 +54,28 @@ class EnhancedAudioVisualizer {
             console.log('🎨 音频可视化Canvas已找到并初始化');
         } else {
             console.warn('音频可视化Canvas未找到，将在显示时初始化');
+            // 设置重试机制
+            this.retryCount = 0;
+            this.maxRetries = 10;
+            this.retryInitialization();
+        }
+    }
+    
+    retryInitialization() {
+        if (this.retryCount < this.maxRetries) {
+            this.retryCount++;
+            setTimeout(() => {
+                this.canvas = document.getElementById('audio-visualizer');
+                if (this.canvas) {
+                    this.initCanvas();
+                    console.log('🎨 音频可视化Canvas已找到并初始化（重试成功）');
+                } else {
+                    console.log(`🎨 音频可视化Canvas重试 ${this.retryCount}/${this.maxRetries}`);
+                    this.retryInitialization();
+                }
+            }, 500);
+        } else {
+            console.warn('🎨 音频可视化Canvas重试次数已达上限，将在显示时自动初始化');
         }
     }
     

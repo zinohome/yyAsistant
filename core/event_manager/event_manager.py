@@ -102,9 +102,34 @@ class EventManager:
         
         # 异步处理事件
         if not self.event_processing:
-            asyncio.create_task(self.process_events())
+            try:
+                asyncio.create_task(self.process_events())
+            except RuntimeError:
+                # 如果没有事件循环，使用同步处理
+                self._process_events_sync()
         
         logger.debug(f"事件已触发: {event_type.value}")
+    
+    def _process_events_sync(self) -> None:
+        """同步处理事件队列（当没有事件循环时使用）"""
+        self.event_processing = True
+        
+        try:
+            while self.event_queue:
+                event_type, data, timestamp = self.event_queue.pop(0)
+                
+                if event_type in self.event_handlers:
+                    for handler in self.event_handlers[event_type]:
+                        try:
+                            # 检查处理器是否为协程函数
+                            if asyncio.iscoroutinefunction(handler):
+                                logger.warning(f"同步上下文中跳过异步处理器: {handler.__name__}")
+                                continue
+                            handler(data)
+                        except Exception as e:
+                            logger.error(f"事件处理器执行失败: {e}")
+        finally:
+            self.event_processing = False
     
     async def process_events(self) -> None:
         """异步处理事件队列"""
@@ -336,3 +361,7 @@ def is_valid_event(event_name: str) -> bool:
         return True
     except ValueError:
         return False
+
+
+# 全局事件管理器实例
+event_manager = EventManager()

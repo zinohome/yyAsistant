@@ -61,29 +61,38 @@ class EnhancedPlaybackStatus {
         this.updateDisplay(config, message, options);
         this.recordState(state, message);
         
-        console.log(`🔊 播放状态更新: ${state} - ${message}`);
+        // 只在调试模式下显示状态更新日志
+        if (window.DEBUG_UI_OPTIMIZATION) {
+            console.log(`🔊 播放状态更新: ${state} - ${message}`);
+        }
     }
     
     createContainer() {
         this.container = document.createElement('div');
         this.container.id = 'enhanced-playback-status';
+        // 使用 voice_player_enhanced.js 的漂亮样式
         this.container.style.cssText = `
             position: fixed;
             top: 60px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 10000;
-            background: white;
-            border: 1px solid #d9d9d9;
-            border-radius: 8px;
-            padding: 8px 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            display: none;
+            background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
             align-items: center;
             gap: 8px;
+            z-index: 10000;
+            box-shadow: 0 4px 16px rgba(24, 144, 255, 0.4);
+            opacity: 0;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            font-weight: 500;
             min-width: 200px;
             max-width: 400px;
-            transition: all 0.3s ease;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         `;
         
@@ -93,18 +102,18 @@ class EnhancedPlaybackStatus {
     updateDisplay(config, message, options) {
         const { icon, color, bgColor } = config;
         
+        // 使用 voice_player_enhanced.js 的样式风格
         this.container.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
-                <div style="color: ${color}; font-size: 16px; flex-shrink: 0;">${icon}</div>
-                <div style="flex: 1; color: #333; font-size: 14px; line-height: 1.4;">${message}</div>
+            <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                <div style="width: 16px; height: 16px; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; flex-shrink: 0;"></div>
+                <div style="flex: 1; color: white; font-size: 14px; line-height: 1.4; font-weight: 600; letter-spacing: 0.5px;">${message}</div>
                 ${options.showProgress ? this.createProgressBar() : ''}
                 ${options.showRetry ? this.createRetryButton() : ''}
                 ${options.showCancel ? this.createCancelButton() : ''}
             </div>
         `;
         
-        this.container.style.backgroundColor = bgColor;
-        this.container.style.borderColor = color;
+        // 保持渐变背景，不改变背景色
         this.container.style.display = 'flex';
         
         // 显示动画
@@ -112,6 +121,24 @@ class EnhancedPlaybackStatus {
             this.container.style.opacity = '1';
             this.container.style.transform = 'translateX(-50%) translateY(0)';
         }, 100);
+        
+        // 添加旋转动画样式
+        this.addSpinAnimation();
+    }
+    
+    addSpinAnimation() {
+        // 添加旋转动画样式（如果还没有添加）
+        if (!document.getElementById('enhanced-playback-spin-animation')) {
+            const style = document.createElement('style');
+            style.id = 'enhanced-playback-spin-animation';
+            style.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
     }
     
     createProgressBar() {
@@ -224,11 +251,13 @@ class EnhancedPlaybackStatus {
     
     hide() {
         if (this.container) {
+            // 使用 voice_player_enhanced.js 的淡出动画
             this.container.style.opacity = '0';
-            this.container.style.transform = 'translateX(-50%) translateY(-10px)';
             
             setTimeout(() => {
-                this.container.style.display = 'none';
+                if (this.container && this.container.parentNode) {
+                    this.container.parentNode.removeChild(this.container);
+                }
             }, 300);
         }
     }
@@ -239,6 +268,40 @@ class EnhancedPlaybackStatus {
         }
         this.container = null;
         this.stateHistory = [];
+    }
+    
+    /**
+     * 启用紧凑模式
+     */
+    setCompactMode(enabled) {
+        if (this.container) {
+            if (enabled) {
+                this.container.style.padding = '8px 16px';
+                this.container.style.fontSize = '12px';
+                this.container.style.minWidth = '150px';
+            } else {
+                this.container.style.padding = '12px 20px';
+                this.container.style.fontSize = '14px';
+                this.container.style.minWidth = '200px';
+            }
+        }
+    }
+    
+    /**
+     * 启用宽松模式
+     */
+    setSpaciousMode(enabled) {
+        if (this.container) {
+            if (enabled) {
+                this.container.style.padding = '16px 24px';
+                this.container.style.fontSize = '16px';
+                this.container.style.minWidth = '250px';
+            } else {
+                this.container.style.padding = '12px 20px';
+                this.container.style.fontSize = '14px';
+                this.container.style.minWidth = '200px';
+            }
+        }
     }
 }
 

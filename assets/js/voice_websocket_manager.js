@@ -60,7 +60,13 @@ class VoiceWebSocketManager {
             if (window.smartErrorHandler) {
                 console.log('🔧 智能错误处理系统已连接');
             } else {
-                console.warn('🔧 智能错误处理系统未找到');
+                console.warn('🔧 智能错误处理系统未找到，将在系统加载后重试');
+                // 重试机制
+                setTimeout(() => {
+                    if (window.smartErrorHandler) {
+                        console.log('🔧 智能错误处理系统已连接（重试成功）');
+                    }
+                }, 1000);
             }
         }, 500);
     }
@@ -93,7 +99,22 @@ class VoiceWebSocketManager {
                 
                 console.log('🔄 状态同步管理器已连接');
             } else {
-                console.warn('🔄 状态同步管理器未找到');
+                console.warn('🔄 状态同步管理器未找到，将在系统加载后重试');
+                // 重试机制
+                setTimeout(() => {
+                    if (window.stateSyncManager) {
+                        console.log('🔄 状态同步管理器已连接（重试成功）');
+                        // 重试时也注册状态
+                        if (!window.stateSyncManager.getState('voice_call')) {
+                            window.stateSyncManager.registerState('voice_call', {
+                                status: 'idle',
+                                isConnected: false,
+                                isConnecting: false,
+                                error: null
+                            });
+                        }
+                    }
+                }, 1000);
             }
         }, 500);
     }
@@ -110,7 +131,14 @@ class VoiceWebSocketManager {
                 // 记录语音通话相关的用户行为
                 this.recordVoiceCallBehavior();
             } else {
-                console.warn('🔮 智能状态预测器未找到');
+                console.warn('🔮 智能状态预测器未找到，将在系统加载后重试');
+                // 重试机制
+                setTimeout(() => {
+                    if (window.smartStatePredictor) {
+                        console.log('🔮 智能状态预测器已连接（重试成功）');
+                        this.recordVoiceCallBehavior();
+                    }
+                }, 1000);
             }
         }, 500);
     }
@@ -394,6 +422,10 @@ class VoiceWebSocketManager {
             // 启动音频可视化
             if (window.enhancedAudioVisualizer) {
                 console.log('🎨 启动增强音频可视化');
+                // 确保Canvas已初始化
+                if (!window.enhancedAudioVisualizer.canvas) {
+                    window.enhancedAudioVisualizer.initializeWhenReady();
+                }
                 window.enhancedAudioVisualizer.updateState('listening');
             } else if (window.audioVisualizer) {
                 console.log('🎨 启动音频可视化');
@@ -403,11 +435,16 @@ class VoiceWebSocketManager {
                 // 尝试初始化增强音频可视化器
                 if (window.initEnhancedAudioVisualizer) {
                     window.initEnhancedAudioVisualizer();
+                    // 增加延迟时间，确保Canvas完全初始化
                     setTimeout(() => {
                         if (window.enhancedAudioVisualizer) {
+                            // 再次检查Canvas是否已初始化
+                            if (!window.enhancedAudioVisualizer.canvas) {
+                                window.enhancedAudioVisualizer.initializeWhenReady();
+                            }
                             window.enhancedAudioVisualizer.updateState('listening');
                         }
-                    }, 200);
+                    }, 500);
                 }
             }
         })
@@ -754,6 +791,21 @@ class VoiceWebSocketManager {
                 this.isSpeaking = false;
                 this.updateStatusIndicator('AI思考中...', 'orange');
                 console.log('🛑 用户停止说话，AI开始思考');
+            }
+        }
+        
+        // 🎨 更新音频可视化器状态：用户说话时显示录音波形
+        if (isUserSpeaking && window.enhancedAudioVisualizer) {
+            if (this.currentVisualizerState !== 'recording') {
+                window.enhancedAudioVisualizer.updateState('recording');
+                this.currentVisualizerState = 'recording';
+                console.log('🎨 语音通话：用户说话，显示录音波形');
+            }
+        } else if (!isUserSpeaking && window.enhancedAudioVisualizer) {
+            if (this.currentVisualizerState !== 'listening') {
+                window.enhancedAudioVisualizer.updateState('listening');
+                this.currentVisualizerState = 'listening';
+                console.log('🎨 语音通话：用户停止说话，显示聆听状态');
             }
         }
         
@@ -1220,9 +1272,22 @@ class VoiceWebSocketManager {
                 console.log('🎨 使用增强音频可视化器');
                 // 确保Canvas已初始化
                 if (!window.enhancedAudioVisualizer.canvas) {
+                    console.log('🎨 Canvas未初始化，开始初始化...');
                     window.enhancedAudioVisualizer.initializeWhenReady();
+                    // 等待Canvas初始化完成
+                    setTimeout(() => {
+                        if (window.enhancedAudioVisualizer.canvas) {
+                            console.log('🎨 Canvas初始化完成，更新状态');
+                            window.enhancedAudioVisualizer.updateState('listening');
+                        } else {
+                            console.warn('🎨 Canvas初始化失败，尝试重试');
+                            window.enhancedAudioVisualizer.retryInitialization();
+                        }
+                    }, 200);
+                } else {
+                    console.log('🎨 Canvas已初始化，直接更新状态');
+                    window.enhancedAudioVisualizer.updateState('listening');
                 }
-                window.enhancedAudioVisualizer.updateState('listening');
             } else {
                 console.log('🎨 增强音频可视化器未找到，尝试重新初始化...');
                 // 重新初始化增强音频可视化器
@@ -1231,6 +1296,10 @@ class VoiceWebSocketManager {
                     // 延迟更新状态
                     setTimeout(() => {
                         if (window.enhancedAudioVisualizer) {
+                            // 再次检查Canvas是否已初始化
+                            if (!window.enhancedAudioVisualizer.canvas) {
+                                window.enhancedAudioVisualizer.initializeWhenReady();
+                            }
                             window.enhancedAudioVisualizer.updateState('listening');
                         }
                     }, 500);
@@ -1508,11 +1577,22 @@ class VoiceWebSocketManager {
         
         // 注册错误消息处理器
         this.registerMessageHandler('error', (data) => {
-            console.error('语音通话错误:', data);
+            // 根据错误类型和当前状态确定错误来源
+            const currentState = window.voiceStateManager ? window.voiceStateManager.getState() : 'unknown';
+            const scenario = currentState.scenario || 'unknown';
+            
+            let errorSource = '语音功能';
+            if (scenario === 'voice_call') {
+                errorSource = '语音通话';
+            } else if (scenario === 'voice_recording') {
+                errorSource = '录音聊天';
+            }
+            
+            console.error(`${errorSource}错误:`, data);
             // 显示错误消息给用户
             if (window.dash_clientside && window.dash_clientside.set_props) {
                 window.dash_clientside.set_props('global-message', {
-                    children: data.message || '语音通话出现错误'
+                    children: data.message || `${errorSource}出现错误`
                 });
             }
         });

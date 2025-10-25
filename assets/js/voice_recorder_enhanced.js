@@ -78,13 +78,166 @@ class VoiceRecorderEnhanced {
      * 清理资源
      */
     cleanup() {
+        console.log('🎤 开始清理录音器资源...');
+        
         // 停止录音
         if (this.isRecording) {
+            console.log('🎤 停止录音中...');
             this.stopRecording();
         }
+        
+        // 停止音频流（如果还存在）
+        if (this.audioStream) {
+            console.log('🎤 停止音频流，释放麦克风');
+            this.audioStream.getTracks().forEach(track => {
+                console.log('🎤 停止音频轨道:', track.label, track.readyState);
+                track.stop();
+                console.log('🎤 音频轨道已停止');
+            });
+            this.audioStream = null;
+        } else {
+            console.log('🎤 音频流已为空，无需释放');
+        }
+        
         // 清理音频块
         this.audioChunks = [];
-        console.log('录音器资源已清理');
+        
+        // 清理MediaRecorder对象
+        if (this.mediaRecorder) {
+            console.log('🎤 清理MediaRecorder对象');
+            this.mediaRecorder = null;
+            console.log('🎤 MediaRecorder已清空');
+        }
+        
+        // 清理音频上下文（如果还存在）
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            console.log('🎤 关闭音频上下文');
+            try {
+                this.audioContext.close();
+            } catch (error) {
+                console.log('🎤 音频上下文已关闭或无法关闭:', error.message);
+            }
+            this.audioContext = null;
+        } else {
+            console.log('🎤 音频上下文已关闭或不存在');
+        }
+        
+        // 清理麦克风节点（如果还存在）
+        if (this.microphone) {
+            console.log('🎤 断开麦克风节点');
+            this.microphone.disconnect();
+            this.microphone = null;
+        }
+        
+        // 最终检查所有资源状态
+        console.log('🎤 最终资源状态检查:');
+        console.log('🎤 - audioStream:', this.audioStream ? '存在' : '已清空');
+        console.log('🎤 - audioContext:', this.audioContext ? '存在' : '已清空');
+        console.log('🎤 - microphone:', this.microphone ? '存在' : '已清空');
+        console.log('🎤 - mediaRecorder:', this.mediaRecorder ? '存在' : '已清空');
+        console.log('🎤 - isRecording:', this.isRecording);
+        
+        // 最终强制释放所有资源
+        this.forceReleaseMicrophone();
+        
+        // 最终检查麦克风状态
+        this.checkMicrophoneStatus();
+        
+        console.log('🎤 录音器资源已完全清理，麦克风已释放');
+    }
+    
+    /**
+     * 强制释放所有麦克风相关资源
+     */
+    forceReleaseMicrophone() {
+        console.log('🎤 强制释放所有麦克风资源...');
+        
+        // 1. 停止所有MediaStream tracks
+        if (this.audioStream) {
+            console.log('🎤 强制停止所有音频轨道');
+            this.audioStream.getTracks().forEach(track => {
+                console.log('🎤 强制停止轨道:', track.label, '状态:', track.readyState);
+                if (track.readyState !== 'ended') {
+                    track.stop();
+                    console.log('🎤 轨道已强制停止');
+                } else {
+                    console.log('🎤 轨道已结束，无需停止');
+                }
+            });
+            // 注意：在这里清空audioStream，确保麦克风被释放
+            this.audioStream = null;
+            console.log('🎤 MediaStream已清空');
+        } else {
+            console.log('🎤 MediaStream已为空，无需释放');
+        }
+        
+        // 2. 断开所有音频节点
+        if (this.microphone) {
+            console.log('🎤 强制断开麦克风节点');
+            this.microphone.disconnect();
+            this.microphone = null;
+        }
+        
+        // 3. 关闭AudioContext
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            console.log('🎤 强制关闭音频上下文');
+            try {
+                this.audioContext.close();
+            } catch (error) {
+                console.log('🎤 音频上下文关闭错误:', error.message);
+            }
+            this.audioContext = null;
+        }
+        
+        // 4. 清理MediaRecorder
+        if (this.mediaRecorder) {
+            console.log('🎤 强制清理MediaRecorder');
+            this.mediaRecorder = null;
+        }
+        
+        // 5. 清理其他资源
+        this.audioChunks = [];
+        this.analyser = null;
+        this.dataArray = null;
+        
+        console.log('🎤 强制释放完成');
+    }
+    
+    /**
+     * 检查浏览器麦克风状态
+     */
+    checkMicrophoneStatus() {
+        console.log('🎤 检查浏览器麦克风状态:');
+        
+        // 检查navigator.mediaDevices
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            console.log('🎤 - navigator.mediaDevices 可用');
+        } else {
+            console.log('🎤 - navigator.mediaDevices 不可用');
+        }
+        
+        // 检查当前活动的MediaStream
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            navigator.mediaDevices.enumerateDevices().then(devices => {
+                const audioInputs = devices.filter(device => device.kind === 'audioinput');
+                console.log('🎤 - 音频输入设备数量:', audioInputs.length);
+                audioInputs.forEach((device, index) => {
+                    console.log(`🎤 - 设备[${index}]:`, {
+                        label: device.label,
+                        deviceId: device.deviceId
+                    });
+                });
+            }).catch(error => {
+                console.log('🎤 - 枚举设备失败:', error);
+            });
+        }
+        
+        // 检查是否有全局的MediaStream
+        if (window.currentMediaStream) {
+            console.log('🎤 - 全局MediaStream存在:', window.currentMediaStream.active);
+        } else {
+            console.log('🎤 - 全局MediaStream不存在');
+        }
     }
     
     async initWebSocket() {
@@ -181,6 +334,14 @@ class VoiceRecorderEnhanced {
             VoiceUtils.triggerEvent('recording_start', { timestamp: Date.now() });
             VoiceUtils.updateState('recording', 'voice_recording', {});
             
+            // 触发Dash状态更新
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props('button-event-trigger', {
+                    data: {type: 'recording_start', timestamp: Date.now()}
+                });
+                console.log('录音开始，触发状态更新');
+            }
+            
             // 请求麦克风权限
             console.log('正在请求麦克风权限...');
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -192,6 +353,9 @@ class VoiceRecorderEnhanced {
                 }
             });
             console.log('麦克风权限获取成功，音频流:', stream);
+            
+            // 保存音频流引用
+            this.audioStream = stream;
             
             // 初始化音频上下文
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -274,9 +438,30 @@ class VoiceRecorderEnhanced {
             this.mediaRecorder.stop();
             this.isRecording = false;
             
+            // 🔧 停止音频轨道但不立即清空audioStream
+            if (this.audioStream) {
+                console.log('🎤 录音停止，停止音频轨道');
+                this.audioStream.getTracks().forEach(track => {
+                    console.log('🎤 停止音频轨道:', track.label, track.readyState);
+                    track.stop();
+                    console.log('🎤 音频轨道已停止');
+                });
+                // 注意：不在这里设置 this.audioStream = null，让forceReleaseMicrophone处理
+            } else {
+                console.log('🎤 录音停止时，音频流已为空');
+            }
+            
             // 使用公共工具触发录音停止事件
             VoiceUtils.triggerEvent('recording_stop', { timestamp: Date.now() });
             VoiceUtils.updateState('voice_processing', 'voice_recording', {});
+            
+            // 触发Dash状态更新
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                window.dash_clientside.set_props('button-event-trigger', {
+                    data: {type: 'recording_stop', timestamp: Date.now()}
+                });
+                console.log('录音停止，触发状态更新');
+            }
             
             // 停止波形动画
             this.stopWaveformAnimation();
@@ -287,13 +472,53 @@ class VoiceRecorderEnhanced {
             // 恢复输入框
             this.enableInput();
             
-            // 关闭音频流
+            // 立即释放所有资源
             if (this.microphone) {
+                console.log('🎤 断开麦克风节点');
+                console.log('🎤 麦克风节点状态:', this.microphone.context.state);
                 this.microphone.disconnect();
+                this.microphone = null;
+                console.log('🎤 麦克风节点已断开并清空');
             }
-            if (this.audioContext) {
-                this.audioContext.close();
+            if (this.audioContext && this.audioContext.state !== 'closed') {
+                console.log('🎤 关闭音频上下文');
+                console.log('🎤 音频上下文状态:', this.audioContext.state);
+                try {
+                    this.audioContext.close();
+                    console.log('🎤 音频上下文关闭成功');
+                } catch (error) {
+                    console.log('🎤 音频上下文已关闭或无法关闭:', error.message);
+                }
+                this.audioContext = null;
+                console.log('🎤 音频上下文已清空');
             }
+            
+            // 清理MediaRecorder对象
+            if (this.mediaRecorder) {
+                console.log('🎤 清理MediaRecorder对象');
+                this.mediaRecorder = null;
+                console.log('🎤 MediaRecorder已清空');
+            }
+            
+            // 检查MediaStream是否真的被释放
+            if (this.audioStream) {
+                console.log('🎤 检查MediaStream状态:');
+                console.log('🎤 - active:', this.audioStream.active);
+                console.log('🎤 - tracks数量:', this.audioStream.getTracks().length);
+                this.audioStream.getTracks().forEach((track, index) => {
+                    console.log(`🎤 - track[${index}]:`, {
+                        label: track.label,
+                        readyState: track.readyState,
+                        enabled: track.enabled,
+                        muted: track.muted
+                    });
+                });
+            } else {
+                console.log('🎤 MediaStream已为空');
+            }
+            
+            // 检查麦克风状态
+            this.checkMicrophoneStatus();
             
             console.log('停止录音，开始处理音频');
             
@@ -327,9 +552,15 @@ class VoiceRecorderEnhanced {
             await this.sendAudioForTranscription(audioBlob);
             console.log('STT请求发送完成');
             
+            // 音频数据发送完成后，强制释放麦克风资源
+            this.forceReleaseMicrophone();
+            
         } catch (error) {
             console.error('处理录音失败:', error);
             this.showError('语音转文本失败');
+            
+            // 即使出错也要释放麦克风资源
+            this.forceReleaseMicrophone();
         }
     }
     
@@ -595,53 +826,81 @@ class VoiceRecorderEnhanced {
     }
     
     showRecordingWaveform() {
-        // 创建录音波形容器
-        let waveformContainer = document.getElementById('voice-waveform-container');
-        if (!waveformContainer) {
-            waveformContainer = document.createElement('div');
-            waveformContainer.id = 'voice-waveform-container';
-            waveformContainer.style.cssText = `
-                position: absolute;
-                top: -60px;
-                left: 0;
-                right: 0;
-                height: 50px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        // 录音聊天：显示音频可视化区域
+        const audioVisualizerContainer = document.getElementById('audio-visualizer-container');
+        const audioVisualizer = document.getElementById('audio-visualizer');
+        
+        if (audioVisualizerContainer && audioVisualizer) {
+            // 显示音频可视化区域
+            audioVisualizerContainer.style.display = 'inline-block';
+            console.log('🎨 录音聊天：显示音频可视化区域');
+            
+            // 初始化增强的音频可视化器
+            if (window.enhancedAudioVisualizer) {
+                window.enhancedAudioVisualizer.updateState('recording');
+                console.log('🎨 录音聊天：更新音频可视化器状态为录音');
+            }
+            
+            // 开始波形动画
+            this.startWaveformAnimation(audioVisualizer);
+        } else {
+            console.warn('音频可视化区域未找到，使用备用方案');
+            // 备用方案：创建录音波形容器
+            let waveformContainer = document.getElementById('voice-waveform-container');
+            if (!waveformContainer) {
+                waveformContainer = document.createElement('div');
+                waveformContainer.id = 'voice-waveform-container';
+                waveformContainer.style.cssText = `
+                    position: absolute;
+                    top: -60px;
+                    left: 0;
+                    right: 0;
+                    height: 50px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                `;
+                
+                // 插入到输入容器中
+                const inputContainer = document.querySelector('.chat-input-container');
+                if (inputContainer) {
+                    inputContainer.style.position = 'relative';
+                    inputContainer.appendChild(waveformContainer);
+                }
+            }
+            
+            // 创建波形画布
+            const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 40;
+            canvas.style.cssText = `
+                border-radius: 4px;
+                background: rgba(255,255,255,0.1);
             `;
             
-            // 插入到输入容器中
-            const inputContainer = document.querySelector('.chat-input-container');
-            if (inputContainer) {
-                inputContainer.style.position = 'relative';
-                inputContainer.appendChild(waveformContainer);
-            }
+            waveformContainer.innerHTML = '';
+            waveformContainer.appendChild(canvas);
+            
+            // 开始波形动画
+            this.startWaveformAnimation(canvas);
+            
+            waveformContainer.style.display = 'flex';
         }
-        
-        // 创建波形画布
-        const canvas = document.createElement('canvas');
-        canvas.width = 300;
-        canvas.height = 40;
-        canvas.style.cssText = `
-            border-radius: 4px;
-            background: rgba(255,255,255,0.1);
-        `;
-        
-        waveformContainer.innerHTML = '';
-        waveformContainer.appendChild(canvas);
-        
-        // 开始波形动画
-        this.startWaveformAnimation(canvas);
-        
-        waveformContainer.style.display = 'flex';
     }
     
     hideRecordingWaveform() {
+        // 隐藏音频可视化区域
+        const audioVisualizerContainer = document.getElementById('audio-visualizer-container');
+        if (audioVisualizerContainer) {
+            audioVisualizerContainer.style.display = 'none';
+            console.log('🎨 录音聊天：隐藏音频可视化区域');
+        }
+        
+        // 备用方案：隐藏录音波形容器
         const waveformContainer = document.getElementById('voice-waveform-container');
         if (waveformContainer) {
             waveformContainer.style.display = 'none';

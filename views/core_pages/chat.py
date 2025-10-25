@@ -343,6 +343,10 @@ def _create_state_stores():
     # 语音触发TTS开关（仅语音转写触发的那次SSE需要使能）
     voice_enable_voice_store = dcc.Store(id='voice-enable-voice', data=False)
     voice_transcription_store = dcc.Store(id='voice-transcription-store', data=None)
+    
+    # 添加按钮图标存储组件
+    text_button_icon_store = dcc.Store(id='ai-chat-x-send-icon-store', data='material-symbols:send')
+    call_button_icon_store = dcc.Store(id='voice-call-icon-store', data='bi:telephone')
     voice_transcription_store_server = dcc.Store(id='voice-transcription-store-server', data=None)
     
     # 不再需要隐藏div，直接通过JavaScript更新Store
@@ -633,6 +637,10 @@ def _create_state_stores():
         voice_enable_voice_store,
         voice_transcription_store,
         voice_transcription_store_server,
+        
+        # 按钮图标存储组件
+        text_button_icon_store,
+        call_button_icon_store,
         voice_message_notification,
         voice_error_notification,
         voice_js_integration,

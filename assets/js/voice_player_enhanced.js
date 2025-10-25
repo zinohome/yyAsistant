@@ -30,6 +30,7 @@ class VoicePlayerEnhanced {
         this.playedMessages = new Set(); // 记录已播放的消息ID，避免重复播放
         this.streamStates = new Map(); // message_id -> { chunks: [{seq, base64}], nextSeq, codec, session_id }
         this.shouldStop = false; // 停止标志
+        this.isPlayingVoiceCall = false; // 语音通话播放标志，确保分片按顺序播放
         
         // 异步初始化
         this.init().catch(error => {
@@ -300,16 +301,23 @@ class VoicePlayerEnhanced {
         // 监听SSE完成事件，触发TTS播放
         document.addEventListener('messageCompleted', (event) => {
             try {
-                // 检查是否启用前端TTS回退
-                const frontendTtsEnabled = window.voiceConfig?.get('frontendTtsFallback', true);
-                if (frontendTtsEnabled && event.detail && event.detail.text) {
-                    console.log('🎵 SSE完成，开始TTS播放:', event.detail.text.substring(0, 50) + '...');
+                console.log('🎵 SSE完成事件触发:', event.detail);
+                
+                // 强制启用TTS播放，确保功能正常
+                if (event.detail && event.detail.text) {
+                    console.log('🎵 开始TTS播放:', event.detail.text.substring(0, 50) + '...');
+                    
+                    // 立即触发TTS播放，不延迟
                     this.synthesizeAndPlay(event.detail.text);
                 } else {
-                    console.log('🎵 SSE完成，但前端TTS已禁用或没有文本内容');
+                    console.log('🎵 SSE完成，但没有文本内容');
                 }
             } catch (e) {
-                console.warn('messageCompleted TTS 处理失败:', e);
+                console.error('messageCompleted TTS 处理失败:', e);
+                // 即使出错也要尝试播放
+                if (event.detail && event.detail.text) {
+                    this.synthesizeAndPlay(event.detail.text);
+                }
             }
         });
     }
@@ -322,24 +330,29 @@ class VoicePlayerEnhanced {
             }
             
             // 使用公共工具更新状态
-            VoiceUtils.updateState('processing', 'voice_recording', { tts_playing: true });
+            VoiceUtils.updateState('processing', 'text_chat', { tts_playing: true });
             
-            console.log('开始语音合成:', text);
+            console.log('🎵 开始语音合成:', text.substring(0, 100) + '...');
             
             // 更新状态为播放中
             if (window.voiceStateManager) {
                 window.voiceStateManager.startPlaying();
             }
             
-            // 显示语音播放状态
-            this.showPlaybackStatus();
+            // 使用EnhancedPlaybackStatus显示语音播放状态
+            if (this.enhancedPlaybackStatus) {
+                this.enhancedPlaybackStatus.showStatus('speaking', '正在播放语音...');
+            }
             
             // 发送文本转语音请求
             await this.requestSpeechSynthesis(text);
             
         } catch (error) {
             VoiceUtils.handleError(error, '语音合成');
-            this.hidePlaybackStatus();
+            // 使用EnhancedPlaybackStatus隐藏语音播放状态
+            if (this.enhancedPlaybackStatus) {
+                this.enhancedPlaybackStatus.hide();
+            }
             
             // 集成智能错误处理
             if (window.smartErrorHandler) {
@@ -363,29 +376,31 @@ class VoicePlayerEnhanced {
     
     async requestSpeechSynthesis(text) {
         return new Promise(async (resolve, reject) => {
-            // 检查WebSocket连接状态，如果未连接则尝试重连
-            if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-                console.log('🔌 WebSocket未连接，尝试重新连接...');
-                try {
-                    // 尝试通过全局WebSocket管理器重新连接
-                    if (window.voiceWebSocketManager) {
-                        await window.voiceWebSocketManager.connect();
+            // 使用全局WebSocket管理器，避免重复连接
+            if (window.voiceWebSocketManager) {
+                this.websocket = window.voiceWebSocketManager.ws;
+                
+                // 检查连接状态
+                if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+                    console.log('🔌 WebSocket未连接，等待连接建立...');
+                    // 等待连接建立，而不是重新连接
+                    const maxWait = 5000; // 最多等待5秒
+                    const startTime = Date.now();
+                    
+                    while ((!this.websocket || this.websocket.readyState !== WebSocket.OPEN) && 
+                           (Date.now() - startTime) < maxWait) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
                         this.websocket = window.voiceWebSocketManager.ws;
-                        
-                        // 等待连接建立
-                        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                            console.log('✅ WebSocket重连成功');
-                        } else {
-                            throw new Error('WebSocket重连失败');
-                        }
-                    } else {
-                        throw new Error('WebSocket管理器不可用');
                     }
-                } catch (error) {
-                    console.error('❌ WebSocket重连失败:', error);
-                    reject(new Error(`语音合成失败: WebSocket连接不可用 (${error.message})`));
-                    return;
+                    
+                    if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+                        reject(new Error('语音合成失败: WebSocket连接超时'));
+                        return;
+                    }
                 }
+            } else {
+                reject(new Error('语音合成失败: WebSocket管理器不可用'));
+                return;
             }
             
             // 使用后端支持的text_message类型，并启用语音
@@ -401,8 +416,15 @@ class VoicePlayerEnhanced {
             };
             
             console.log('🎵 发送TTS请求:', { type: message.type, content: text.substring(0, 50) + '...', enable_voice: true });
-            this.websocket.send(JSON.stringify(message));
-            resolve();
+            
+            try {
+                this.websocket.send(JSON.stringify(message));
+                console.log('🎵 TTS请求发送成功');
+                resolve();
+            } catch (sendError) {
+                console.error('🎵 TTS请求发送失败:', sendError);
+                reject(sendError);
+            }
         });
     }
     
@@ -560,12 +582,50 @@ class VoicePlayerEnhanced {
                     // 🚀 重置播放标志，允许处理下一个音频
                     this.simplePlaying = false;
                     
+                    // 更新状态跟踪
+                    if (this.streamStates.has(messageId)) {
+                        const state = this.streamStates.get(messageId);
+                        state.playingSources = Math.max(0, (state.playingSources || 0) - 1);
+                        state.lastChunkTs = Date.now();
+                        
+                        // 注意：不要在这里设置 synthComplete = true
+                        // 因为可能还有更多音频片段在队列中等待播放
+                        // synthComplete 应该只在收到 synthesis_complete 消息时设置
+                        
+                        // 尝试最终收尾
+                        this.maybeFinalize(messageId);
+                    }
+                    
                     resolve();
                 };
                 
                 // 开始播放
                 source.start();
                 console.log('🎧 简单音频开始播放:', messageId);
+                
+                // 显示播放状态指示器（只在第一个片段播放时显示）
+                if (!this.isTtsPlaying) {
+                    this.isTtsPlaying = true;
+                    
+                    // 使用EnhancedPlaybackStatus显示播放状态
+                    if (this.enhancedPlaybackStatus) {
+                        this.enhancedPlaybackStatus.showStatus('speaking', '正在播放语音...');
+                    }
+                }
+                
+                // 为简单播放队列创建状态跟踪
+                if (!this.streamStates.has(messageId)) {
+                    this.streamStates.set(messageId, {
+                        synthComplete: false,
+                        playingSources: 0,
+                        chunks: [],
+                        lastChunkTs: Date.now()
+                    });
+                }
+                
+                // 增加播放源计数（每个音频片段都要计数）
+                const state = this.streamStates.get(messageId);
+                state.playingSources = (state.playingSources || 0) + 1;
                 
             } catch (error) {
                 console.error('❌ 简单音频播放失败:', error);
@@ -770,7 +830,17 @@ class VoicePlayerEnhanced {
                         console.log(`🎵 播放分片 seq:${chunk.seq}, 剩余分片:${state.chunks.length}`);
                         
                         try {
+                            // 🔧 语音通话音频播放：添加播放间隔，避免一股脑播放
                             await this.playAudioFromBase64(chunk.base64, messageId);
+                            
+                            // 🔧 添加播放间隔，确保音频分片之间有适当的间隔
+                            const playbackDuration = this.estimateAudioDuration(chunk.base64);
+                            const minInterval = 100; // 最小间隔100ms
+                            const interval = Math.max(minInterval, playbackDuration * 0.1); // 播放时长的10%作为间隔
+                            
+                            console.log(`🎵 播放间隔: ${interval}ms (播放时长: ${playbackDuration}ms)`);
+                            await new Promise(resolve => setTimeout(resolve, interval));
+                            
                         } catch (e) {
                             console.warn('播放分片失败，跳过该分片:', e);
                         }
@@ -789,6 +859,34 @@ class VoicePlayerEnhanced {
         console.log(`🎵 播放流状态完成，messageId:${messageId}`);
         // 播放循环结束后尝试收尾
         this.maybeFinalize(messageId);
+    }
+    
+    /**
+     * 估算音频播放时长（基于base64数据大小）
+     */
+    estimateAudioDuration(base64Audio) {
+        try {
+            // 解码base64获取实际数据大小
+            const binaryString = atob(base64Audio);
+            const dataSize = binaryString.length;
+            
+            // 假设是PCM16格式，采样率24kHz
+            const sampleRate = 24000;
+            const bytesPerSample = 2; // 16位 = 2字节
+            const channels = 1; // 单声道
+            
+            // 计算播放时长（秒）
+            const durationSeconds = dataSize / (sampleRate * bytesPerSample * channels);
+            
+            // 转换为毫秒
+            const durationMs = durationSeconds * 1000;
+            
+            console.log(`🎵 音频时长估算: ${durationMs.toFixed(0)}ms (数据大小: ${dataSize} bytes)`);
+            return Math.max(50, durationMs); // 最小50ms
+        } catch (error) {
+            console.warn('音频时长估算失败，使用默认值:', error);
+            return 200; // 默认200ms
+        }
     }
     
     /**
@@ -1029,12 +1127,12 @@ class VoicePlayerEnhanced {
             const isVoiceCall = messageId && messageId.includes('voice_call');
             
             if (isVoiceCall) {
-                // 语音通话：直接流式播放，参考Chainlit实现
-                console.log('🎧 语音通话音频，直接流式播放');
+                // 语音通话：直接流式播放，不显示播放指示器
+                console.log('🎧 语音通话音频，直接流式播放（不显示播放指示器）');
                 await this.playVoiceCallAudio(base64Audio, messageId);
             } else {
-                // 录音聊天TTS：使用标准音频格式
-                console.log('🎧 录音聊天TTS，使用标准音频格式');
+                // 录音聊天TTS：使用标准音频格式，显示播放指示器
+                console.log('🎧 录音聊天TTS，使用标准音频格式（显示播放指示器）');
                 await this.playStandardAudio(base64Audio, messageId);
             }
             
@@ -1047,6 +1145,18 @@ class VoicePlayerEnhanced {
     async playVoiceCallAudio(base64Audio, messageId = null) {
         try {
             console.log('🎧 播放语音通话音频，base64长度:', base64Audio.length);
+            
+            // 🔧 关键修复：确保音频分片按顺序播放，防止并发播放
+            if (this.isPlayingVoiceCall) {
+                console.log('🎧 语音通话音频正在播放中，等待当前播放完成');
+                // 等待当前播放完成
+                while (this.isPlayingVoiceCall) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+            }
+            
+            this.isPlayingVoiceCall = true;
+            console.log('🎧 开始播放语音通话音频分片');
             
             // 解码base64音频数据
             const binaryString = atob(base64Audio);
@@ -1072,11 +1182,48 @@ class VoicePlayerEnhanced {
             
             console.log('🎵 语音通话音频准备完成，时长:', audioBufferNode.duration.toFixed(2), '秒');
             
-            // 使用队列管理，避免重叠播放
-            this.addToPlayQueue(audioBufferNode, messageId);
+            // 🔧 修复：减少播放间隔，让语音更流利
+            const playbackDuration = audioBufferNode.duration * 1000; // 转换为毫秒
+            const minInterval = 10; // 最小间隔10ms（大幅减少）
+            const interval = Math.max(minInterval, playbackDuration * 0.02); // 播放时长的2%作为间隔（大幅减少）
+            
+            console.log(`🎵 语音通话播放间隔: ${interval.toFixed(1)}ms (播放时长: ${playbackDuration.toFixed(1)}ms)`);
+            
+            // 语音通话音频播放：不显示播放指示器，直接播放
+            console.log('🎧 语音通话音频直接播放（不显示播放指示器）');
+            const source = this.audioContext.createBufferSource();
+            source.buffer = audioBufferNode;
+            source.connect(this.audioContext.destination);
+            
+            // 🔧 关键修复：等待音频播放完成，而不是简单的setTimeout
+            await new Promise((resolve) => {
+                source.onended = () => {
+                    console.log('🎵 音频分片播放完成');
+                    resolve();
+                };
+                source.start();
+                
+                // 备用超时机制，防止onended事件不触发
+                setTimeout(() => {
+                    console.log('🎵 音频分片播放超时，继续下一个');
+                    resolve();
+                }, playbackDuration + 100); // 播放时长 + 100ms 容错
+            });
+            
+            // 🔧 添加额外间隔，确保音频分片之间有适当的间隔
+            if (interval > 0) {
+                console.log(`🎵 等待播放间隔: ${interval}ms`);
+                await new Promise(resolve => setTimeout(resolve, interval));
+            }
+            
+            console.log('🎧 语音通话音频分片播放完成');
             
         } catch (error) {
             console.error('❌ 语音通话音频播放失败:', error);
+        } finally {
+            // 🔧 重置播放标志，允许下一个分片播放
+            this.isPlayingVoiceCall = false;
+            console.log('🎧 语音通话播放标志已重置');
         }
     }
     
@@ -1330,10 +1477,10 @@ class VoicePlayerEnhanced {
                     this.isPlaying = false;
                     console.log('TTS片段播放完成');
                     
-                    // 隐藏增强播放状态指示器
-                    if (this.enhancedPlaybackStatus) {
-                        this.enhancedPlaybackStatus.hide();
-                    }
+                    // 不在这里隐藏播放状态指示器，让maybeFinalize统一处理
+                    // if (this.enhancedPlaybackStatus) {
+                    //     this.enhancedPlaybackStatus.hide();
+                    // }
                     // 记录声源计数并尝试最终收尾
                     if (messageId && this.streamStates.has(messageId)) {
                         const st = this.streamStates.get(messageId);
@@ -1368,27 +1515,32 @@ class VoicePlayerEnhanced {
                     st.playingSources = (st.playingSources || 0) + 1;
                 }
                 
-                // 通知统一按钮状态管理器TTS播放开始 (通过dcc.Store) - 只在/core/chat页面
-                const currentPath = window.location.pathname;
-                const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
-                
-                if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
-                    try {
-                        window.dash_clientside.set_props('button-event-trigger', {
-                            data: {type: 'tts_start', timestamp: Date.now()}
-                        });
-                        console.log('TTS播放开始，触发状态更新');
-                    } catch (setPropsError) {
-                        console.error('set_props调用失败:', setPropsError);
+                // 只在第一个片段播放时显示状态，避免闪烁
+                if (!this.isTtsPlaying) {
+                    this.isTtsPlaying = true;
+                    
+                    // 通知统一按钮状态管理器TTS播放开始 (通过dcc.Store) - 只在/core/chat页面
+                    const currentPath = window.location.pathname;
+                    const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+                    
+                    if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
+                        try {
+                            window.dash_clientside.set_props('button-event-trigger', {
+                                data: {type: 'tts_start', timestamp: Date.now()}
+                            });
+                            console.log('TTS播放开始，触发状态更新');
+                        } catch (setPropsError) {
+                            console.error('set_props调用失败:', setPropsError);
+                        }
+                    }
+                    
+                    // 启用EnhancedPlaybackStatus
+                    if (this.enhancedPlaybackStatus) {
+                        this.enhancedPlaybackStatus.showStatus('speaking', '正在播放语音...');
                     }
                 }
                 
                 console.log('开始播放音频');
-                
-                // 显示增强播放状态指示器
-                if (this.enhancedPlaybackStatus) {
-                    this.enhancedPlaybackStatus.showStatus('speaking', 0);
-                }
                 
             } catch (error) {
                 reject(error);
@@ -1398,7 +1550,8 @@ class VoicePlayerEnhanced {
     
     handleSynthesisComplete(data) {
         console.log('语音合成完成');
-        this.hidePlaybackStatus();
+        // 注意：不要立即隐藏播放状态指示器
+        // 因为TTS播放可能还在进行中，应该等待播放完成后再隐藏
         
         // 标记对应message的合成完成
         const messageId = data.message_id || 'unknown';
@@ -1457,9 +1610,12 @@ class VoicePlayerEnhanced {
         if (synthComplete && noPlayingSources && noPendingChunks && silenceElapsed) {
             // 满足条件，回idle
             console.log(`消息${messageId}播放完成，回idle状态`);
-            this.returnToIdle();
-            // 清理该消息状态
+            // 立即清理该消息状态，避免内存泄漏
             this.streamStates.delete(messageId);
+            // 延迟一点时间确保所有音频都播放完成
+            setTimeout(() => {
+                this.returnToIdle();
+            }, 100);
         } else if (synthComplete && noPlayingSources && noPendingChunks) {
             // 合成完成且无播放源且无待播放分片，但静默窗口未到，延迟重试
             const remaining = silenceWindow - timeSinceLastChunk;
@@ -1482,13 +1638,55 @@ class VoicePlayerEnhanced {
         
         this.isReturningToIdle = true;
         
+        // 重置TTS播放标志，允许下次播放时重新显示状态
+        this.isTtsPlaying = false;
+        
         try {
-            // 隐藏播放状态指示器
-            this.hidePlaybackStatus();
+            console.log('🎵 开始回idle状态');
+            
+            // 使用EnhancedPlaybackStatus隐藏播放状态指示器
+            if (this.enhancedPlaybackStatus) {
+                this.enhancedPlaybackStatus.hide();
+            }
             
             // 使用公共工具触发事件和更新状态
             VoiceUtils.triggerEvent('tts_complete', { timestamp: Date.now() });
             VoiceUtils.updateState('idle', null, {});
+            
+            // 更新语音状态管理器
+            if (window.voiceStateManager) {
+                window.voiceStateManager.finishPlaying();
+            }
+            
+            // 🔧 录音聊天TTS完成后，确保释放麦克风
+            console.log('🎤 检查录音器实例:', window.voiceRecorder, window.voiceRecorderEnhanced);
+            if (window.voiceRecorder) {
+                console.log('🎤 录音聊天TTS完成，释放麦克风资源');
+                console.log('🎤 调用录音器cleanup方法...');
+                try {
+                    window.voiceRecorder.cleanup();
+                    console.log('🎤 录音器cleanup方法调用完成');
+                } catch (error) {
+                    console.error('🎤 录音器cleanup方法调用失败:', error);
+                }
+            } else if (window.voiceRecorderEnhanced) {
+                console.log('🎤 使用备用录音器实例');
+                try {
+                    window.voiceRecorderEnhanced.cleanup();
+                    console.log('🎤 备用录音器cleanup方法调用完成');
+                } catch (error) {
+                    console.error('🎤 备用录音器cleanup方法调用失败:', error);
+                }
+            } else {
+                console.log('🎤 录音器实例不存在，检查全局状态');
+                // 检查是否有其他方式释放麦克风
+                if (window.voiceStateManager) {
+                    console.log('🎤 通过状态管理器释放麦克风');
+                    window.voiceStateManager.cleanup();
+                }
+            }
+            
+            console.log('🎵 已回idle状态');
             
             // 触发会话状态更新，确保"当前会话"状态正确
             if (window.dash_clientside && window.dash_clientside.set_props) {
@@ -1513,7 +1711,10 @@ class VoicePlayerEnhanced {
     
     handleError(data) {
         VoiceUtils.handleError(new Error(data.message), '语音合成');
-        this.hidePlaybackStatus();
+        // 使用EnhancedPlaybackStatus隐藏播放状态指示器
+        if (this.enhancedPlaybackStatus) {
+            this.enhancedPlaybackStatus.hide();
+        }
         
         // 使用公共工具重置状态
         VoiceUtils.updateState('idle', null, {});
@@ -1539,76 +1740,17 @@ class VoicePlayerEnhanced {
         // 清空流状态
         this.streamStates.clear();
         
-        // 隐藏播放状态
-        this.hidePlaybackStatus();
+        // 使用EnhancedPlaybackStatus隐藏播放状态
+        if (this.enhancedPlaybackStatus) {
+            this.enhancedPlaybackStatus.hide();
+        }
         
         // 重置播放状态
         this.isPlaying = false;
     }
     
-    showPlaybackStatus() {
-        // 创建播放状态指示器
-        let statusIndicator = document.getElementById('voice-playback-status');
-        if (!statusIndicator) {
-            statusIndicator = document.createElement('div');
-            statusIndicator.id = 'voice-playback-status';
-            statusIndicator.style.cssText = `
-                position: fixed;
-                top: 80px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-                color: white;
-                padding: 6px 12px;
-                border-radius: 15px;
-                font-size: 12px;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                z-index: 10000;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-                opacity: 0;
-                transition: opacity 0.3s ease;
-            `;
-            document.body.appendChild(statusIndicator);
-        }
-        
-        statusIndicator.innerHTML = `
-            <div style="width: 12px; height: 12px; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            正在播放语音...
-        `;
-        
-        // 显示动画
-        setTimeout(() => {
-            statusIndicator.style.opacity = '1';
-        }, 100);
-        
-        // 添加旋转动画
-        if (!document.getElementById('voice-playback-spin-animation')) {
-            const style = document.createElement('style');
-            style.id = 'voice-playback-spin-animation';
-            style.textContent = `
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-    }
-    
-    hidePlaybackStatus() {
-        const statusIndicator = document.getElementById('voice-playback-status');
-        if (statusIndicator) {
-            // 使用淡出动画隐藏
-            statusIndicator.style.opacity = '0';
-            setTimeout(() => {
-                if (statusIndicator.parentNode) {
-                    statusIndicator.parentNode.removeChild(statusIndicator);
-                }
-            }, 300);
-        }
-    }
+    // 注意：showPlaybackStatus() 和 hidePlaybackStatus() 方法已被删除
+    // 现在使用 enhanced_playback_status.js 作为播放状态指示器
     
     stopPlayback() {
         if (this.currentAudio) {
@@ -1637,7 +1779,10 @@ class VoicePlayerEnhanced {
                 console.error('停止播放失败:', error);
             }
         }
-        this.hidePlaybackStatus();
+        // 使用EnhancedPlaybackStatus隐藏播放状态
+        if (this.enhancedPlaybackStatus) {
+            this.enhancedPlaybackStatus.hide();
+        }
     }
     
     setVoiceSettings(settings) {

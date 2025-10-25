@@ -140,6 +140,7 @@ class TimeoutManager:
         timeout_info['warned'] = True
         
         # 调用警告处理器
+        timeout_type = timeout_info['type']
         if timeout_type in self.timeout_handlers:
             try:
                 self.timeout_handlers[timeout_type](timeout_id, 'warning', timeout_info)

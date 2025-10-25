@@ -327,22 +327,38 @@ app.clientside_callback(
                 return result;
             }
             
-            // 录音按钮图标映射 - 返回 DashIconify 组件
+            // 文本按钮图标映射
+            let textButtonIcon = 'material-symbols:send'; // 默认发送图标
+            if (state === 'text_processing' || state === 'text_sse') {
+                textButtonIcon = 'eos-icons:loading'; // 处理中显示loading旋转图标
+            }
+            
+            // 录音按钮图标映射
             let recordButtonIcon = 'proicons:microphone'; // 默认麦克风
             if (state === 'recording') {
                 recordButtonIcon = 'material-symbols:stop'; // 录音中显示停止
-            } else if (state === 'processing' || state === 'voice_processing') {
+            } else if (state === 'processing' || state === 'voice_processing' || state === 'voice_stt' || state === 'voice_sse') {
                 recordButtonIcon = 'eos-icons:loading'; // 处理中显示loading
+            } else if (state === 'voice_tts') {
+                recordButtonIcon = 'material-symbols:play-arrow'; // TTS播放中显示播放
+            }
+            
+            // 通话按钮图标映射
+            let callButtonIcon = 'bi:telephone'; // 默认通话图标（话筒方向向左下角）
+            if (state === 'voice_call' || state === 'calling') {
+                callButtonIcon = 'material-symbols:call-end'; // 通话中显示挂断
             }
             
             const result = [
                 mergeButtonStyle('ai-chat-x-send-btn', styles.textButton),
                 styles.textLoading || false,
                 styles.textDisabled || false,
+                textButtonIcon, // 文本按钮图标
                 mergeButtonStyle('voice-record-button', styles.recordButton),
-                recordButtonIcon, // 图标字符串，将在 Python 端转换为 DashIconify
+                recordButtonIcon, // 录音按钮图标
                 styles.recordDisabled || false,
                 mergeButtonStyle('voice-call-btn', styles.callButton),
+                callButtonIcon, // 通话按钮图标
                 styles.callDisabled || false
             ];
             
@@ -353,17 +369,32 @@ app.clientside_callback(
         Output('ai-chat-x-send-btn', 'style', allow_duplicate=True),
         Output('ai-chat-x-send-btn', 'loading', allow_duplicate=True),
         Output('ai-chat-x-send-btn', 'disabled', allow_duplicate=True),
+        Output('ai-chat-x-send-icon-store', 'data', allow_duplicate=True),
         Output('voice-record-button', 'style', allow_duplicate=True),
         Output('voice-record-icon-store', 'data', allow_duplicate=True),
         Output('voice-record-button', 'disabled', allow_duplicate=True),
         Output('voice-call-btn', 'style', allow_duplicate=True),
+        Output('voice-call-icon-store', 'data', allow_duplicate=True),
         Output('voice-call-btn', 'disabled', allow_duplicate=True)
     ],
     Input('unified-button-state', 'data'),
     prevent_initial_call=True
 )
 
-# 回调 3: 录音按钮图标更新回调
+# 回调 3: 文本按钮图标更新回调
+@app.callback(
+    Output('ai-chat-x-send-btn', 'icon', allow_duplicate=True),
+    Input('ai-chat-x-send-icon-store', 'data'),
+    prevent_initial_call=True
+)
+def update_text_button_icon(icon_data):
+    """更新文本按钮图标"""
+    if not icon_data:
+        return DashIconify(icon="material-symbols:send", width=20, height=20)
+    
+    return DashIconify(icon=icon_data, width=20, height=20)
+
+# 回调 4: 录音按钮图标更新回调
 @app.callback(
     Output('voice-record-button', 'icon', allow_duplicate=True),
     Input('voice-record-icon-store', 'data'),
@@ -373,6 +404,23 @@ def update_record_button_icon(icon_data):
     """更新录音按钮图标"""
     if not icon_data:
         return DashIconify(icon="proicons:microphone", width=20, height=20)
+    
+    return DashIconify(icon=icon_data, width=20, height=20)
+
+# 回调 5: 通话按钮图标更新回调
+@app.callback(
+    Output('voice-call-btn', 'icon', allow_duplicate=True),
+    Input('voice-call-icon-store', 'data'),
+    prevent_initial_call=True
+)
+def update_call_button_icon(icon_data):
+    """更新通话按钮图标"""
+    if not icon_data:
+        return DashIconify(icon="bi:telephone", rotate=2, width=20, height=20)
+    
+    # 如果是bi:telephone图标，需要旋转180度
+    if icon_data == "bi:telephone":
+        return DashIconify(icon=icon_data, rotate=2, width=20, height=20)
     
     return DashIconify(icon=icon_data, width=20, height=20)
 

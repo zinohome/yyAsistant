@@ -276,6 +276,10 @@ class HealthChecker:
                     'error': check.last_error,
                     'success_rate': check.get_success_rate()
                 }
+            
+            # 记录健康状态历史
+            self._record_health_status(results)
+            
             return results
     
     def get_health_status(self) -> Dict[str, Any]:
