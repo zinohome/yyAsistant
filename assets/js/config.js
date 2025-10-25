@@ -24,7 +24,7 @@ class Config {
             
             // WebSocket配置
             websocket: {
-                url: 'ws://192.168.32.168:9800/ws/chat',
+                url: 'ws://yychat:9800/ws/chat',
                 reconnectAttempts: 5,
                 reconnectInterval: 5000,
                 heartbeatInterval: 30000
@@ -160,7 +160,7 @@ class Config {
                 debug: window.location.hostname === 'localhost'
             },
             websocket: {
-                url: 'ws://192.168.32.168:9800/ws/chat',
+                url: 'ws://yychat:9800/ws/chat',
                 reconnectAttempts: 5,
                 reconnectInterval: 5000,
                 heartbeatInterval: 30000

@@ -83,7 +83,7 @@ class BaseConfig:
     
     # WebSocket配置
     # WebSocket服务器地址
-    websocket_url: str = "ws://192.168.32.168:9800/ws/chat"
+    websocket_url: str = "ws://yychat:9800/ws/chat"
     # WebSocket重连间隔时间（毫秒）
     websocket_reconnect_interval: int = 1000
     # WebSocket最大重连次数
