@@ -25,11 +25,7 @@ class VoiceConfig {
             audioChunkSize: 12288,
             audioSendInterval: 300,
             
-            // WebSocket设置
-            wsUrl: 'ws://192.168.32.168:9800/ws/chat',
-            reconnectAttempts: 5,
-            reconnectInterval: 1000,
-            heartbeatInterval: 30000,
+            // WebSocket设置已移至 config.js 中统一管理
             
             // UI设置
             autoPlay: true,

@@ -5,10 +5,7 @@ from typing import Dict, Any
 class VoiceConfig:
     """语音功能配置类"""
     
-    # WebSocket配置 - 直连yychat后端的WebSocket端点
-    WS_URL = "ws://192.168.32.168:9800/ws/chat"
-    WS_RECONNECT_INTERVAL = 1000  # 毫秒
-    WS_MAX_RECONNECT_ATTEMPTS = 5
+    # WebSocket配置已移至 base_config.py 中统一管理
     
     # 音频配置
     AUDIO_SAMPLE_RATE = 16000

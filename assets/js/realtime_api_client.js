@@ -21,7 +21,7 @@ class RealtimeAPIClient {
      */
     async connect() {
         try {
-            console.log('开始连接OpenAI Realtime API...');
+            window.controlledLog.log('开始连接OpenAI Realtime API...');
             
             // 1. 从后端获取token
             await this.fetchToken();
@@ -30,13 +30,13 @@ class RealtimeAPIClient {
             await this.establishConnection();
             
             this.isConnected = true;
-            console.log('OpenAI Realtime API连接成功');
+            window.controlledLog.log('OpenAI Realtime API连接成功');
             
             // 触发连接成功事件
             this.emit('connected');
             
         } catch (error) {
-            console.error('连接OpenAI Realtime API失败:', error);
+            window.controlledLog.error('连接OpenAI Realtime API失败:', error);
             this.emit('error', error);
             throw error;
         }
@@ -69,10 +69,10 @@ class RealtimeAPIClient {
             this.url = data.data.url;
             this.model = data.data.model;
             
-            console.log('Token获取成功');
+            window.controlledLog.log('Token获取成功');
             
         } catch (error) {
-            console.error('获取token失败:', error);
+            window.controlledLog.error('获取token失败:', error);
             throw error;
         }
     }
@@ -103,7 +103,7 @@ class RealtimeAPIClient {
      */
     setupEventHandlers(resolve, reject) {
         this.ws.onopen = () => {
-            console.log('WebSocket连接已建立');
+            window.controlledLog.log('WebSocket连接已建立');
             this.reconnectAttempts = 0;
             resolve();
         };
@@ -113,18 +113,18 @@ class RealtimeAPIClient {
                 const data = JSON.parse(event.data);
                 this.handleMessage(data);
             } catch (error) {
-                console.error('处理WebSocket消息失败:', error);
+                window.controlledLog.error('处理WebSocket消息失败:', error);
                 this.emit('error', error);
             }
         };
         
         this.ws.onerror = (error) => {
-            console.error('WebSocket错误:', error);
+            window.controlledLog.error('WebSocket错误:', error);
             this.emit('error', error);
         };
         
         this.ws.onclose = (event) => {
-            console.log('WebSocket连接已关闭:', event.code, event.reason);
+            window.controlledLog.log('WebSocket连接已关闭:', event.code, event.reason);
             this.isConnected = false;
             this.emit('disconnected', event);
             
@@ -139,7 +139,7 @@ class RealtimeAPIClient {
      * 处理WebSocket消息
      */
     handleMessage(data) {
-        console.log('收到Realtime API消息:', data);
+        window.controlledLog.log('收到Realtime API消息:', data);
         
         switch (data.type) {
             case 'session.created':
@@ -191,7 +191,7 @@ class RealtimeAPIClient {
                 this.emit('api_error', data);
                 break;
             default:
-                console.log('未知消息类型:', data.type);
+                window.controlledLog.log('未知消息类型:', data.type);
                 this.emit('unknown_message', data);
         }
     }
@@ -206,9 +206,9 @@ class RealtimeAPIClient {
         
         try {
             this.ws.send(JSON.stringify(message));
-            console.log('发送消息到Realtime API:', message);
+            window.controlledLog.log('发送消息到Realtime API:', message);
         } catch (error) {
-            console.error('发送消息失败:', error);
+            window.controlledLog.error('发送消息失败:', error);
             throw error;
         }
     }
@@ -279,7 +279,7 @@ class RealtimeAPIClient {
             this.ws = null;
         }
         this.isConnected = false;
-        console.log('已断开Realtime API连接');
+        window.controlledLog.log('已断开Realtime API连接');
     }
     
     /**
@@ -289,11 +289,11 @@ class RealtimeAPIClient {
         this.reconnectAttempts++;
         const delay = this.reconnectDelay * this.reconnectAttempts;
         
-        console.log(`安排重连，延迟 ${delay}ms (尝试 ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+        window.controlledLog.log(`安排重连，延迟 ${delay}ms (尝试 ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
         
         setTimeout(() => {
             this.connect().catch(error => {
-                console.error('重连失败:', error);
+                window.controlledLog.error('重连失败:', error);
             });
         }, delay);
     }
@@ -337,7 +337,7 @@ class RealtimeAPIClient {
                 try {
                     handler(data);
                 } catch (error) {
-                    console.error(`事件处理器错误 (${event}):`, error);
+                    window.controlledLog.error(`事件处理器错误 (${event}):`, error);
                 }
             });
         }

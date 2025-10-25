@@ -21,7 +21,7 @@ class VoiceStateManager {
         // 初始化状态处理器
         this.initStateHandlers();
         
-        console.log('语音状态管理器已初始化');
+        window.controlledLog.log('语音状态管理器已初始化');
     }
     
     /**
@@ -43,7 +43,7 @@ class VoiceStateManager {
         this.stateHandlers.set(this.STATES.PROCESSING, () => {
             this.updateButtonState('processing', '处理中...', false);
             // 处理中状态时，不要禁用文本提交按钮
-            console.log('语音处理中，保持文本提交按钮可用');
+            window.controlledLog.log('语音处理中，保持文本提交按钮可用');
         });
         
         // 播放状态处理器
@@ -69,7 +69,7 @@ class VoiceStateManager {
             const oldState = this.currentState;
             this.currentState = newState;
             
-            console.log(`语音状态变更: ${oldState} → ${newState}`);
+            window.controlledLog.log(`语音状态变更: ${oldState} → ${newState}`);
             
             // 执行状态处理器
             const handler = this.stateHandlers.get(newState);
@@ -80,7 +80,7 @@ class VoiceStateManager {
             // 通知状态变化
             this.notifyStateChange(oldState, newState);
         } else {
-            console.error('无效的语音状态:', newState);
+            window.controlledLog.error('无效的语音状态:', newState);
         }
     }
     
@@ -181,7 +181,7 @@ class VoiceStateManager {
                 client_id: window.voiceWebSocketManager.clientId,
                 session_id: window.voiceWebSocketManager.sessionId
             });
-            console.log('已发送中断信号到后端');
+            window.controlledLog.log('已发送中断信号到后端');
         }
     }
     
@@ -237,56 +237,56 @@ class VoiceStateManager {
      * 处理按钮点击事件
      */
     async handleButtonClick() {
-        console.log('语音按钮被点击，当前状态:', this.currentState);
+        window.controlledLog.log('语音按钮被点击，当前状态:', this.currentState);
         
         if (this.currentState === this.STATES.IDLE) {
             // 空闲状态：开始录音
-            console.log('开始录音');
+            window.controlledLog.log('开始录音');
             
             // 先调用录音器开始录音，再更新状态
             if (window.voiceRecorder) {
-                console.log('状态管理器调用录音器开始录音');
+                window.controlledLog.log('状态管理器调用录音器开始录音');
                 const success = await window.voiceRecorder.startRecording();
                 if (success) {
                     this.startRecording();
                     return true;
                 } else {
-                    console.error('录音器开始录音失败');
+                    window.controlledLog.error('录音器开始录音失败');
                     return false;
                 }
             } else {
-                console.error('录音器未找到: window.voiceRecorder');
+                window.controlledLog.error('录音器未找到: window.voiceRecorder');
                 return false;
             }
         } else if (this.currentState === this.STATES.RECORDING) {
             // 录音中状态：停止录音
-            console.log('停止录音');
+            window.controlledLog.log('停止录音');
             
             // 直接调用录音器的停止录音方法
             if (window.voiceRecorder) {
-                console.log('状态管理器调用录音器停止录音');
+                window.controlledLog.log('状态管理器调用录音器停止录音');
                 await window.voiceRecorder.stopRecording();
             } else {
-                console.error('录音器未找到: window.voiceRecorder');
+                window.controlledLog.error('录音器未找到: window.voiceRecorder');
             }
             
             return true;
         } else if (this.canInterrupt()) {
             // 播放中状态：中断播放
-            console.log('中断播放');
+            window.controlledLog.log('中断播放');
             this.interrupt();
             return true;
         } else {
-            console.log('当前状态不允许操作:', this.currentState);
+            window.controlledLog.log('当前状态不允许操作:', this.currentState);
             return false;
         }
     }
 }
 
 // 创建全局实例
-console.log('初始化语音状态管理器...');
+window.controlledLog.log('初始化语音状态管理器...');
 window.voiceStateManager = new VoiceStateManager();
-console.log('语音状态管理器初始化完成:', window.voiceStateManager);
+window.controlledLog.log('语音状态管理器初始化完成:', window.voiceStateManager);
 
 // 导出按钮点击处理方法到全局命名空间，供Dash客户端回调使用
 window.voiceStateManager.handleButtonClick = window.voiceStateManager.handleButtonClick.bind(window.voiceStateManager);

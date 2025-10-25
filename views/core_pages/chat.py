@@ -390,7 +390,7 @@ def _create_state_stores():
                     
                     // 从Python配置动态设置全局语音配置
                     window.voiceConfig = {{
-                        WS_URL: '''' + VoiceConfig.WS_URL + '''',
+                        WS_URL: '''' + BaseConfig.websocket_url + '''',
                         AUDIO_SAMPLE_RATE: ''' + str(VoiceConfig.AUDIO_SAMPLE_RATE) + ''',
                         AUDIO_CHANNELS: ''' + str(VoiceConfig.AUDIO_CHANNELS) + ''',
                         AUDIO_BIT_RATE: ''' + str(VoiceConfig.AUDIO_BIT_RATE) + ''',

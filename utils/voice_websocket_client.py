@@ -14,9 +14,10 @@ class VoiceWebSocketClient:
     """语音WebSocket客户端 - 专门处理语音相关的WebSocket通信"""
     
     def __init__(self):
-        self.ws_url = VoiceConfig.WS_URL
-        self.reconnect_interval = VoiceConfig.WS_RECONNECT_INTERVAL
-        self.max_reconnect_attempts = VoiceConfig.WS_MAX_RECONNECT_ATTEMPTS
+        from configs.base_config import BaseConfig
+        self.ws_url = BaseConfig.websocket_url
+        self.reconnect_interval = BaseConfig.websocket_reconnect_interval
+        self.max_reconnect_attempts = BaseConfig.websocket_max_reconnect_attempts
         self.websocket = None
         self.client_id = None
         self.is_connected = False

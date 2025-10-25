@@ -47,7 +47,7 @@ class VoiceRecorder {
             
             // 检查MediaRecorder支持
             if (!MediaRecorder.isTypeSupported(this.audioConfig.mimeType)) {
-                console.warn('不支持的音频格式，使用默认格式');
+                window.controlledLog.warn('不支持的音频格式，使用默认格式');
                 this.audioConfig.mimeType = 'audio/webm';
             }
             
@@ -60,10 +60,10 @@ class VoiceRecorder {
             // 设置事件处理器
             this.setupEventHandlers();
             
-            console.log('语音录音器初始化成功');
+            window.controlledLog.log('语音录音器初始化成功');
             return true;
         } catch (error) {
-            console.error('语音录音器初始化失败:', error);
+            window.controlledLog.error('语音录音器初始化失败:', error);
             this.handleError(error);
             return false;
         }
@@ -80,7 +80,7 @@ class VoiceRecorder {
         };
         
         this.mediaRecorder.onstart = () => {
-            console.log('开始录音');
+            window.controlledLog.log('开始录音');
             this.isRecording = true;
             this.recordingStartTime = Date.now();
             this.startDurationTimer();
@@ -91,7 +91,7 @@ class VoiceRecorder {
         };
         
         this.mediaRecorder.onstop = () => {
-            console.log('停止录音');
+            window.controlledLog.log('停止录音');
             this.isRecording = false;
             this.stopDurationTimer();
             
@@ -104,7 +104,7 @@ class VoiceRecorder {
         };
         
         this.mediaRecorder.onerror = (event) => {
-            console.error('录音错误:', event.error);
+            window.controlledLog.error('录音错误:', event.error);
             this.handleError(event.error);
         };
     }
@@ -121,7 +121,7 @@ class VoiceRecorder {
         }
         
         if (this.isRecording) {
-            console.warn('已经在录音中');
+            window.controlledLog.warn('已经在录音中');
             return false;
         }
         
@@ -134,7 +134,7 @@ class VoiceRecorder {
             
             return true;
         } catch (error) {
-            console.error('开始录音失败:', error);
+            window.controlledLog.error('开始录音失败:', error);
             this.handleError(error);
             return false;
         }
@@ -145,7 +145,7 @@ class VoiceRecorder {
      */
     stopRecording() {
         if (!this.isRecording || !this.mediaRecorder) {
-            console.warn('当前没有在录音');
+            window.controlledLog.warn('当前没有在录音');
             return false;
         }
         
@@ -153,7 +153,7 @@ class VoiceRecorder {
             this.mediaRecorder.stop();
             return true;
         } catch (error) {
-            console.error('停止录音失败:', error);
+            window.controlledLog.error('停止录音失败:', error);
             this.handleError(error);
             return false;
         }
@@ -164,7 +164,7 @@ class VoiceRecorder {
      */
     async processRecording() {
         if (this.audioChunks.length === 0) {
-            console.warn('没有录音数据');
+            window.controlledLog.warn('没有录音数据');
             return;
         }
         
@@ -174,7 +174,7 @@ class VoiceRecorder {
                 type: this.audioConfig.mimeType
             });
             
-            console.log('录音完成，音频大小:', audioBlob.size, 'bytes');
+            window.controlledLog.log('录音完成，音频大小:', audioBlob.size, 'bytes');
             
             // 发送音频数据
             if (this.onAudioData) {
@@ -182,7 +182,7 @@ class VoiceRecorder {
             }
             
         } catch (error) {
-            console.error('处理录音数据失败:', error);
+            window.controlledLog.error('处理录音数据失败:', error);
             this.handleError(error);
         }
     }
@@ -227,7 +227,7 @@ class VoiceRecorder {
      * 处理错误
      */
     handleError(error) {
-        console.error('语音录音器错误:', error);
+        window.controlledLog.error('语音录音器错误:', error);
         
         if (this.onRecordingError) {
             this.onRecordingError(error);
@@ -254,7 +254,7 @@ class VoiceRecorder {
         this.recordingStartTime = null;
         this.recordingDuration = 0;
         
-        console.log('语音录音器资源已清理');
+        window.controlledLog.log('语音录音器资源已清理');
     }
     
     /**

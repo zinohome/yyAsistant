@@ -18,7 +18,8 @@ class Config {
             app: {
                 name: 'yyAsistant',
                 version: '2.0.0',
-                debug: window.location.hostname === 'localhost'
+                debug: window.location.hostname === 'localhost',
+                show_console_log: false  // 控制台日志显示开关
             },
             
             // WebSocket配置
@@ -57,9 +58,7 @@ class Config {
      * @returns {string} WebSocket URL
      */
     getWebSocketUrl() {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        return `${protocol}//${host}/ws`;
+        return this.config.websocket.url;
     }
     
     /**
@@ -242,6 +241,40 @@ class Config {
 // 全局配置实例
 window.config = new Config();
 
+// 日志控制系统
+window.controlledLog = {
+    log: function(...args) {
+        if (window.config.get('app.show_console_log', true)) {
+            console.log(...args);
+        }
+    },
+    warn: function(...args) {
+        if (window.config.get('app.show_console_log', true)) {
+            console.warn(...args);
+        }
+    },
+    error: function(...args) {
+        if (window.config.get('app.show_console_log', true)) {
+            console.error(...args);
+        }
+    },
+    info: function(...args) {
+        if (window.config.get('app.show_console_log', true)) {
+            console.info(...args);
+        }
+    },
+    debug: function(...args) {
+        if (window.config.get('app.show_console_log', true)) {
+            console.debug(...args);
+        }
+    }
+};
+
+// 设置控制台日志开关的便捷函数
+window.setConsoleLogEnabled = function(enabled) {
+    window.config.set('app.show_console_log', enabled);
+};
+
 // 便捷函数
 /**
  * 获取配置值的便捷函数
@@ -266,14 +299,14 @@ window.setConfig = function(key, value) {
 document.addEventListener('DOMContentLoaded', function() {
     const validation = window.config.validate();
     if (!validation.valid) {
-        console.warn('配置验证失败:', validation);
+        window.controlledLog.warn('配置验证失败:', validation);
         if (validation.missing.length > 0) {
-            console.error('缺少必需配置:', validation.missing);
+            window.controlledLog.error('缺少必需配置:', validation.missing);
         }
         if (validation.invalid.length > 0) {
-            console.error('配置值无效:', validation.invalid);
+            window.controlledLog.error('配置值无效:', validation.invalid);
         }
     } else {
-        console.log('配置验证通过');
+        window.controlledLog.log('配置验证通过');
     }
 });

@@ -52,7 +52,7 @@ class RealtimeStateManager {
     }
     
     init() {
-        console.log('RealtimeStateManager: Initializing...');
+        window.controlledLog.log('RealtimeStateManager: Initializing...');
         
         // Bind event listeners
         this.bindEventListeners();
@@ -63,7 +63,7 @@ class RealtimeStateManager {
         // Initialize UI
         this.updateUI();
         
-        console.log('RealtimeStateManager: Initialized');
+        window.controlledLog.log('RealtimeStateManager: Initialized');
     }
     
     bindEventListeners() {
@@ -109,36 +109,36 @@ class RealtimeStateManager {
     }
     
     registerWebSocketHandlers() {
-        console.log('RealtimeStateManager: Registering WebSocket handlers...');
+        window.controlledLog.log('RealtimeStateManager: Registering WebSocket handlers...');
         
         // Wait for WebSocket manager to be available
         const checkWebSocketManager = () => {
             if (window.voiceWebSocketManager) {
                 // Register start_audio_stream handler
                 window.voiceWebSocketManager.registerMessageHandler('start_audio_stream', (data) => {
-                    console.log('RealtimeStateManager: Received start_audio_stream:', data);
+                    window.controlledLog.log('RealtimeStateManager: Received start_audio_stream:', data);
                     this.handleStartAudioStream(data);
                 });
                 
                 // Register realtime_dialogue_started handler
                 window.voiceWebSocketManager.registerMessageHandler('realtime_dialogue_started', (data) => {
-                    console.log('RealtimeStateManager: Received realtime_dialogue_started:', data);
+                    window.controlledLog.log('RealtimeStateManager: Received realtime_dialogue_started:', data);
                     this.handleRealtimeDialogueStarted(data);
                 });
                 
                 // Register realtime_dialogue_stopped handler
                 window.voiceWebSocketManager.registerMessageHandler('realtime_dialogue_stopped', (data) => {
-                    console.log('RealtimeStateManager: Received realtime_dialogue_stopped:', data);
+                    window.controlledLog.log('RealtimeStateManager: Received realtime_dialogue_stopped:', data);
                     this.handleRealtimeDialogueStopped(data);
                 });
                 
                 // Register audio_stream_ack handler
                 window.voiceWebSocketManager.registerMessageHandler('audio_stream_ack', (data) => {
-                    console.log('RealtimeStateManager: Received audio_stream_ack:', data);
+                    window.controlledLog.log('RealtimeStateManager: Received audio_stream_ack:', data);
                     // Audio stream acknowledged, continue listening
                 });
                 
-                console.log('RealtimeStateManager: WebSocket handlers registered');
+                window.controlledLog.log('RealtimeStateManager: WebSocket handlers registered');
             } else {
                 // Retry after 100ms
                 setTimeout(checkWebSocketManager, 100);
@@ -150,21 +150,21 @@ class RealtimeStateManager {
     
     setState(newState, metadata = {}) {
         if (this.STATES[newState] === undefined) {
-            console.error(`RealtimeStateManager: Invalid state: ${newState}`);
+            window.controlledLog.error(`RealtimeStateManager: Invalid state: ${newState}`);
             return false;
         }
         
         const stateValue = this.STATES[newState];
         
         if (this.currentState === stateValue) {
-            console.log(`RealtimeStateManager: Already in state: ${stateValue}`);
+            window.controlledLog.log(`RealtimeStateManager: Already in state: ${stateValue}`);
             return true;
         }
         
         this.previousState = this.currentState;
         this.currentState = stateValue;
         
-        console.log(`RealtimeStateManager: State changed: ${this.previousState} -> ${this.currentState}`);
+        window.controlledLog.log(`RealtimeStateManager: State changed: ${this.previousState} -> ${this.currentState}`);
         
         // Update UI
         this.updateUI();
@@ -295,7 +295,7 @@ class RealtimeStateManager {
     }
     
     startRealtimeDialogue() {
-        console.log('RealtimeStateManager: Starting realtime dialogue');
+        window.controlledLog.log('RealtimeStateManager: Starting realtime dialogue');
         
         this.setState('LISTENING');
         this.stats.startTime = Date.now();
@@ -305,7 +305,7 @@ class RealtimeStateManager {
     }
     
     stopRealtimeDialogue() {
-        console.log('RealtimeStateManager: Stopping realtime dialogue');
+        window.controlledLog.log('RealtimeStateManager: Stopping realtime dialogue');
         
         this.setState('IDLE');
         
@@ -321,7 +321,7 @@ class RealtimeStateManager {
     
     toggleMute() {
         this.settings.muted = !this.settings.muted;
-        console.log(`RealtimeStateManager: Mute toggled: ${this.settings.muted}`);
+        window.controlledLog.log(`RealtimeStateManager: Mute toggled: ${this.settings.muted}`);
         
         this.updateButtons();
         this.onMuteToggle(this.settings.muted);
@@ -329,14 +329,14 @@ class RealtimeStateManager {
     
     updateVolume(volume) {
         this.settings.volume = Math.max(0, Math.min(100, volume));
-        console.log(`RealtimeStateManager: Volume updated: ${this.settings.volume}`);
+        window.controlledLog.log(`RealtimeStateManager: Volume updated: ${this.settings.volume}`);
         
         this.onVolumeChange(this.settings.volume);
     }
     
     updateRate(rate) {
         this.settings.rate = Math.max(0.5, Math.min(2.0, rate));
-        console.log(`RealtimeStateManager: Rate updated: ${this.settings.rate}`);
+        window.controlledLog.log(`RealtimeStateManager: Rate updated: ${this.settings.rate}`);
         
         this.onRateChange(this.settings.rate);
     }
@@ -360,7 +360,7 @@ class RealtimeStateManager {
         // Update display
         this.updateHistoryDisplay();
         
-        console.log(`RealtimeStateManager: Added to history: ${role} - ${content.substring(0, 50)}...`);
+        window.controlledLog.log(`RealtimeStateManager: Added to history: ${role} - ${content.substring(0, 50)}...`);
     }
     
     clearHistory() {
@@ -368,7 +368,7 @@ class RealtimeStateManager {
         this.stats.totalMessages = 0;
         this.updateHistoryDisplay();
         
-        console.log('RealtimeStateManager: History cleared');
+        window.controlledLog.log('RealtimeStateManager: History cleared');
     }
     
     getCurrentState() {
@@ -383,49 +383,49 @@ class RealtimeStateManager {
     
     // Event handlers (to be overridden)
     onStateChange(newState, previousState, metadata) {
-        console.log(`RealtimeStateManager: State change event: ${previousState} -> ${newState}`);
+        window.controlledLog.log(`RealtimeStateManager: State change event: ${previousState} -> ${newState}`);
     }
     
     onDialogueStart() {
-        console.log('RealtimeStateManager: Dialogue start event');
+        window.controlledLog.log('RealtimeStateManager: Dialogue start event');
     }
     
     onDialogueStop() {
-        console.log('RealtimeStateManager: Dialogue stop event');
+        window.controlledLog.log('RealtimeStateManager: Dialogue stop event');
     }
     
     onMuteToggle(muted) {
-        console.log(`RealtimeStateManager: Mute toggle event: ${muted}`);
+        window.controlledLog.log(`RealtimeStateManager: Mute toggle event: ${muted}`);
     }
     
     onVolumeChange(volume) {
-        console.log(`RealtimeStateManager: Volume change event: ${volume}`);
+        window.controlledLog.log(`RealtimeStateManager: Volume change event: ${volume}`);
     }
     
     onRateChange(rate) {
-        console.log(`RealtimeStateManager: Rate change event: ${rate}`);
+        window.controlledLog.log(`RealtimeStateManager: Rate change event: ${rate}`);
     }
     
     setupDashStoreListener() {
         // 使用Dash Clientside Callback监听button-event-trigger store更新
-        console.log('RealtimeStateManager: Using Dash Clientside Callback for button-event-trigger');
-        console.log('RealtimeStateManager: Dash Store listener setup complete (via clientside callback)');
+        window.controlledLog.log('RealtimeStateManager: Using Dash Clientside Callback for button-event-trigger');
+        window.controlledLog.log('RealtimeStateManager: Dash Store listener setup complete (via clientside callback)');
     }
     
     handleRealtimeTrigger(triggerData) {
-        console.log('RealtimeStateManager: Handling trigger:', triggerData);
+        window.controlledLog.log('RealtimeStateManager: Handling trigger:', triggerData);
         
         if (triggerData.action === 'start_realtime_dialogue') {
-            console.log('RealtimeStateManager: Starting realtime dialogue...');
+            window.controlledLog.log('RealtimeStateManager: Starting realtime dialogue...');
             this.startRealtimeDialogue();
         } else if (triggerData.action === 'stop_realtime_dialogue') {
-            console.log('RealtimeStateManager: Stopping realtime dialogue...');
+            window.controlledLog.log('RealtimeStateManager: Stopping realtime dialogue...');
             this.stopRealtimeDialogue();
         }
     }
     
     startRealtimeDialogue() {
-        console.log('RealtimeStateManager: Starting realtime dialogue...');
+        window.controlledLog.log('RealtimeStateManager: Starting realtime dialogue...');
         // 这里应该启动实时语音对话
         // 可以通过WebSocket发送消息到后端
         if (window.voiceWebSocketManager && window.voiceWebSocketManager.sendMessage) {
@@ -433,31 +433,31 @@ class RealtimeStateManager {
                 type: 'start_realtime_dialogue',
                 timestamp: Date.now()
             });
-            console.log('RealtimeStateManager: Sent start_realtime_dialogue message');
+            window.controlledLog.log('RealtimeStateManager: Sent start_realtime_dialogue message');
         } else {
-            console.warn('RealtimeStateManager: WebSocket manager not available');
+            window.controlledLog.warn('RealtimeStateManager: WebSocket manager not available');
         }
     }
     
     stopRealtimeDialogue() {
-        console.log('RealtimeStateManager: Stopping realtime dialogue...');
+        window.controlledLog.log('RealtimeStateManager: Stopping realtime dialogue...');
         // 这里应该停止实时语音对话
         if (window.voiceWebSocketManager && window.voiceWebSocketManager.sendMessage) {
             window.voiceWebSocketManager.sendMessage({
                 type: 'stop_realtime_dialogue',
                 timestamp: Date.now()
             });
-            console.log('RealtimeStateManager: Sent stop_realtime_dialogue message');
+            window.controlledLog.log('RealtimeStateManager: Sent stop_realtime_dialogue message');
         } else {
-            console.warn('RealtimeStateManager: WebSocket manager not available');
+            window.controlledLog.warn('RealtimeStateManager: WebSocket manager not available');
         }
     }
     
     handleStartAudioStream(data) {
-        console.log('RealtimeStateManager: Handling start_audio_stream:', data);
+        window.controlledLog.log('RealtimeStateManager: Handling start_audio_stream:', data);
         
         // 启动实时音频流处理
-        console.log('RealtimeStateManager: Starting real-time audio stream processing...');
+        window.controlledLog.log('RealtimeStateManager: Starting real-time audio stream processing...');
         
         // 启动麦克风监听
         this.startMicrophoneListening();
@@ -470,7 +470,7 @@ class RealtimeStateManager {
     }
     
     startMicrophoneListening() {
-        console.log('RealtimeStateManager: Starting microphone listening...');
+        window.controlledLog.log('RealtimeStateManager: Starting microphone listening...');
         
         // 请求麦克风权限并开始监听
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -482,7 +482,7 @@ class RealtimeStateManager {
                 } 
             })
                 .then(stream => {
-                    console.log('RealtimeStateManager: Microphone access granted');
+                    window.controlledLog.log('RealtimeStateManager: Microphone access granted');
                     this.microphoneStream = stream;
                     
                     // 使用 MediaRecorder 来录制音频
@@ -494,13 +494,13 @@ class RealtimeStateManager {
                     try {
                         this.mediaRecorder = new MediaRecorder(stream, options);
                     } catch (e) {
-                        console.warn('RealtimeStateManager: Preferred format not supported, using default');
+                        window.controlledLog.warn('RealtimeStateManager: Preferred format not supported, using default');
                         this.mediaRecorder = new MediaRecorder(stream);
                     }
                     
                     this.mediaRecorder.ondataavailable = (event) => {
                         if (event.data && event.data.size > 0) {
-                            console.log('RealtimeStateManager: Audio data available:', event.data.size, 'bytes');
+                            window.controlledLog.log('RealtimeStateManager: Audio data available:', event.data.size, 'bytes');
                             // 将Blob转换为base64并发送
                             const reader = new FileReader();
                             reader.onloadend = () => {
@@ -513,7 +513,7 @@ class RealtimeStateManager {
                                         client_id: window.voiceWebSocketManager.clientId,
                                         format: 'webm'  // 告诉后端这是WebM格式
                                     });
-                                    console.log('RealtimeStateManager: Audio data sent (WebM format)');
+                                    window.controlledLog.log('RealtimeStateManager: Audio data sent (WebM format)');
                                 }
                             };
                             reader.readAsDataURL(event.data);
@@ -521,7 +521,7 @@ class RealtimeStateManager {
                     };
                     
                     this.mediaRecorder.onerror = (error) => {
-                        console.error('RealtimeStateManager: MediaRecorder error:', error);
+                        window.controlledLog.error('RealtimeStateManager: MediaRecorder error:', error);
                         this.setState('ERROR', {
                             message: '录音失败',
                             timestamp: Date.now()
@@ -531,18 +531,18 @@ class RealtimeStateManager {
                     // 每1秒发送一次音频数据（调整间隔以平衡实时性和网络负担）
                     this.mediaRecorder.start(1000);
                     
-                    console.log('RealtimeStateManager: MediaRecorder started, sending audio every 1 second');
+                    window.controlledLog.log('RealtimeStateManager: MediaRecorder started, sending audio every 1 second');
                     
                 })
                 .catch(error => {
-                    console.error('RealtimeStateManager: Microphone access denied:', error);
+                    window.controlledLog.error('RealtimeStateManager: Microphone access denied:', error);
                     this.setState('ERROR', {
                         message: '麦克风权限被拒绝',
                         timestamp: Date.now()
                     });
                 });
         } else {
-            console.error('RealtimeStateManager: getUserMedia not supported');
+            window.controlledLog.error('RealtimeStateManager: getUserMedia not supported');
             this.setState('ERROR', {
                 message: '浏览器不支持麦克风访问',
                 timestamp: Date.now()
@@ -551,7 +551,7 @@ class RealtimeStateManager {
     }
     
     startAudioAnalysis() {
-        console.log('RealtimeStateManager: Starting audio analysis...');
+        window.controlledLog.log('RealtimeStateManager: Starting audio analysis...');
         
         // 设置音频分析参数
         this.analyser.fftSize = 2048;
@@ -572,11 +572,11 @@ class RealtimeStateManager {
             
             // 检测语音活动 (降低阈值，增加调试信息)
             if (average > 10) { // 降低阈值从30到10
-                console.log('RealtimeStateManager: Speech detected, average:', average);
+                window.controlledLog.log('RealtimeStateManager: Speech detected, average:', average);
                 this.handleSpeechDetected();
             } else if (average > 5) {
                 // 添加调试信息，显示音频强度
-                console.log('RealtimeStateManager: Audio level:', average);
+                window.controlledLog.log('RealtimeStateManager: Audio level:', average);
             }
             
             // 继续分析
@@ -585,7 +585,7 @@ class RealtimeStateManager {
     }
     
     handleSpeechDetected() {
-        console.log('RealtimeStateManager: Speech detected, processing...');
+        window.controlledLog.log('RealtimeStateManager: Speech detected, processing...');
         
         // 更新状态为处理中
         this.setState('IDLE', {
@@ -598,11 +598,11 @@ class RealtimeStateManager {
     }
     
     collectAndSendAudioData() {
-        console.log('RealtimeStateManager: Collecting audio data...');
+        window.controlledLog.log('RealtimeStateManager: Collecting audio data...');
         
         // 检查是否有有效的音频数据
         if (!this.dataArray || this.dataArray.length === 0) {
-            console.warn('RealtimeStateManager: No audio data available');
+            window.controlledLog.warn('RealtimeStateManager: No audio data available');
             this.setState('IDLE', {
                 message: '继续监听...',
                 timestamp: Date.now()
@@ -613,12 +613,12 @@ class RealtimeStateManager {
         // 收集音频数据 (简化版本，实际应该使用MediaRecorder)
         const audioData = this.dataArray;
         
-        console.log('RealtimeStateManager: Audio data type:', typeof audioData, 'length:', audioData ? audioData.length : 'null');
-        console.log('RealtimeStateManager: Audio data sample:', audioData ? Array.from(audioData.slice(0, 10)) : 'null');
+        window.controlledLog.log('RealtimeStateManager: Audio data type:', typeof audioData, 'length:', audioData ? audioData.length : 'null');
+        window.controlledLog.log('RealtimeStateManager: Audio data sample:', audioData ? Array.from(audioData.slice(0, 10)) : 'null');
         
         // 检查数据有效性
         if (!audioData || audioData.length === 0) {
-            console.warn('RealtimeStateManager: No audio data to send.');
+            window.controlledLog.warn('RealtimeStateManager: No audio data to send.');
             return;
         }
         
@@ -631,11 +631,11 @@ class RealtimeStateManager {
         }
         const audioBase64 = btoa(binaryString);
         
-        console.log('RealtimeStateManager: Base64 encoded length:', audioBase64.length);
-        console.log('RealtimeStateManager: Base64 sample:', audioBase64.substring(0, 50));
+        window.controlledLog.log('RealtimeStateManager: Base64 encoded length:', audioBase64.length);
+        window.controlledLog.log('RealtimeStateManager: Base64 sample:', audioBase64.substring(0, 50));
         
-        console.log('RealtimeStateManager: Base64 audio data length:', audioBase64.length);
-        console.log('RealtimeStateManager: Base64 sample:', audioBase64.substring(0, 50));
+        window.controlledLog.log('RealtimeStateManager: Base64 audio data length:', audioBase64.length);
+        window.controlledLog.log('RealtimeStateManager: Base64 sample:', audioBase64.substring(0, 50));
         
         // 发送音频数据到后端
         if (window.voiceWebSocketManager && window.voiceWebSocketManager.sendMessage) {
@@ -645,9 +645,9 @@ class RealtimeStateManager {
                 timestamp: Date.now(),
                 client_id: window.voiceWebSocketManager.clientId
             });
-            console.log('RealtimeStateManager: Audio data sent to backend');
+            window.controlledLog.log('RealtimeStateManager: Audio data sent to backend');
         } else {
-            console.warn('RealtimeStateManager: WebSocket manager not available');
+            window.controlledLog.warn('RealtimeStateManager: WebSocket manager not available');
         }
         
         // 继续监听
@@ -660,7 +660,7 @@ class RealtimeStateManager {
     }
     
     handleRealtimeDialogueStarted(data) {
-        console.log('RealtimeStateManager: Handling realtime_dialogue_started:', data);
+        window.controlledLog.log('RealtimeStateManager: Handling realtime_dialogue_started:', data);
         
         // 更新UI状态
         this.setState('IDLE', {
@@ -670,10 +670,10 @@ class RealtimeStateManager {
     }
     
     handleRealtimeDialogueStopped(data) {
-        console.log('RealtimeStateManager: Handling realtime_dialogue_stopped:', data);
+        window.controlledLog.log('RealtimeStateManager: Handling realtime_dialogue_stopped:', data);
         
         // 停止实时音频流处理
-        console.log('RealtimeStateManager: Stopping real-time audio stream processing...');
+        window.controlledLog.log('RealtimeStateManager: Stopping real-time audio stream processing...');
         
         // 停止麦克风监听
         this.stopMicrophoneListening();
@@ -686,7 +686,7 @@ class RealtimeStateManager {
     }
     
     stopMicrophoneListening() {
-        console.log('RealtimeStateManager: Stopping microphone listening...');
+        window.controlledLog.log('RealtimeStateManager: Stopping microphone listening...');
         
         // 停止 MediaRecorder
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
@@ -700,7 +700,7 @@ class RealtimeStateManager {
             this.microphoneStream = null;
         }
         
-        console.log('RealtimeStateManager: Microphone listening stopped');
+        window.controlledLog.log('RealtimeStateManager: Microphone listening stopped');
     }
 }
 
@@ -709,9 +709,9 @@ window.realtimeStateManager = null;
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Initializing RealtimeStateManager...');
+    window.controlledLog.log('Initializing RealtimeStateManager...');
     window.realtimeStateManager = new RealtimeStateManager();
-    console.log('RealtimeStateManager ready');
+    window.controlledLog.log('RealtimeStateManager ready');
 });
 
 // Export for module systems

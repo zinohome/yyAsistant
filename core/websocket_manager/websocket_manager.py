@@ -35,11 +35,13 @@ class WebSocketManager:
     
     def __init__(self):
         """初始化WebSocket管理器"""
+        from configs.base_config import BaseConfig
+        
         self.websocket = None
         self.connection_state = ConnectionState.DISCONNECTED
-        self.url = 'ws://192.168.32.168:9800/ws/chat'  # 硬编码默认值，配置整理放到后面专题
-        self.reconnect_attempts = 5
-        self.reconnect_interval = 5000
+        self.url = BaseConfig.websocket_url
+        self.reconnect_attempts = BaseConfig.websocket_max_reconnect_attempts
+        self.reconnect_interval = BaseConfig.websocket_reconnect_interval
         self.heartbeat_interval = 30000
         
         self.current_attempts = 0

@@ -27,7 +27,7 @@ class RealtimeAudioProcessor {
      */
     async startCapture() {
         try {
-            console.log('开始音频捕获...');
+            window.controlledLog.log('开始音频捕获...');
             
             // 1. 获取麦克风权限
             await this.getUserMedia();
@@ -42,10 +42,10 @@ class RealtimeAudioProcessor {
             this.startAudioProcessing();
             
             this.isCapturing = true;
-            console.log('音频捕获已启动');
+            window.controlledLog.log('音频捕获已启动');
             
         } catch (error) {
-            console.error('启动音频捕获失败:', error);
+            window.controlledLog.error('启动音频捕获失败:', error);
             throw error;
         }
     }
@@ -65,10 +65,10 @@ class RealtimeAudioProcessor {
                 }
             });
             
-            console.log('麦克风权限获取成功');
+            window.controlledLog.log('麦克风权限获取成功');
             
         } catch (error) {
-            console.error('获取麦克风权限失败:', error);
+            window.controlledLog.error('获取麦克风权限失败:', error);
             throw new Error('无法访问麦克风，请检查权限设置');
         }
     }
@@ -94,10 +94,10 @@ class RealtimeAudioProcessor {
             const source = this.audioContext.createMediaStreamSource(this.mediaStream);
             source.connect(this.analyser);
             
-            console.log('音频上下文创建成功');
+            window.controlledLog.log('音频上下文创建成功');
             
         } catch (error) {
-            console.error('创建音频上下文失败:', error);
+            window.controlledLog.error('创建音频上下文失败:', error);
             throw error;
         }
     }
@@ -161,7 +161,7 @@ class RealtimeAudioProcessor {
             
             if (!this.isSpeaking) {
                 this.isSpeaking = true;
-                console.log('检测到语音活动');
+                window.controlledLog.log('检测到语音活动');
                 if (this.speechDetectionCallback) {
                     this.speechDetectionCallback('start');
                 }
@@ -170,7 +170,7 @@ class RealtimeAudioProcessor {
             // 检查是否已经静音足够长时间
             if (this.isSpeaking && (now - this.lastSpeechTime) > this.silenceDuration) {
                 this.isSpeaking = false;
-                console.log('语音活动结束');
+                window.controlledLog.log('语音活动结束');
                 if (this.speechDetectionCallback) {
                     this.speechDetectionCallback('stop');
                 }
@@ -255,7 +255,7 @@ class RealtimeAudioProcessor {
      */
     stopCapture() {
         try {
-            console.log('停止音频捕获...');
+            window.controlledLog.log('停止音频捕获...');
             
             this.isCapturing = false;
             
@@ -275,10 +275,10 @@ class RealtimeAudioProcessor {
             this.analyser = null;
             this.dataArray = null;
             
-            console.log('音频捕获已停止');
+            window.controlledLog.log('音频捕获已停止');
             
         } catch (error) {
-            console.error('停止音频捕获失败:', error);
+            window.controlledLog.error('停止音频捕获失败:', error);
         }
     }
     

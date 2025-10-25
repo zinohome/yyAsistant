@@ -35,7 +35,7 @@ class RealtimeVoiceManager {
      * 初始化管理器
      */
     initialize() {
-        console.log('初始化实时语音管理器...');
+        window.controlledLog.log('初始化实时语音管理器...');
         
         // 设置适配器客户端配置
         this.adapterClient.setBackendUrl(this.config.backendUrl);
@@ -47,7 +47,7 @@ class RealtimeVoiceManager {
         // 设置API客户端回调
         this.setupAPICallbacks();
         
-        console.log('实时语音管理器初始化完成');
+        window.controlledLog.log('实时语音管理器初始化完成');
     }
     
     /**
@@ -71,39 +71,39 @@ class RealtimeVoiceManager {
     setupAPICallbacks() {
         // 连接事件
         this.apiClient.on('connected', () => {
-            console.log('Realtime API连接成功');
+            window.controlledLog.log('Realtime API连接成功');
             this.updateState('listening');
         });
         
         this.apiClient.on('disconnected', () => {
-            console.log('Realtime API连接断开');
+            window.controlledLog.log('Realtime API连接断开');
             this.updateState('idle');
         });
         
         this.apiClient.on('error', (error) => {
-            console.error('Realtime API错误:', error);
+            window.controlledLog.error('Realtime API错误:', error);
             this.updateState('error');
             this.emit('error', error);
         });
         
         // 语音事件
         this.apiClient.on('speech_started', () => {
-            console.log('用户开始说话');
+            window.controlledLog.log('用户开始说话');
             this.updateState('listening');
         });
         
         this.apiClient.on('speech_stopped', () => {
-            console.log('用户停止说话');
+            window.controlledLog.log('用户停止说话');
             this.updateState('processing');
         });
         
         this.apiClient.on('ai_speech_started', () => {
-            console.log('AI开始说话');
+            window.controlledLog.log('AI开始说话');
             this.updateState('speaking');
         });
         
         this.apiClient.on('ai_speech_stopped', () => {
-            console.log('AI停止说话');
+            window.controlledLog.log('AI停止说话');
             this.updateState('listening');
         });
         
@@ -131,7 +131,7 @@ class RealtimeVoiceManager {
      */
     async start() {
         try {
-            console.log('启动实时语音对话...');
+            window.controlledLog.log('启动实时语音对话...');
             
             this.updateState('connecting');
             
@@ -153,11 +153,11 @@ class RealtimeVoiceManager {
             this.isActive = true;
             this.updateState('listening');
             
-            console.log('实时语音对话已启动');
+            window.controlledLog.log('实时语音对话已启动');
             this.emit('started');
             
         } catch (error) {
-            console.error('启动实时语音对话失败:', error);
+            window.controlledLog.error('启动实时语音对话失败:', error);
             this.updateState('error');
             this.emit('error', error);
             throw error;
@@ -169,7 +169,7 @@ class RealtimeVoiceManager {
      */
     async stop() {
         try {
-            console.log('停止实时语音对话...');
+            window.controlledLog.log('停止实时语音对话...');
             
             this.updateState('connecting');
             
@@ -182,11 +182,11 @@ class RealtimeVoiceManager {
             this.isActive = false;
             this.updateState('idle');
             
-            console.log('实时语音对话已停止');
+            window.controlledLog.log('实时语音对话已停止');
             this.emit('stopped');
             
         } catch (error) {
-            console.error('停止实时语音对话失败:', error);
+            window.controlledLog.error('停止实时语音对话失败:', error);
             this.updateState('error');
             this.emit('error', error);
             throw error;
@@ -204,11 +204,11 @@ class RealtimeVoiceManager {
                 this.sessionConfig
             );
             
-            console.log('会话创建成功:', sessionData);
+            window.controlledLog.log('会话创建成功:', sessionData);
             return sessionData;
             
         } catch (error) {
-            console.error('创建会话失败:', error);
+            window.controlledLog.error('创建会话失败:', error);
             throw error;
         }
     }
@@ -239,10 +239,10 @@ class RealtimeVoiceManager {
             
             this.apiClient.updateSession(sessionConfig);
             
-            console.log('会话配置完成');
+            window.controlledLog.log('会话配置完成');
             
         } catch (error) {
-            console.error('配置会话失败:', error);
+            window.controlledLog.error('配置会话失败:', error);
             throw error;
         }
     }
@@ -263,7 +263,7 @@ class RealtimeVoiceManager {
      * 处理AI文本增量
      */
     handleAITextDelta(data) {
-        console.log('AI文本增量:', data);
+        window.controlledLog.log('AI文本增量:', data);
         this.emit('ai_text_delta', data);
     }
     
@@ -271,7 +271,7 @@ class RealtimeVoiceManager {
      * 处理AI文本提交
      */
     handleAITextCommitted(data) {
-        console.log('AI文本提交:', data);
+        window.controlledLog.log('AI文本提交:', data);
         this.emit('ai_text_committed', data);
         
         // 保存到记忆
@@ -284,7 +284,7 @@ class RealtimeVoiceManager {
      * 处理工具调用创建
      */
     handleToolCallCreated(data) {
-        console.log('工具调用创建:', data);
+        window.controlledLog.log('工具调用创建:', data);
         this.emit('tool_call_created', data);
     }
     
@@ -292,7 +292,7 @@ class RealtimeVoiceManager {
      * 处理工具调用完成
      */
     handleToolCallCompleted(data) {
-        console.log('工具调用完成:', data);
+        window.controlledLog.log('工具调用完成:', data);
         this.emit('tool_call_completed', data);
     }
     
@@ -311,7 +311,7 @@ class RealtimeVoiceManager {
             const oldState = this.currentState;
             this.currentState = newState;
             
-            console.log(`状态变更: ${oldState} -> ${newState}`);
+            window.controlledLog.log(`状态变更: ${oldState} -> ${newState}`);
             this.emit('state_changed', { oldState, newState });
             this.updateUI();
         }
@@ -412,7 +412,7 @@ class RealtimeVoiceManager {
                 { type: 'realtime_voice', timestamp: new Date().toISOString() }
             );
         } catch (error) {
-            console.error('保存记忆失败:', error);
+            window.controlledLog.error('保存记忆失败:', error);
         }
     }
     
@@ -481,7 +481,7 @@ class RealtimeVoiceManager {
                 try {
                     handler(data);
                 } catch (error) {
-                    console.error(`事件处理器错误 (${event}):`, error);
+                    window.controlledLog.error(`事件处理器错误 (${event}):`, error);
                 }
             });
         }

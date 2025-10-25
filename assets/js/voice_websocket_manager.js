@@ -32,7 +32,7 @@ class VoiceWebSocketManager {
         this.messageHandlers.set('stop_playback', () => {});
         
         // 使用配置类获取WebSocket URL，并附带持久化client_id
-        this.wsUrlBase = window.voiceConfig?.get('wsUrl') || 'ws://192.168.32.168:9800/ws/chat';
+        this.wsUrlBase = window.appConfig?.getWebSocketUrl() || 'ws://192.168.32.168:9800/ws/chat';
         this.persistentClientId = this.ensurePersistentClientId();
         this.wsUrl = this.appendClientId(this.wsUrlBase, this.persistentClientId);
         
@@ -58,13 +58,13 @@ class VoiceWebSocketManager {
         // 延迟初始化，等待其他系统加载
         setTimeout(() => {
             if (window.smartErrorHandler) {
-                console.log('🔧 智能错误处理系统已连接');
+                window.controlledLog?.log('🔧 智能错误处理系统已连接');
             } else {
-                console.warn('🔧 智能错误处理系统未找到，将在系统加载后重试');
+                window.controlledLog?.warn('🔧 智能错误处理系统未找到，将在系统加载后重试');
                 // 重试机制
                 setTimeout(() => {
                     if (window.smartErrorHandler) {
-                        console.log('🔧 智能错误处理系统已连接（重试成功）');
+                        window.controlledLog?.log('🔧 智能错误处理系统已连接（重试成功）');
                     }
                 }, 1000);
             }

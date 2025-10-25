@@ -1,4 +1,4 @@
-// 改造console.error()以隐藏无关痛痒的警告信息
+// 改造window.controlledLog.error()以隐藏无关痛痒的警告信息
 const originalConsoleError = console.error;
 console.error = function (...args) {
     // 检查args中是否包含需要过滤的内容
@@ -18,7 +18,7 @@ window.dash_clientside.clientside = {
     // 处理SSE连接启动 - 统一版本
     // 处理SSE连接启动 - 统一版本
 startSSE: function(input) {
-    // console.log('startSSE函数被调用，输入:', input);
+    // window.controlledLog.log('startSSE函数被调用，输入:', input);
     
     // 兼容两种参数格式：如果是数组则处理为triggerIds，否则处理为divId
     let messageId;
@@ -33,37 +33,37 @@ startSSE: function(input) {
     }
     
     if (messageId) {
-        // console.log('从clientside调用startSSE，消息ID:', messageId);
+        // window.controlledLog.log('从clientside调用startSSE，消息ID:', messageId);
         
         // 使用正确的ID获取会话ID和消息列表
         const sessionIdEl = document.getElementById('ai-chat-x-current-session-id');
-        // console.log('会话ID元素是否存在:', !!sessionIdEl);
+        // window.controlledLog.log('会话ID元素是否存在:', !!sessionIdEl);
         const sessionId = sessionIdEl?.value || '';
-        // console.log('获取到的会话ID:', sessionId);
+        // window.controlledLog.log('获取到的会话ID:', sessionId);
         
         let messages = [];
         try {
             const messagesStore = document.getElementById('ai-chat-x-messages-store');
-            // console.log('消息存储元素是否存在:', !!messagesStore);
+            // window.controlledLog.log('消息存储元素是否存在:', !!messagesStore);
             if (messagesStore) {
                 messages = JSON.parse(messagesStore.value || '[]');
-                // console.log('获取到的消息数量:', messages.length);
-                // console.log('消息内容示例:', messages.length > 0 ? JSON.stringify(messages[0]) : '无消息');
+                // window.controlledLog.log('获取到的消息数量:', messages.length);
+                // window.controlledLog.log('消息内容示例:', messages.length > 0 ? JSON.stringify(messages[0]) : '无消息');
             }
         } catch (e) {
-            console.error('获取消息列表失败:', e);
+            window.controlledLog.error('获取消息列表失败:', e);
         }
         
         // 调用全局函数，传递完整参数
         if (window.startSSEConnection) {
-            // console.log('准备调用window.startSSEConnection');
+            // window.controlledLog.log('准备调用window.startSSEConnection');
             window.startSSEConnection(messageId, sessionId, messages);
         } else {
-            console.error('未找到startSSEConnection函数');
+            window.controlledLog.error('未找到startSSEConnection函数');
             // 如果找不到全局函数，尝试直接在页面中查找并执行
             setTimeout(() => {
                 if (window.startSSEConnection) {
-                    // console.log('延迟后找到startSSEConnection函数，尝试调用');
+                    // window.controlledLog.log('延迟后找到startSSEConnection函数，尝试调用');
                     window.startSSEConnection(messageId, sessionId, messages);
                 }
             }, 500);
@@ -240,7 +240,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             
             // 如果正在重连或已达到最大重试次数，则不再重连
             if (reconnectInfo.isReconnecting || reconnectInfo.retryCount >= reconnectInfo.maxRetries) {
-                // console.log(`SSE重连已达到最大次数或正在重连中: ${reconnectKey}`);
+                // window.controlledLog.log(`SSE重连已达到最大次数或正在重连中: ${reconnectKey}`);
                 return;
             }
             
@@ -250,17 +250,17 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             // 计算延迟时间（指数退避）
             const delay = reconnectInfo.baseDelay * Math.pow(2, reconnectInfo.retryCount - 1);
             
-            // console.log(`SSE连接断开，${delay}ms后进行第${reconnectInfo.retryCount}次重连: ${reconnectKey}`);
+            // window.controlledLog.log(`SSE连接断开，${delay}ms后进行第${reconnectInfo.retryCount}次重连: ${reconnectKey}`);
             
             setTimeout(() => {
                 try {
                     // 重新启动SSE连接
                     if (window.startSSEConnection) {
                         window.startSSEConnection(messageId, sessionId, messages);
-                        // console.log(`SSE重连尝试完成: ${reconnectKey}`);
+                        // window.controlledLog.log(`SSE重连尝试完成: ${reconnectKey}`);
                     }
                 } catch (error) {
-                    console.error(`SSE重连失败: ${reconnectKey}`, error);
+                    window.controlledLog.error(`SSE重连失败: ${reconnectKey}`, error);
                 } finally {
                     reconnectInfo.isReconnecting = false;
                 }
@@ -274,7 +274,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             if (window.sseReconnectInfo) {
                 const reconnectKey = `${messageId}_${sessionId}`;
                 delete window.sseReconnectInfo[reconnectKey];
-                // console.log(`清理SSE重连信息: ${reconnectKey}`);
+                // window.controlledLog.log(`清理SSE重连信息: ${reconnectKey}`);
             }
         },
         // 新增：SSE超时检测
@@ -291,7 +291,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             
             // 设置新的超时检测器
             const timeoutId = setTimeout(() => {
-                console.warn(`SSE连接超时: ${messageId}`);
+                window.controlledLog.warn(`SSE连接超时: ${messageId}`);
                 
                 // 触发超时处理
                 const event = new CustomEvent('sseTimeout', {
@@ -306,21 +306,21 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             }, timeoutSeconds * 1000);
             
             window.sseTimeoutMonitors[messageId] = timeoutId;
-            // console.log(`启动SSE超时检测: ${messageId}, 超时时间: ${timeoutSeconds}秒`);
+            // window.controlledLog.log(`启动SSE超时检测: ${messageId}, 超时时间: ${timeoutSeconds}秒`);
         },
         // 清理SSE超时检测器
         clearSSETimeoutMonitor: (messageId) => {
             if (window.sseTimeoutMonitors && window.sseTimeoutMonitors[messageId]) {
                 clearTimeout(window.sseTimeoutMonitors[messageId]);
                 delete window.sseTimeoutMonitors[messageId];
-                // console.log(`清理SSE超时检测器: ${messageId}`);
+                // window.controlledLog.log(`清理SSE超时检测器: ${messageId}`);
             }
         },
         // 新增：优化的自动滚动到底部函数
         autoScrollToBottom: (force = false) => {
             const historyContainer = document.getElementById('ai-chat-x-history');
             if (!historyContainer) {
-                console.warn('未找到聊天历史容器');
+                window.controlledLog.warn('未找到聊天历史容器');
                 return;
             }
             
@@ -335,7 +335,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             
             // 如果用户不在底部且不是强制滚动，则不自动滚动
             if (!isAtBottom && !force) {
-                // console.log('用户正在查看历史消息，跳过自动滚动');
+                // window.controlledLog.log('用户正在查看历史消息，跳过自动滚动');
                 return;
             }
             
@@ -347,7 +347,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                     top: maxScroll,
                     behavior: 'smooth'
                 });
-                // console.log('自动滚动到底部');
+                // window.controlledLog.log('自动滚动到底部');
                 
                 // 更新用户位置状态
                 if (window.userScrollPosition) {
@@ -365,7 +365,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
         initScrollListener: () => {
             const historyContainer = document.getElementById('ai-chat-x-history');
             if (!historyContainer) {
-                console.warn('未找到聊天历史容器，无法初始化滚动监听器');
+                window.controlledLog.warn('未找到聊天历史容器，无法初始化滚动监听器');
                 return;
             }
             
@@ -387,7 +387,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                 // 设置超时，如果用户停止滚动1秒后仍在底部，则恢复自动滚动
                 scrollTimeout = setTimeout(() => {
                     if (isAtBottom) {
-                        // console.log('用户滚动到底部，恢复自动滚动');
+                        // window.controlledLog.log('用户滚动到底部，恢复自动滚动');
                     }
                 }, 1000);
             });
@@ -398,7 +398,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                 setAtBottom: (value) => { userAtBottom = value; }
             };
             
-            // console.log('滚动监听器初始化完成');
+            // window.controlledLog.log('滚动监听器初始化完成');
         }
     }
 });

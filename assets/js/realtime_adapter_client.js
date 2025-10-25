@@ -18,7 +18,7 @@ class RealtimeAdapterClient {
      */
     async getMemory(conversationId, query) {
         try {
-            console.log('获取记忆:', conversationId, query);
+            window.controlledLog.log('获取记忆:', conversationId, query);
             
             const response = await fetch(`${this.backendUrl}/v1/realtime/memory`, {
                 method: 'POST',
@@ -39,11 +39,11 @@ class RealtimeAdapterClient {
                 throw new Error(`获取记忆失败: ${data.error || '未知错误'}`);
             }
             
-            console.log('记忆获取成功:', data.data);
+            window.controlledLog.log('记忆获取成功:', data.data);
             return data.data;
             
         } catch (error) {
-            console.error('获取记忆失败:', error);
+            window.controlledLog.error('获取记忆失败:', error);
             throw error;
         }
     }
@@ -53,7 +53,7 @@ class RealtimeAdapterClient {
      */
     async getPersonality(personalityId) {
         try {
-            console.log('获取人格配置:', personalityId);
+            window.controlledLog.log('获取人格配置:', personalityId);
             
             const response = await fetch(`${this.backendUrl}/v1/realtime/personality`, {
                 method: 'POST',
@@ -73,11 +73,11 @@ class RealtimeAdapterClient {
                 throw new Error(`获取人格配置失败: ${data.error || '未知错误'}`);
             }
             
-            console.log('人格配置获取成功:', data.data);
+            window.controlledLog.log('人格配置获取成功:', data.data);
             return data.data;
             
         } catch (error) {
-            console.error('获取人格配置失败:', error);
+            window.controlledLog.error('获取人格配置失败:', error);
             throw error;
         }
     }
@@ -87,7 +87,7 @@ class RealtimeAdapterClient {
      */
     async getTools(personalityId = null) {
         try {
-            console.log('获取工具列表:', personalityId);
+            window.controlledLog.log('获取工具列表:', personalityId);
             
             const response = await fetch(`${this.backendUrl}/v1/realtime/tools`, {
                 method: 'POST',
@@ -107,11 +107,11 @@ class RealtimeAdapterClient {
                 throw new Error(`获取工具列表失败: ${data.error || '未知错误'}`);
             }
             
-            console.log('工具列表获取成功:', data.data);
+            window.controlledLog.log('工具列表获取成功:', data.data);
             return data.data;
             
         } catch (error) {
-            console.error('获取工具列表失败:', error);
+            window.controlledLog.error('获取工具列表失败:', error);
             throw error;
         }
     }
@@ -121,7 +121,7 @@ class RealtimeAdapterClient {
      */
     async executeTool(toolName, parameters) {
         try {
-            console.log('执行工具:', toolName, parameters);
+            window.controlledLog.log('执行工具:', toolName, parameters);
             
             const response = await fetch(`${this.backendUrl}/v1/realtime/tools/execute`, {
                 method: 'POST',
@@ -142,11 +142,11 @@ class RealtimeAdapterClient {
                 throw new Error(`执行工具失败: ${data.error || '未知错误'}`);
             }
             
-            console.log('工具执行成功:', data.data);
+            window.controlledLog.log('工具执行成功:', data.data);
             return data.data;
             
         } catch (error) {
-            console.error('执行工具失败:', error);
+            window.controlledLog.error('执行工具失败:', error);
             throw error;
         }
     }
@@ -156,7 +156,7 @@ class RealtimeAdapterClient {
      */
     async saveMemory(conversationId, content, metadata = null) {
         try {
-            console.log('保存记忆:', conversationId, content);
+            window.controlledLog.log('保存记忆:', conversationId, content);
             
             const response = await fetch(`${this.backendUrl}/v1/realtime/memory/save`, {
                 method: 'POST',
@@ -178,11 +178,11 @@ class RealtimeAdapterClient {
                 throw new Error(`保存记忆失败: ${data.error || '未知错误'}`);
             }
             
-            console.log('记忆保存成功:', data.data);
+            window.controlledLog.log('记忆保存成功:', data.data);
             return data.data;
             
         } catch (error) {
-            console.error('保存记忆失败:', error);
+            window.controlledLog.error('保存记忆失败:', error);
             throw error;
         }
     }
@@ -192,7 +192,7 @@ class RealtimeAdapterClient {
      */
     async createSession(conversationId, personalityId = null, sessionConfig = null) {
         try {
-            console.log('创建实时语音会话:', conversationId, personalityId);
+            window.controlledLog.log('创建实时语音会话:', conversationId, personalityId);
             
             const response = await fetch(`${this.backendUrl}/v1/realtime/session`, {
                 method: 'POST',
@@ -214,11 +214,11 @@ class RealtimeAdapterClient {
                 throw new Error(`创建会话失败: ${data.error || '未知错误'}`);
             }
             
-            console.log('会话创建成功:', data.data);
+            window.controlledLog.log('会话创建成功:', data.data);
             return data.data;
             
         } catch (error) {
-            console.error('创建会话失败:', error);
+            window.controlledLog.error('创建会话失败:', error);
             throw error;
         }
     }
@@ -262,7 +262,7 @@ class RealtimeAdapterClient {
             return response.ok;
             
         } catch (error) {
-            console.error('检查连接失败:', error);
+            window.controlledLog.error('检查连接失败:', error);
             return false;
         }
     }
@@ -303,7 +303,7 @@ class RealtimeAdapterClient {
                     throw error;
                 }
                 
-                console.log(`请求失败，${delay}ms后重试 (${i + 1}/${maxRetries})`);
+                window.controlledLog.log(`请求失败，${delay}ms后重试 (${i + 1}/${maxRetries})`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 delay *= 2; // 指数退避
             }

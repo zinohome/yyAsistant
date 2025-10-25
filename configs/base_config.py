@@ -80,3 +80,11 @@ class BaseConfig:
     # 语音自动播放配置
     # SSE结束后是否自动触发TTS语音播放
     enable_auto_tts_after_sse: bool = True
+    
+    # WebSocket配置
+    # WebSocket服务器地址
+    websocket_url: str = "ws://192.168.32.168:9800/ws/chat"
+    # WebSocket重连间隔时间（毫秒）
+    websocket_reconnect_interval: int = 1000
+    # WebSocket最大重连次数
+    websocket_max_reconnect_attempts: int = 5
