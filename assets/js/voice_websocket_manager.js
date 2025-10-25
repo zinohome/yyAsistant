@@ -1532,7 +1532,12 @@ class VoiceWebSocketManager {
         
         // 注册AI音频响应处理器
         this.registerMessageHandler('audio_stream', (data) => {
-            console.log('🎵 收到AI音频响应:', data);
+            console.log('🎵 收到AI音频响应:', {
+                hasAudio: !!data.audio,
+                audioLength: data.audio ? data.audio.length : 0,
+                messageId: data.message_id,
+                timestamp: data.timestamp
+            });
             
             // 🚀 检查是否正在打断，如果是则忽略新的音频
             if (this.isInterrupting) {
@@ -1545,9 +1550,30 @@ class VoiceWebSocketManager {
             console.log('🔄 状态已更新为: AI回复中');
             
             // 🚀 确保音频可视化器正常工作
-            if (window.audioVisualizer && !window.audioVisualizer.isActive && this.audioStream) {
+            if (window.enhancedAudioVisualizer) {
+                window.enhancedAudioVisualizer.updateState('speaking');
+                console.log('🎨 音频可视化器状态已更新为: speaking');
+                
+                // 🔧 关键修复：启动真正的波形动画，就像录音通话一样
+                this.startVoiceCallWaveformAnimation();
+            } else if (window.audioVisualizer && !window.audioVisualizer.isActive && this.audioStream) {
                 console.log('🔄 AI回复时检测到音频可视化器停止，重新启动');
                 this.restartAudioVisualization();
+            } else {
+                console.warn('🎨 音频可视化器未找到或未初始化');
+                // 尝试重新初始化音频可视化器
+                if (window.initEnhancedAudioVisualizer) {
+                    console.log('🎨 尝试重新初始化音频可视化器');
+                    window.initEnhancedAudioVisualizer();
+                    setTimeout(() => {
+                        if (window.enhancedAudioVisualizer) {
+                            window.enhancedAudioVisualizer.updateState('speaking');
+                            console.log('🎨 音频可视化器重新初始化成功');
+                            // 启动波形动画
+                            this.startVoiceCallWaveformAnimation();
+                        }
+                    }, 100);
+                }
             }
             
             // 播放AI的音频回复
@@ -1558,7 +1584,8 @@ class VoiceWebSocketManager {
             } else {
                 console.warn('🎵 无法播放AI音频：', {
                     hasAudio: !!data.audio,
-                    hasPlayer: !!window.voicePlayerEnhanced
+                    hasPlayer: !!window.voicePlayerEnhanced,
+                    playerState: window.voicePlayerEnhanced ? 'available' : 'missing'
                 });
             }
         });
@@ -1948,6 +1975,88 @@ class VoiceWebSocketManager {
         
         console.warn('等待WebSocket连接超时');
         return null;
+    }
+    
+    /**
+     * 启动语音通话波形动画（参考录音通话实现）
+     */
+    startVoiceCallWaveformAnimation() {
+        const canvas = document.getElementById('audio-visualizer');
+        if (!canvas) {
+            console.warn('❌ 音频可视化Canvas未找到');
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        console.log('🎨 启动语音通话波形动画');
+        
+        // 停止之前的动画
+        if (this.voiceCallAnimationId) {
+            cancelAnimationFrame(this.voiceCallAnimationId);
+        }
+        
+        // 创建音频分析器（如果还没有）
+        if (!this.voiceCallAnalyser && this.audioContext && this.audioStream) {
+            this.voiceCallAnalyser = this.audioContext.createAnalyser();
+            this.voiceCallAnalyser.fftSize = 256;
+            this.voiceCallAnalyser.smoothingTimeConstant = 0.8;
+            
+            // 连接音频流到分析器
+            const source = this.audioContext.createMediaStreamSource(this.audioStream);
+            source.connect(this.voiceCallAnalyser);
+            
+            this.voiceCallDataArray = new Uint8Array(this.voiceCallAnalyser.frequencyBinCount);
+            console.log('🎨 语音通话音频分析器已创建');
+        }
+        
+        const draw = () => {
+            if (!this.voiceCallAnalyser || !this.voiceCallDataArray) {
+                return;
+            }
+            
+            // 清除画布
+            ctx.clearRect(0, 0, width, height);
+            
+            // 获取音频数据
+            this.voiceCallAnalyser.getByteFrequencyData(this.voiceCallDataArray);
+            
+            // 绘制波形（参考录音通话的实现）
+            const barWidth = width / this.voiceCallDataArray.length;
+            let x = 0;
+            
+            for (let i = 0; i < this.voiceCallDataArray.length; i++) {
+                const barHeight = (this.voiceCallDataArray[i] / 255) * height;
+                
+                // 创建渐变（AI回复时使用蓝色系）
+                const gradient = ctx.createLinearGradient(0, height, 0, height - barHeight);
+                gradient.addColorStop(0, '#1890ff');  // 蓝色
+                gradient.addColorStop(0.5, '#40a9ff'); // 浅蓝色
+                gradient.addColorStop(1, '#69c0ff');   // 更浅的蓝色
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(x, height - barHeight, barWidth - 1, barHeight);
+                
+                x += barWidth;
+            }
+            
+            this.voiceCallAnimationId = requestAnimationFrame(draw);
+        };
+        
+        draw();
+    }
+    
+    /**
+     * 停止语音通话波形动画
+     */
+    stopVoiceCallWaveformAnimation() {
+        if (this.voiceCallAnimationId) {
+            cancelAnimationFrame(this.voiceCallAnimationId);
+            this.voiceCallAnimationId = null;
+            console.log('🎨 语音通话波形动画已停止');
+        }
     }
 }
 

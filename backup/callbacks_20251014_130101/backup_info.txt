@@ -1,4 +1,0 @@
-备份时间: Tue Oct 14 13:01:01 CST 2025
-备份原因: 回调迁移前备份
-备份内容: 所有回调文件和配置文件
-恢复命令: ./scripts/restore_callbacks.sh backup/callbacks_20251014_130101

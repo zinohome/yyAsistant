@@ -835,8 +835,8 @@ class VoicePlayerEnhanced {
                             
                             // 🔧 添加播放间隔，确保音频分片之间有适当的间隔
                             const playbackDuration = this.estimateAudioDuration(chunk.base64);
-                            const minInterval = 100; // 最小间隔100ms
-                            const interval = Math.max(minInterval, playbackDuration * 0.1); // 播放时长的10%作为间隔
+                            const minInterval = 10; // 最小间隔10ms（大幅减少）
+                            const interval = Math.max(minInterval, playbackDuration * 0.02); // 播放时长的2%作为间隔（大幅减少）
                             
                             console.log(`🎵 播放间隔: ${interval}ms (播放时长: ${playbackDuration}ms)`);
                             await new Promise(resolve => setTimeout(resolve, interval));
