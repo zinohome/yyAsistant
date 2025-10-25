@@ -265,6 +265,9 @@ class VoiceUtils {
      * @returns {boolean} 是否支持
      */
     static checkBrowserSupport() {
+        // 检查是否为微信浏览器
+        const isWeChat = navigator.userAgent.toLowerCase().includes('micromessenger');
+        
         const requiredFeatures = [
             'WebSocket',
             'AudioContext',
@@ -289,6 +292,14 @@ class VoiceUtils {
         
         if (missingFeatures.length > 0) {
             console.warn('缺少必要的浏览器功能:', missingFeatures);
+            
+            // 如果是微信浏览器，提供特殊提示
+            if (isWeChat) {
+                console.warn('微信浏览器兼容性问题，某些功能可能受限');
+                // 微信浏览器下，允许部分功能降级使用
+                return missingFeatures.length <= 2; // 允许缺少2个或更少的功能
+            }
+            
             return false;
         }
         
