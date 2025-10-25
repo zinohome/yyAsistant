@@ -97,13 +97,13 @@ class VoiceWebSocketManager {
                     });
                 }
                 
-                console.log('🔄 状态同步管理器已连接');
+                window.controlledLog?.log('🔄 状态同步管理器已连接');
             } else {
                 console.warn('🔄 状态同步管理器未找到，将在系统加载后重试');
                 // 重试机制
                 setTimeout(() => {
                     if (window.stateSyncManager) {
-                        console.log('🔄 状态同步管理器已连接（重试成功）');
+                        window.controlledLog?.log('🔄 状态同步管理器已连接（重试成功）');
                         // 重试时也注册状态
                         if (!window.stateSyncManager.getState('voice_call')) {
                             window.stateSyncManager.registerState('voice_call', {
@@ -126,7 +126,7 @@ class VoiceWebSocketManager {
         // 延迟初始化，等待其他系统加载
         setTimeout(() => {
             if (window.smartStatePredictor) {
-                console.log('🔮 语音WebSocket管理器已连接智能状态预测器');
+                window.controlledLog?.log('🔮 语音WebSocket管理器已连接智能状态预测器');
                 
                 // 记录语音通话相关的用户行为
                 this.recordVoiceCallBehavior();
@@ -135,7 +135,7 @@ class VoiceWebSocketManager {
                 // 重试机制
                 setTimeout(() => {
                     if (window.smartStatePredictor) {
-                        console.log('🔮 智能状态预测器已连接（重试成功）');
+                        window.controlledLog?.log('🔮 智能状态预测器已连接（重试成功）');
                         this.recordVoiceCallBehavior();
                     }
                 }, 1000);
@@ -236,7 +236,7 @@ class VoiceWebSocketManager {
     updateSessionId(conversationId) {
         this.sessionId = conversationId;
         window.voiceChatState.sessionId = conversationId;
-        console.log('WebSocket管理器更新会话ID:', conversationId);
+        window.controlledLog?.log('WebSocket管理器更新会话ID:', conversationId);
     }
     
     /**
@@ -245,19 +245,19 @@ class VoiceWebSocketManager {
     async connect() {
         // 如果正在连接中，直接返回
         if (this.isConnecting) {
-            console.log('WebSocket正在连接中，跳过重复连接');
+            window.controlledLog?.log('WebSocket正在连接中，跳过重复连接');
             return Promise.resolve();
         }
         
         this.isConnecting = true;
         return new Promise((resolve, reject) => {
             try {
-                console.log('正在连接语音WebSocket:', this.wsUrl);
+                window.controlledLog?.log('正在连接语音WebSocket:', this.wsUrl);
                 
                 this.ws = new WebSocket(this.wsUrl);
                 
                 this.ws.onopen = (event) => {
-                    console.log('语音WebSocket连接已建立');
+                    window.controlledLog?.log('语音WebSocket连接已建立');
                     this.isConnected = true;
                     this.isConnecting = false;  // 重置连接中标志
                     // 新连接建立时，清空旧的 clientId，等待服务端下发新的 connection_established 进行绑定
@@ -280,7 +280,7 @@ class VoiceWebSocketManager {
                             detail: { connected: true, client_id: null, timestamp: Date.now() }
                         });
                         document.dispatchEvent(event);
-                        console.log('连接时使用事件机制更新状态');
+                        window.controlledLog?.log('连接时使用事件机制更新状态');
                     } catch (e) {
                         console.warn('连接时事件机制失败:', e);
                     }
@@ -311,7 +311,7 @@ class VoiceWebSocketManager {
                 };
                 
                 this.ws.onclose = (event) => {
-                    console.log('语音WebSocket连接已关闭:', event.code, event.reason);
+                    window.controlledLog?.log('语音WebSocket连接已关闭:', event.code, event.reason);
                     // 连接关闭时也清理 clientId，避免用旧 id 校验新连接的首条消息
                     this.clientId = null;
                     window.voiceChatState.clientId = null;
@@ -396,7 +396,7 @@ class VoiceWebSocketManager {
      * 启动音频流处理
      */
     startAudioStreaming() {
-        console.log('启动音频流处理...');
+        window.controlledLog?.log('启动音频流处理...');
         
         // 检查是否支持音频流
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -414,27 +414,27 @@ class VoiceWebSocketManager {
             } 
         })
         .then(stream => {
-            console.log('音频流获取成功');
+            window.controlledLog?.log('音频流获取成功');
             this.audioStream = stream;
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.startAudioProcessing();
             
             // 🔧 关键修复：音频流初始化成功后启动语音通话录音动画
-            console.log('🔍 [语音通话调试] 音频流初始化成功，启动录音动画');
+            window.controlledLog?.log('🔍 [语音通话调试] 音频流初始化成功，启动录音动画');
             this.startVoiceCallRecordingAnimation();
             
             // 更新状态指示器
             this.updateStatusIndicator('通话中，等待用户说话', 'blue');
             // 启动音频可视化
             if (window.enhancedAudioVisualizer) {
-                console.log('🎨 启动增强音频可视化');
+                window.controlledLog?.log('🎨 启动增强音频可视化');
                 // 确保Canvas已初始化
                 if (!window.enhancedAudioVisualizer.canvas) {
                     window.enhancedAudioVisualizer.initializeWhenReady();
                 }
                 window.enhancedAudioVisualizer.updateState('listening');
             } else if (window.audioVisualizer) {
-                console.log('🎨 启动音频可视化');
+                window.controlledLog?.log('🎨 启动音频可视化');
                 window.audioVisualizer.startVisualization(stream);
             } else {
                 console.warn('❌ 音频可视化器未找到，尝试初始化');
@@ -463,12 +463,12 @@ class VoiceWebSocketManager {
      * 完全清理语音通话相关状态
      */
     cleanupVoiceCallState() {
-        console.log('🧹 完全清理语音通话状态');
+        window.controlledLog?.log('🧹 完全清理语音通话状态');
         
         // 清理播放器状态
         if (window.voicePlayerEnhanced) {
             window.voicePlayerEnhanced.forceStopAllAudio();
-            console.log('🧹 播放器状态已清理');
+            window.controlledLog?.log('🧹 播放器状态已清理');
         }
         
         // 清理WebSocket状态
@@ -487,23 +487,23 @@ class VoiceWebSocketManager {
             try {
                 this.audioContext.close();
             } catch (error) {
-                console.log('音频上下文清理完成');
+                window.controlledLog?.log('音频上下文清理完成');
             }
             this.audioContext = null;
         }
         
         // 🔧 关键修复：清理全局状态，确保不影响其他场景
         this.isVoiceCallActive = false;
-        console.log('🧹 全局语音通话状态已清理，不影响其他场景');
+        window.controlledLog?.log('🧹 全局语音通话状态已清理，不影响其他场景');
         
-        console.log('🧹 语音通话状态清理完成');
+        window.controlledLog?.log('🧹 语音通话状态清理完成');
     }
     
     /**
      * 停止音频流处理
      */
     stopAudioStreaming() {
-        console.log('停止音频流处理...');
+        window.controlledLog?.log('停止音频流处理...');
         
         // 🔧 使用server_vad时，不需要手动提交音频缓冲区
         // 直接停止音频流即可
@@ -527,14 +527,14 @@ class VoiceWebSocketManager {
         
         // 停止音频可视化
         if (window.audioVisualizer) {
-            console.log('🛑 停止音频可视化');
+            window.controlledLog?.log('🛑 停止音频可视化');
             window.audioVisualizer.stopVisualization();
         }
         
         // 重置状态指示器
         this.updateStatusIndicator('等待开始', 'gray');
         
-        console.log('🛑 用户声音处理已完全停止');
+        window.controlledLog?.log('🛑 用户声音处理已完全停止');
     }
     
     /**
@@ -566,7 +566,7 @@ class VoiceWebSocketManager {
             this.audioSendInterval = window.VoiceConfig?.audio?.sendInterval || 300;
             this.gainFactor = window.VoiceConfig?.audio?.gainFactor || 2.0;
             
-            console.log('🎛️ VAD参数已加载:', {
+            window.controlledLog?.log('🎛️ VAD参数已加载:', {
                 vadThreshold: this.vadThreshold,
                 maxSilenceDuration: this.maxSilenceDuration,
                 audioChunkSize: this.audioChunkSize,
@@ -579,7 +579,7 @@ class VoiceWebSocketManager {
                 
                 // 🔍 调试：检查音频输入是否正常
                 if (Math.random() < 0.01) { // 每100次采样打印一次
-                    console.log(`🎤 麦克风输入检测: 样本数=${inputData.length}`);
+                    window.controlledLog?.log(`🎤 麦克风输入检测: 样本数=${inputData.length}`);
                 }
                 
                 // 🔧 使用server_vad：直接发送音频数据，让OpenAI服务器端处理VAD
@@ -589,7 +589,7 @@ class VoiceWebSocketManager {
             source.connect(processor);
             processor.connect(this.audioContext.destination);
             
-            console.log('音频处理已启动');
+            window.controlledLog?.log('音频处理已启动');
         } catch (error) {
             console.error('启动音频处理失败:', error);
         }
@@ -607,7 +607,7 @@ class VoiceWebSocketManager {
         // 只过滤完全静音的数据（非常宽松的阈值）
         if (false && originalVolume < 0.000001 && nonZeroSamples < 5) {
             if (Math.random() < 0.01) {
-                console.log(`🔇 跳过完全静音音频: 音量=${originalVolume.toFixed(8)}, 非零样本=${nonZeroSamples}`);
+                window.controlledLog?.log(`🔇 跳过完全静音音频: 音量=${originalVolume.toFixed(8)}, 非零样本=${nonZeroSamples}`);
             }
             return;
         }
@@ -629,7 +629,7 @@ class VoiceWebSocketManager {
         const int16NonZero = Array.from(int16Data).filter(v => v !== 0).length;
         if (int16NonZero < 3) {
             if (Math.random() < 0.01) {
-                console.log(`🔇 转换后数据仍为静音: 非零样本=${int16NonZero}`);
+                window.controlledLog?.log(`🔇 转换后数据仍为静音: 非零样本=${int16NonZero}`);
             }
             return;
         }
@@ -639,7 +639,7 @@ class VoiceWebSocketManager {
         
         // 每50次发送记录一次（避免日志过多）
         if (Math.random() < 0.02) {
-            console.log(`📤 发送有效音频数据: 原始长度=${audioData.length}, 原始音量=${originalVolume.toFixed(6)}, 非零样本=${nonZeroSamples}, base64长度=${base64.length}`);
+            window.controlledLog?.log(`📤 发送有效音频数据: 原始长度=${audioData.length}, 原始音量=${originalVolume.toFixed(6)}, 非零样本=${nonZeroSamples}, base64长度=${base64.length}`);
         }
         
         // 检查音频质量 - 基于OpenAI官方文档，确保满足100ms最小要求
@@ -660,7 +660,7 @@ class VoiceWebSocketManager {
             const enhancedVolume = this.calculateVolume(enhancedAudioData);
             // 计算音频时长：PCM16格式，16kHz采样率，2字节/样本
             const audioDurationMs = (audioData.length / 2) / 16000 * 1000;
-            console.log(`🎵 音频质量监控: 原始长度=${audioData.length}, base64长度=${base64.length}, 时长=${audioDurationMs.toFixed(1)}ms, 原始音量=${originalVolume.toFixed(4)}, 增强后音量=${enhancedVolume.toFixed(4)}`);
+            window.controlledLog?.log(`🎵 音频质量监控: 原始长度=${audioData.length}, base64长度=${base64.length}, 时长=${audioDurationMs.toFixed(1)}ms, 原始音量=${originalVolume.toFixed(4)}, 增强后音量=${enhancedVolume.toFixed(4)}`);
             
             // 如果音量过低，给出警告
             if (originalVolume < 0.01) {
@@ -700,7 +700,7 @@ class VoiceWebSocketManager {
         // 临时禁用静音过滤，确保音频数据能发送到后端
         if (false && originalVolume < silenceVolumeThreshold && nonZeroRatio < silenceNonZeroRatioThreshold) {
             if (Math.random() < 0.01) {
-                console.log(`🔇 检测到完全静音数据: 音量=${originalVolume.toFixed(8)}, 非零样本=${nonZeroSamples}/${audioData.length} (${(nonZeroRatio*100).toFixed(1)}%)`);
+                window.controlledLog?.log(`🔇 检测到完全静音数据: 音量=${originalVolume.toFixed(8)}, 非零样本=${nonZeroSamples}/${audioData.length} (${(nonZeroRatio*100).toFixed(1)}%)`);
             }
             return; // 只过滤完全静音的数据
         }
@@ -718,7 +718,7 @@ class VoiceWebSocketManager {
         
         // 每100次处理记录一次音量（避免日志过多）
         if (Math.random() < 0.01) {
-            console.log(`🔊 客户端VAD: 原始音量=${originalVolume.toFixed(6)}, 增强音量=${volume.toFixed(6)}, 阈值=${this.vadThreshold}, 非零样本=${nonZeroSamples}, 状态=${this.isSpeaking ? '说话中' : '静音'}`);
+            window.controlledLog?.log(`🔊 客户端VAD: 原始音量=${originalVolume.toFixed(6)}, 增强音量=${volume.toFixed(6)}, 阈值=${this.vadThreshold}, 非零样本=${nonZeroSamples}, 状态=${this.isSpeaking ? '说话中' : '静音'}`);
         }
         
         // 🔍 语音检测：音量必须足够高，且非零样本比例足够大（使用配置文件参数）
@@ -734,13 +734,13 @@ class VoiceWebSocketManager {
             this.lastAudioTime = currentTime;
             
             if (!this.isSpeaking) {
-                console.log(`🎤 开始说话 - 音量: ${volume.toFixed(6)}, 阈值: ${this.vadThreshold}, 非零样本: ${nonZeroSamples}`);
+                window.controlledLog?.log(`🎤 开始说话 - 音量: ${volume.toFixed(6)}, 阈值: ${this.vadThreshold}, 非零样本: ${nonZeroSamples}`);
                 this.isSpeaking = true;
                 this.updateStatusIndicator('正在说话', 'blue');
                 
                 // 增强打断机制：立即打断AI回复
                 if (this.isAIResponding()) {
-                    console.log('🛑 AI正在回复，用户开始说话，立即打断');
+                    window.controlledLog?.log('🛑 AI正在回复，用户开始说话，立即打断');
                     this.interruptAIResponse();
                 }
             }
@@ -756,7 +756,7 @@ class VoiceWebSocketManager {
                 
                 // 如果静音时间超过阈值，认为用户停止说话
                 if (this.silenceDuration >= this.maxSilenceDuration) {
-                    console.log(`🔇 检测到静音，用户停止说话，提交音频 (静音时长: ${this.silenceDuration}ms, 阈值: ${this.maxSilenceDuration}ms)`);
+                    window.controlledLog?.log(`🔇 检测到静音，用户停止说话，提交音频 (静音时长: ${this.silenceDuration}ms, 阈值: ${this.maxSilenceDuration}ms)`);
                     this.submitAudioBuffer();
                     this.isSpeaking = false;
                     this.silenceDuration = 0;
@@ -788,7 +788,7 @@ class VoiceWebSocketManager {
             
             // 需要连续3次检测到用户说话才触发打断
             if (this.userSpeakingCount >= 3) {
-                console.log('🛑 连续检测到用户说话，立即打断AI回复');
+                window.controlledLog?.log('🛑 连续检测到用户说话，立即打断AI回复');
                 this.interruptAIResponse();
                 this.userSpeakingCount = 0; // 重置计数
             }
@@ -800,7 +800,7 @@ class VoiceWebSocketManager {
             if (!isUserSpeaking && !this.isInterrupting && this.isSpeaking) {
                 this.isSpeaking = false;
                 this.updateStatusIndicator('AI思考中...', 'orange');
-                console.log('🛑 用户停止说话，AI开始思考');
+                window.controlledLog?.log('🛑 用户停止说话，AI开始思考');
             }
         }
         
@@ -809,13 +809,13 @@ class VoiceWebSocketManager {
             if (this.currentVisualizerState !== 'recording') {
                 window.enhancedAudioVisualizer.updateState('recording');
                 this.currentVisualizerState = 'recording';
-                console.log('🎨 语音通话：用户说话，显示录音波形');
+                window.controlledLog?.log('🎨 语音通话：用户说话，显示录音波形');
             }
         } else if (!isUserSpeaking && window.enhancedAudioVisualizer) {
             if (this.currentVisualizerState !== 'listening') {
                 window.enhancedAudioVisualizer.updateState('listening');
                 this.currentVisualizerState = 'listening';
-                console.log('🎨 语音通话：用户停止说话，显示聆听状态');
+                window.controlledLog?.log('🎨 语音通话：用户停止说话，显示聆听状态');
             }
         }
         
@@ -837,7 +837,7 @@ class VoiceWebSocketManager {
         
         // 每50次发送记录一次（避免日志过多）
         if (Math.random() < 0.02) {
-            console.log(`📤 发送音频数据: base64长度=${base64.length}, 原始长度=${audioData.length}`);
+            window.controlledLog?.log(`📤 发送音频数据: base64长度=${base64.length}, 原始长度=${audioData.length}`);
         }
         
         // 发送音频数据到后端
@@ -862,7 +862,7 @@ class VoiceWebSocketManager {
         // 只过滤完全静音的数据（非常宽松的阈值）
         if (false && originalVolume < 0.000001 && nonZeroSamples < 5) {
             if (Math.random() < 0.01) {
-                console.log(`🔇 跳过完全静音音频: 音量=${originalVolume.toFixed(8)}, 非零样本=${nonZeroSamples}`);
+                window.controlledLog?.log(`🔇 跳过完全静音音频: 音量=${originalVolume.toFixed(8)}, 非零样本=${nonZeroSamples}`);
             }
             return;
         }
@@ -884,7 +884,7 @@ class VoiceWebSocketManager {
         const int16NonZero = Array.from(int16Data).filter(v => v !== 0).length;
         if (false && int16NonZero < 10) {
             if (Math.random() < 0.01) {
-                console.log(`🔇 转换后数据仍为静音: 非零样本=${int16NonZero}`);
+                window.controlledLog?.log(`🔇 转换后数据仍为静音: 非零样本=${int16NonZero}`);
             }
             return;
         }
@@ -894,7 +894,7 @@ class VoiceWebSocketManager {
         
         // 每50次发送记录一次（避免日志过多）
         if (Math.random() < 0.02) {
-            console.log(`📤 发送有效音频数据: 原始长度=${audioData.length}, 原始音量=${originalVolume.toFixed(6)}, 非零样本=${nonZeroSamples}, base64长度=${base64.length}`);
+            window.controlledLog?.log(`📤 发送有效音频数据: 原始长度=${audioData.length}, 原始音量=${originalVolume.toFixed(6)}, 非零样本=${nonZeroSamples}, base64长度=${base64.length}`);
         }
         
         // 检查音频质量 - 基于OpenAI官方文档，确保满足100ms最小要求
@@ -915,7 +915,7 @@ class VoiceWebSocketManager {
             const enhancedVolume = this.calculateVolume(enhancedAudioData);
             // 计算音频时长：PCM16格式，16kHz采样率，2字节/样本
             const audioDurationMs = (audioData.length / 2) / 16000 * 1000;
-            console.log(`🎵 音频质量监控: 原始长度=${audioData.length}, base64长度=${base64.length}, 时长=${audioDurationMs.toFixed(1)}ms, 原始音量=${originalVolume.toFixed(4)}, 增强后音量=${enhancedVolume.toFixed(4)}`);
+            window.controlledLog?.log(`🎵 音频质量监控: 原始长度=${audioData.length}, base64长度=${base64.length}, 时长=${audioDurationMs.toFixed(1)}ms, 原始音量=${originalVolume.toFixed(4)}, 增强后音量=${enhancedVolume.toFixed(4)}`);
             
             // 如果音量过低，给出警告
             if (originalVolume < 0.01) {
@@ -929,7 +929,7 @@ class VoiceWebSocketManager {
         }
         
         // 发送音频数据到后端
-        console.log(`📤 发送音频数据: base64长度=${base64.length}, 原始长度=${audioData.length}, 非零样本=${int16NonZero}`);
+        window.controlledLog?.log(`📤 发送音频数据: base64长度=${base64.length}, 原始长度=${audioData.length}, 非零样本=${int16NonZero}`);
         
         // 🔍 最终检查：确保音频数据有效
         if (int16NonZero < 50) {
@@ -963,7 +963,7 @@ class VoiceWebSocketManager {
         // 临时禁用静音过滤，确保音频数据能发送到后端
         if (false && originalVolume < silenceVolumeThreshold && nonZeroRatio < silenceNonZeroRatioThreshold) {
             if (Math.random() < 0.01) {
-                console.log(`🔇 检测到完全静音数据: 音量=${originalVolume.toFixed(8)}, 非零样本=${nonZeroSamples}/${audioData.length} (${(nonZeroRatio*100).toFixed(1)}%)`);
+                window.controlledLog?.log(`🔇 检测到完全静音数据: 音量=${originalVolume.toFixed(8)}, 非零样本=${nonZeroSamples}/${audioData.length} (${(nonZeroRatio*100).toFixed(1)}%)`);
             }
             return; // 只过滤完全静音的数据
         }
@@ -981,7 +981,7 @@ class VoiceWebSocketManager {
         
         // 每100次处理记录一次音量（避免日志过多）
         if (Math.random() < 0.01) {
-            console.log(`🔊 客户端VAD: 原始音量=${originalVolume.toFixed(6)}, 增强音量=${volume.toFixed(6)}, 阈值=${this.vadThreshold}, 非零样本=${nonZeroSamples}, 状态=${this.isSpeaking ? '说话中' : '静音'}`);
+            window.controlledLog?.log(`🔊 客户端VAD: 原始音量=${originalVolume.toFixed(6)}, 增强音量=${volume.toFixed(6)}, 阈值=${this.vadThreshold}, 非零样本=${nonZeroSamples}, 状态=${this.isSpeaking ? '说话中' : '静音'}`);
         }
         
         // 🔍 语音检测：音量必须足够高，且非零样本比例足够大（使用配置文件参数）
@@ -997,13 +997,13 @@ class VoiceWebSocketManager {
             this.lastAudioTime = currentTime;
             
             if (!this.isSpeaking) {
-                console.log(`🎤 开始说话 - 音量: ${volume.toFixed(6)}, 阈值: ${this.vadThreshold}`);
+                window.controlledLog?.log(`🎤 开始说话 - 音量: ${volume.toFixed(6)}, 阈值: ${this.vadThreshold}`);
                 this.isSpeaking = true;
                 this.updateStatusIndicator('正在说话', 'blue');
                 
                 // 增强打断机制：立即打断AI回复
                 if (this.isAIResponding()) {
-                    console.log('🛑 AI正在回复，用户开始说话，立即打断');
+                    window.controlledLog?.log('🛑 AI正在回复，用户开始说话，立即打断');
                     this.interruptAIResponse();
                 }
             }
@@ -1021,7 +1021,7 @@ class VoiceWebSocketManager {
                 
                 // 如果静音时间超过阈值，提交音频
                 if (this.silenceDuration >= this.maxSilenceDuration) {
-                    console.log(`🔇 检测到静音，提交音频 (静音时长: ${this.silenceDuration}ms, 阈值: ${this.maxSilenceDuration}ms)`);
+                    window.controlledLog?.log(`🔇 检测到静音，提交音频 (静音时长: ${this.silenceDuration}ms, 阈值: ${this.maxSilenceDuration}ms)`);
                     this.submitAudioBuffer();
                     this.isSpeaking = false;
                     this.silenceDuration = 0;
@@ -1071,14 +1071,14 @@ class VoiceWebSocketManager {
      * 打断AI回复
      */
     interruptAIResponse() {
-        console.log('🛑 用户开始说话，立即打断AI回复');
+        window.controlledLog?.log('🛑 用户开始说话，立即打断AI回复');
         
         // 🚀 设置打断标志，防止重复触发
         this.isInterrupting = true;
         
         // 🚀 立即停止AI播放（出方向）
         if (window.voicePlayerEnhanced) {
-            console.log('🛑 强制停止AI语音播放');
+            window.controlledLog?.log('🛑 强制停止AI语音播放');
             window.voicePlayerEnhanced.forceStopAllAudio();
         }
         
@@ -1101,14 +1101,14 @@ class VoiceWebSocketManager {
         
         // 🚀 关键：用户声音处理（入方向）应该持续进行，不被停止
         // 只有AI播放（出方向）被停止，用户声音处理应该继续
-        console.log('🛑 用户声音处理继续，只停止AI播放');
+        window.controlledLog?.log('🛑 用户声音处理继续，只停止AI播放');
     }
     
     /**
      * 打断后恢复状态和功能
      */
     restoreAfterInterrupt() {
-        console.log('🔄 开始恢复打断后的状态和功能');
+        window.controlledLog?.log('🔄 开始恢复打断后的状态和功能');
         
         // 🚀 立即重置打断标志
         this.isInterrupting = false;
@@ -1147,7 +1147,7 @@ class VoiceWebSocketManager {
             setTimeout(() => {
                 try {
                     window.audioVisualizer.startVisualization(this.audioStream);
-                    console.log('✅ 音频可视化已重新启动');
+                    window.controlledLog?.log('✅ 音频可视化已重新启动');
                 } catch (error) {
                     console.error('❌ 重新启动音频可视化失败:', error);
                 }
@@ -1161,11 +1161,11 @@ class VoiceWebSocketManager {
      * 验证系统健康状态
      */
     verifySystemHealth() {
-        console.log('🔍 验证系统健康状态');
+        window.controlledLog?.log('🔍 验证系统健康状态');
         
         // 检查音频可视化器
         if (window.audioVisualizer && !window.audioVisualizer.isActive) {
-            console.log('⚠️ 音频可视化器未活跃，尝试重新启动');
+            window.controlledLog?.log('⚠️ 音频可视化器未活跃，尝试重新启动');
             this.restartAudioVisualization();
         }
         
@@ -1177,18 +1177,18 @@ class VoiceWebSocketManager {
         // 检查状态指示器
         const statusElement = document.getElementById('realtime-status-text');
         if (statusElement && (statusElement.textContent === 'AI思考中...' || statusElement.textContent === '等待用户输入')) {
-            console.log('⚠️ 状态指示器未正确更新，强制更新');
+            window.controlledLog?.log('⚠️ 状态指示器未正确更新，强制更新');
             this.updateStatusIndicator('等待用户说话', 'blue');
         }
         
-        console.log('✅ 系统健康检查完成');
+        window.controlledLog?.log('✅ 系统健康检查完成');
     }
     
     /**
      * 提交音频缓冲区（已废弃，使用server_vad时不需要）
      */
     submitAudioBuffer() {
-        console.log('📤 提交音频缓冲区，长度:', this.audioBuffer.length);
+        window.controlledLog?.log('📤 提交音频缓冲区，长度:', this.audioBuffer.length);
         
         if (this.audioBuffer.length > 0) {
             // 🔧 发送整个音频缓冲区到后端
@@ -1212,7 +1212,7 @@ class VoiceWebSocketManager {
      */
     sendCompleteAudioBuffer() {
         if (this.audioBuffer.length === 0) {
-            console.log('⚠️ 音频缓冲区为空，无法发送');
+            window.controlledLog?.log('⚠️ 音频缓冲区为空，无法发送');
             return;
         }
         
@@ -1226,7 +1226,7 @@ class VoiceWebSocketManager {
             offset += buffer.length;
         }
         
-        console.log(`🎵 发送完整音频缓冲区: ${this.audioBuffer.length}个片段, 总长度=${totalLength}样本`);
+        window.controlledLog?.log(`🎵 发送完整音频缓冲区: ${this.audioBuffer.length}个片段, 总长度=${totalLength}样本`);
         
         // 发送合并后的音频数据
         this.sendAudioData(mergedAudioData);
@@ -1236,7 +1236,7 @@ class VoiceWebSocketManager {
      * 处理打断确认消息
      */
     handleInterruptConfirmed(message) {
-        console.log('✅ 打断确认收到:', message.message);
+        window.controlledLog?.log('✅ 打断确认收到:', message.message);
         this.updateStatusIndicator('已停止回复，等待新输入', 'green');
     }
     
@@ -1244,11 +1244,11 @@ class VoiceWebSocketManager {
      * 处理停止播放消息
      */
     handleStopPlayback(message) {
-        console.log('🛑 收到停止播放指令:', message.message);
+        window.controlledLog?.log('🛑 收到停止播放指令:', message.message);
         
         // 立即停止所有语音播放
         if (window.voicePlayerEnhanced) {
-            console.log('🛑 执行停止播放指令');
+            window.controlledLog?.log('🛑 执行停止播放指令');
             window.voicePlayerEnhanced.stopCurrentPlayback();
         }
         
@@ -1275,19 +1275,19 @@ class VoiceWebSocketManager {
         const container = document.getElementById('audio-visualizer-container');
         if (container) {
             container.style.display = 'inline-block';
-            console.log('🎨 音频可视化区域已显示');
+            window.controlledLog?.log('🎨 音频可视化区域已显示');
             
             // 初始化增强的音频可视化器
             if (window.enhancedAudioVisualizer) {
-                console.log('🎨 使用增强音频可视化器');
+                window.controlledLog?.log('🎨 使用增强音频可视化器');
                 // 确保Canvas已初始化
                 if (!window.enhancedAudioVisualizer.canvas) {
-                    console.log('🎨 Canvas未初始化，开始初始化...');
+                    window.controlledLog?.log('🎨 Canvas未初始化，开始初始化...');
                     window.enhancedAudioVisualizer.initializeWhenReady();
                     // 等待Canvas初始化完成
                     setTimeout(() => {
                         if (window.enhancedAudioVisualizer.canvas) {
-                            console.log('🎨 Canvas初始化完成，更新状态');
+                            window.controlledLog?.log('🎨 Canvas初始化完成，更新状态');
                             window.enhancedAudioVisualizer.updateState('listening');
                         } else {
                             console.warn('🎨 Canvas初始化失败，尝试重试');
@@ -1295,11 +1295,11 @@ class VoiceWebSocketManager {
                         }
                     }, 200);
                 } else {
-                    console.log('🎨 Canvas已初始化，直接更新状态');
+                    window.controlledLog?.log('🎨 Canvas已初始化，直接更新状态');
                     window.enhancedAudioVisualizer.updateState('listening');
                 }
             } else {
-                console.log('🎨 增强音频可视化器未找到，尝试重新初始化...');
+                window.controlledLog?.log('🎨 增强音频可视化器未找到，尝试重新初始化...');
                 // 重新初始化增强音频可视化器
                 if (window.initEnhancedAudioVisualizer) {
                     window.initEnhancedAudioVisualizer();
@@ -1327,7 +1327,7 @@ class VoiceWebSocketManager {
         const container = document.getElementById('audio-visualizer-container');
         if (container) {
             container.style.display = 'none';
-            console.log('🎨 音频可视化区域已隐藏');
+            window.controlledLog?.log('🎨 音频可视化区域已隐藏');
             
             // 停止增强音频可视化器动画
             if (window.enhancedAudioVisualizer) {
@@ -1343,7 +1343,7 @@ class VoiceWebSocketManager {
     updateAudioVisualizerState(state, progress = 0) {
         if (window.enhancedAudioVisualizer) {
             window.enhancedAudioVisualizer.updateState(state, progress);
-            console.log(`🎨 音频可视化状态更新: ${state} (${progress}%)`);
+            window.controlledLog?.log(`🎨 音频可视化状态更新: ${state} (${progress}%)`);
         }
     }
     
@@ -1375,7 +1375,7 @@ class VoiceWebSocketManager {
             window.audioVisualizer.updateStatusText(text, color);
         }
         
-        console.log('🔄 状态指示器已更新:', {text, color});
+        window.controlledLog?.log('🔄 状态指示器已更新:', {text, color});
     }
     
     /**
@@ -1392,7 +1392,7 @@ class VoiceWebSocketManager {
             this.ws.send(messageStr);
             // 注释掉心跳消息的日志
             if (message.type !== 'heartbeat') {
-                console.log('发送语音消息:', message.type);
+                window.controlledLog?.log('发送语音消息:', message.type);
             }
             return true;
         } catch (error) {
@@ -1476,7 +1476,7 @@ class VoiceWebSocketManager {
             const message = JSON.parse(data);
             // 注释掉心跳消息的日志
             if (message.type !== 'heartbeat_response') {
-                console.log('收到语音消息:', message.type);
+                window.controlledLog?.log('收到语音消息:', message.type);
             }
 
             // 仅在 connection_established 时绑定 client_id，提高安全性
@@ -1487,17 +1487,17 @@ class VoiceWebSocketManager {
                 }
                 window.voiceChatState.clientId = this.clientId;
                 window.voiceChatState.isConnected = this.isConnected;
-                console.log('首次绑定client_id:', this.clientId);
+                window.controlledLog?.log('首次绑定client_id:', this.clientId);
                 
         // 注册连接确认消息处理器
         this.registerMessageHandler('connection_established', (data) => {
-            console.log('WebSocket连接已建立:', data);
+            window.controlledLog?.log('WebSocket连接已建立:', data);
             // 连接确认消息已处理
         });
         
         // 注册语音通话相关消息处理器
         this.registerMessageHandler('voice_call_started', (data) => {
-            console.log('语音通话已启动:', data);
+            window.controlledLog?.log('语音通话已启动:', data);
             // 显示音频可视化区域
             this.showAudioVisualizer();
             // 更新音频可视化器状态
@@ -1505,13 +1505,13 @@ class VoiceWebSocketManager {
             // 启动音频流处理
             this.startAudioStreaming();
             // 🔧 关键修复：在音频流初始化成功后启动录音动画
-            console.log('🔍 [语音通话调试] 语音通话开始，将在音频流初始化后启动录音动画');
+            window.controlledLog?.log('🔍 [语音通话调试] 语音通话开始，将在音频流初始化后启动录音动画');
             // 更新状态指示器
             this.updateStatusIndicator('通话中，等待用户说话', 'blue');
         });
         
         this.registerMessageHandler('voice_call_stopped', (data) => {
-            console.log('语音通话已停止:', data);
+            window.controlledLog?.log('语音通话已停止:', data);
             
             // 完全清理语音通话相关状态
             this.cleanupVoiceCallState();
@@ -1530,12 +1530,12 @@ class VoiceWebSocketManager {
             
             // 🔧 关键修复：不要强制重置按钮状态，让其他场景自然管理状态
             // 语音通话停止后，其他场景（录音聊天、文字聊天）应该保持自己的状态
-            console.log('语音通话停止，不强制重置按钮状态，让其他场景自然管理');
+            window.controlledLog?.log('语音通话停止，不强制重置按钮状态，让其他场景自然管理');
         });
         
         // 注册AI音频响应处理器
         this.registerMessageHandler('audio_stream', (data) => {
-            console.log('🎵 收到AI音频响应:', {
+            window.controlledLog?.log('🎵 收到AI音频响应:', {
                 hasAudio: !!data.audio,
                 audioLength: data.audio ? data.audio.length : 0,
                 messageId: data.message_id,
@@ -1543,8 +1543,8 @@ class VoiceWebSocketManager {
             });
             
             // 🔧 详细调试日志
-            console.log('🔍 [语音通话调试] audio_stream处理器开始执行');
-            console.log('🔍 [语音通话调试] 数据详情:', {
+            window.controlledLog?.log('🔍 [语音通话调试] audio_stream处理器开始执行');
+            window.controlledLog?.log('🔍 [语音通话调试] 数据详情:', {
                 type: data.type,
                 messageId: data.message_id,
                 hasAudio: !!data.audio,
@@ -1555,22 +1555,22 @@ class VoiceWebSocketManager {
             
             // 🚀 检查是否正在打断，如果是则忽略新的音频
             if (this.isInterrupting) {
-                console.log('🛑 正在打断中，忽略新的音频数据');
+                window.controlledLog?.log('🛑 正在打断中，忽略新的音频数据');
                 return;
             }
             
             // 🚀 更新状态指示器，表示AI开始回复
             this.updateStatusIndicator('AI回复中', 'green');
-            console.log('🔄 状态已更新为: AI回复中');
+            window.controlledLog?.log('🔄 状态已更新为: AI回复中');
             
             // 🔧 关键修复：启动AI回复播放动画
-            console.log('🔍 [语音通话调试] 准备启动播放动画...');
+            window.controlledLog?.log('🔍 [语音通话调试] 准备启动播放动画...');
             this.startVoiceCallPlaybackAnimation();
             
             // 播放AI的音频回复
             if (data.audio && window.voicePlayerEnhanced) {
-                console.log('🎵 开始播放AI音频，数据长度:', data.audio.length);
-                console.log('🔍 [语音通话调试] 调用播放器播放音频，messageId:', data.message_id);
+                window.controlledLog?.log('🎵 开始播放AI音频，数据长度:', data.audio.length);
+                window.controlledLog?.log('🔍 [语音通话调试] 调用播放器播放音频，messageId:', data.message_id);
                 // 传递messageId，确保语音通话音频使用正确的播放方式
                 window.voicePlayerEnhanced.playAudioFromBase64(data.audio, data.message_id);
             } else {
@@ -1579,7 +1579,7 @@ class VoiceWebSocketManager {
                     hasPlayer: !!window.voicePlayerEnhanced,
                     playerState: window.voicePlayerEnhanced ? 'available' : 'missing'
                 });
-                console.log('🔍 [语音通话调试] 播放条件检查失败:', {
+                window.controlledLog?.log('🔍 [语音通话调试] 播放条件检查失败:', {
                     hasAudio: !!data.audio,
                     hasPlayer: !!window.voicePlayerEnhanced,
                     playerType: window.voicePlayerEnhanced ? typeof window.voicePlayerEnhanced : 'undefined'
@@ -1589,7 +1589,7 @@ class VoiceWebSocketManager {
         
         // 注册AI回复完成处理器
         this.registerMessageHandler('synthesis_complete', (data) => {
-            console.log('🎵 AI回复完成:', data);
+            window.controlledLog?.log('🎵 AI回复完成:', data);
             // 🚀 更新状态指示器，表示AI回复完成，等待用户输入
             this.updateStatusIndicator('等待用户说话', 'blue');
             
@@ -1638,7 +1638,7 @@ class VoiceWebSocketManager {
 
         // 注册处理开始消息处理器
         this.registerMessageHandler('processing_start', (data) => {
-            console.log('🔄 开始处理:', data);
+            window.controlledLog?.log('🔄 开始处理:', data);
             this.updateStatusIndicator('AI思考中...', 'orange');
             // 更新音频可视化器状态
             this.updateAudioVisualizerState('processing');
@@ -1646,39 +1646,39 @@ class VoiceWebSocketManager {
 
         // 注册中断通知消息处理器
         this.registerMessageHandler('interrupt_notification', (data) => {
-            console.log('🛑 收到中断通知:', data);
+            window.controlledLog?.log('🛑 收到中断通知:', data);
             this.updateStatusIndicator('用户打断', 'red');
             
             // 🔧 优化：检查是否已经处理过中断（避免重复处理）
             if (this.isInterruptProcessed) {
-                console.log('🛑 中断已处理，跳过重复处理');
+                window.controlledLog?.log('🛑 中断已处理，跳过重复处理');
                 return;
             }
             this.isInterruptProcessed = true;
             
             // 🔧 关键修复：收到中断通知时立即停止所有音频播放
-            console.log('🛑 中断通知：强制停止所有音频播放');
+            window.controlledLog?.log('🛑 中断通知：强制停止所有音频播放');
             if (window.voicePlayerEnhanced) {
                 window.voicePlayerEnhanced.forceStopAllAudio();
-                console.log('🛑 音频播放器已强制停止');
+                window.controlledLog?.log('🛑 音频播放器已强制停止');
             }
             
             // 停止语音通话录音动画
             if (this.voiceCallAnimationId) {
                 cancelAnimationFrame(this.voiceCallAnimationId);
                 this.voiceCallAnimationId = null;
-                console.log('🛑 语音通话录音动画已停止');
+                window.controlledLog?.log('🛑 语音通话录音动画已停止');
             }
             
             // 🔧 优化：如果前端已经重新启动了录音动画，则不需要重复处理
-            console.log('🛑 中断通知：检查是否需要重新启动录音动画');
+            window.controlledLog?.log('🛑 中断通知：检查是否需要重新启动录音动画');
             setTimeout(() => {
                 if (this.audioContext && this.audioStream && !this.voiceCallAnimationId) {
-                    console.log('🔍 [语音通话调试] 中断通知：重新启动录音动画');
+                    window.controlledLog?.log('🔍 [语音通话调试] 中断通知：重新启动录音动画');
                     this.startVoiceCallRecordingAnimation();
                     this.updateStatusIndicator('通话中，等待用户说话', 'blue');
                 } else {
-                    console.log('🔍 [语音通话调试] 中断通知：录音动画已在前端处理或缺少资源');
+                    window.controlledLog?.log('🔍 [语音通话调试] 中断通知：录音动画已在前端处理或缺少资源');
                 }
                 this.isInterruptProcessed = false; // 重置标志
             }, 50); // 更短的延迟
@@ -1691,7 +1691,7 @@ class VoiceWebSocketManager {
             // 使用全局变量存储client_id，避免时机问题
             window.voiceClientId = this.clientId;
             window.voiceWebSocketConnected = true;
-            console.log('已设置全局client_id:', this.clientId);
+            window.controlledLog?.log('已设置全局client_id:', this.clientId);
             
             // 添加全局函数来获取client_id
             window.getVoiceClientId = () => {
@@ -1711,12 +1711,12 @@ class VoiceWebSocketManager {
                     const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
                     
                     if (!isChatPage) {
-                        console.log('当前页面不需要更新WebSocket Store:', currentPath);
+                        window.controlledLog?.log('当前页面不需要更新WebSocket Store:', currentPath);
                         return;
                     }
                     
                     if (window.dash_clientside && window.dash_clientside.set_props) {
-                        console.log('使用dash_clientside.set_props更新Store，clientId:', this.clientId);
+                        window.controlledLog?.log('使用dash_clientside.set_props更新Store，clientId:', this.clientId);
                         
                         try {
                             // 更新WebSocket连接状态 - 使用正确的语法
@@ -1727,7 +1727,7 @@ class VoiceWebSocketManager {
                                     timestamp: Date.now() 
                                 }
                             });
-                            console.log('voice-websocket-connection 更新成功');
+                            window.controlledLog?.log('voice-websocket-connection 更新成功');
                             
                             // 更新语音开关状态 - 使用正确的语法
                             window.dash_clientside.set_props('voice-enable-voice', {
@@ -1737,14 +1737,14 @@ class VoiceWebSocketManager {
                                     ts: Date.now() 
                                 }
                             });
-                            console.log('voice-enable-voice 更新成功');
+                            window.controlledLog?.log('voice-enable-voice 更新成功');
                         } catch (setPropsError) {
                             console.error('set_props调用失败:', setPropsError);
                             // 延迟重试
                             setTimeout(updateDashStore, 200);
                         }
                     } else {
-                        console.log('dash_clientside.set_props 不可用，延迟重试');
+                        window.controlledLog?.log('dash_clientside.set_props 不可用，延迟重试');
                         setTimeout(updateDashStore, 200);
                     }
                 } catch (e) {
@@ -1771,7 +1771,7 @@ class VoiceWebSocketManager {
             if (handler) {
                 // 注释掉心跳消息处理器的日志
                 if (message.type !== 'heartbeat_response') {
-                    console.log('调用消息处理器:', message.type);
+                    window.controlledLog?.log('调用消息处理器:', message.type);
                 }
                 try {
                     handler(message);
@@ -1820,7 +1820,7 @@ class VoiceWebSocketManager {
      */
     registerMessageHandler(messageType, handler) {
         this.messageHandlers.set(messageType, handler);
-        console.log('注册消息处理器:', messageType);
+        window.controlledLog?.log('注册消息处理器:', messageType);
     }
     
     /**
@@ -1875,14 +1875,14 @@ class VoiceWebSocketManager {
     scheduleReconnect() {
         this.reconnectAttempts++;
         const delay = this.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1);
-        console.log(`将在 ${delay}ms 后尝试重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+        window.controlledLog?.log(`将在 ${delay}ms 后尝试重连 (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
         
         setTimeout(async () => {
             if (!this.isConnected && !this.isConnecting) {
                 try {
-                    console.log('🔄 开始自动重连...');
+                    window.controlledLog?.log('🔄 开始自动重连...');
                     await this.connect();
-                    console.log('✅ 自动重连成功');
+                    window.controlledLog?.log('✅ 自动重连成功');
                 } catch (error) {
                     console.error('❌ 自动重连失败:', error);
                     // 如果重连失败且未达到最大重试次数，继续重试
@@ -1974,7 +1974,7 @@ class VoiceWebSocketManager {
         
         // 如果正在连接中，等待连接完成
         if (this.isConnecting) {
-            console.log('WebSocket正在连接中，等待连接完成...');
+            window.controlledLog?.log('WebSocket正在连接中，等待连接完成...');
             return null;
         }
         
@@ -2018,7 +2018,7 @@ class VoiceWebSocketManager {
      * 参考录音聊天的实现，使用真实的麦克风音频流
      */
     startVoiceCallRecordingAnimation() {
-        console.log('🔍 [语音通话调试] startVoiceCallRecordingAnimation 开始执行');
+        window.controlledLog?.log('🔍 [语音通话调试] startVoiceCallRecordingAnimation 开始执行');
         
         const canvas = document.getElementById('audio-visualizer');
         if (!canvas) {
@@ -2030,7 +2030,7 @@ class VoiceWebSocketManager {
         const width = canvas.width;
         const height = canvas.height;
         
-        console.log('🎨 启动语音通话录音波形动画');
+        window.controlledLog?.log('🎨 启动语音通话录音波形动画');
         
         // 停止之前的动画
         if (this.voiceCallAnimationId) {
@@ -2041,7 +2041,7 @@ class VoiceWebSocketManager {
         // 🔧 关键优化：立即检查并创建音频分析器，不等待
         if (!this.voiceCallAnalyser) {
             if (this.audioContext && this.audioStream) {
-                console.log('🔍 [语音通话调试] 创建语音通话录音音频分析器');
+                window.controlledLog?.log('🔍 [语音通话调试] 创建语音通话录音音频分析器');
                 this.voiceCallAnalyser = this.audioContext.createAnalyser();
                 this.voiceCallAnalyser.fftSize = 256;
                 this.voiceCallAnalyser.smoothingTimeConstant = 0.8;
@@ -2051,7 +2051,7 @@ class VoiceWebSocketManager {
                 source.connect(this.voiceCallAnalyser);
                 
                 this.voiceCallDataArray = new Uint8Array(this.voiceCallAnalyser.frequencyBinCount);
-                console.log('🎨 语音通话录音音频分析器已创建');
+                window.controlledLog?.log('🎨 语音通话录音音频分析器已创建');
             } else {
                 console.warn('🔍 [语音通话调试] 无法创建音频分析器：缺少音频上下文或流');
                 return;
@@ -2060,7 +2060,7 @@ class VoiceWebSocketManager {
         
         const draw = () => {
             if (!this.voiceCallAnalyser || !this.voiceCallDataArray) {
-                console.log('🔍 [语音通话调试] 录音动画循环退出: 缺少分析器或数据数组');
+                window.controlledLog?.log('🔍 [语音通话调试] 录音动画循环退出: 缺少分析器或数据数组');
                 return;
             }
             
@@ -2107,7 +2107,7 @@ class VoiceWebSocketManager {
             
             // 🔧 优化：减少调试日志输出频率
             if (Math.random() < 0.005) { // 0.5%概率输出，进一步减少日志
-                console.log('🔍 [语音通话调试] 录音波形动画运行中:', {
+                window.controlledLog?.log('🔍 [语音通话调试] 录音波形动画运行中:', {
                     maxValue: maxValue,
                     dataLength: this.voiceCallDataArray.length,
                     animationId: this.voiceCallAnimationId
@@ -2117,7 +2117,7 @@ class VoiceWebSocketManager {
             this.voiceCallAnimationId = requestAnimationFrame(draw);
         };
         
-        console.log('🔍 [语音通话调试] 启动录音动画循环');
+        window.controlledLog?.log('🔍 [语音通话调试] 启动录音动画循环');
         draw();
     }
     
@@ -2126,7 +2126,7 @@ class VoiceWebSocketManager {
      * 显示播放状态消息，因为无法直接获取播放音频的可视化数据
      */
     startVoiceCallPlaybackAnimation() {
-        console.log('🔍 [语音通话调试] startVoiceCallPlaybackAnimation 开始执行');
+        window.controlledLog?.log('🔍 [语音通话调试] startVoiceCallPlaybackAnimation 开始执行');
         
         const canvas = document.getElementById('audio-visualizer');
         if (!canvas) {
@@ -2138,7 +2138,7 @@ class VoiceWebSocketManager {
         const width = canvas.width;
         const height = canvas.height;
         
-        console.log('🎨 启动语音通话播放波形动画');
+        window.controlledLog?.log('🎨 启动语音通话播放波形动画');
         
         // 停止之前的动画
         if (this.voiceCallAnimationId) {
@@ -2147,7 +2147,7 @@ class VoiceWebSocketManager {
         
         // 🔧 关键修复：语音通话AI回复时的可视化
         // 显示播放状态消息，因为无法直接获取播放音频的可视化数据
-        console.log('🔍 [语音通话调试] 显示AI回复播放状态');
+        window.controlledLog?.log('🔍 [语音通话调试] 显示AI回复播放状态');
         
         // 显示播放状态消息
         this.showVoiceCallPlaybackStatus(canvas, ctx, width, height);
@@ -2207,7 +2207,7 @@ class VoiceWebSocketManager {
         if (this.voiceCallAnimationId) {
             cancelAnimationFrame(this.voiceCallAnimationId);
             this.voiceCallAnimationId = null;
-            console.log('🎨 语音通话波形动画已停止');
+            window.controlledLog?.log('🎨 语音通话波形动画已停止');
         }
     }
 }

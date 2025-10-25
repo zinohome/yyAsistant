@@ -67,7 +67,7 @@ class StateManager {
             }
         });
         
-        console.log(`状态转换成功: ${previousState} -> ${newState}`);
+        window.controlledLog?.log(`状态转换成功: ${previousState} -> ${newState}`);
         return true;
     }
     
@@ -98,7 +98,7 @@ class StateManager {
         if (duration) {
             this.maxLockDuration = duration;
         }
-        console.log(`状态已锁定，持续时间: ${duration ? duration + 'ms' : '永久'}`);
+        window.controlledLog?.log(`状态已锁定，持续时间: ${duration ? duration + 'ms' : '永久'}`);
     }
     
     /**
@@ -107,7 +107,7 @@ class StateManager {
     unlockState() {
         this.stateLocked = false;
         this.stateLockTime = null;
-        console.log('状态已解锁');
+        window.controlledLog?.log('状态已解锁');
     }
     
     /**
@@ -145,7 +145,7 @@ class StateManager {
         // 直接设置状态，不检查转换规则
         this.currentState = previousState;
         
-        console.log(`状态已回滚到: ${previousState}`);
+        window.controlledLog?.log(`状态已回滚到: ${previousState}`);
         return true;
     }
     
@@ -162,7 +162,7 @@ class StateManager {
      */
     clearStateHistory() {
         this.stateHistory = [];
-        console.log('状态历史已清空');
+        window.controlledLog?.log('状态历史已清空');
     }
     
     /**
@@ -171,7 +171,7 @@ class StateManager {
      */
     registerStateChangeCallback(callback) {
         this.stateChangeCallbacks.push(callback);
-        console.log('状态变化回调已注册');
+        window.controlledLog?.log('状态变化回调已注册');
     }
     
     /**
@@ -182,7 +182,7 @@ class StateManager {
         const index = this.stateChangeCallbacks.indexOf(callback);
         if (index > -1) {
             this.stateChangeCallbacks.splice(index, 1);
-            console.log('状态变化回调已注销');
+            window.controlledLog?.log('状态变化回调已注销');
         }
     }
     
@@ -229,7 +229,7 @@ class StateManager {
         this.stateLocked = false;
         this.currentState = 'idle';
         
-        console.log('状态已重置到空闲状态');
+        window.controlledLog?.log('状态已重置到空闲状态');
         return true;
     }
     
@@ -357,6 +357,6 @@ window.isState = function(state) {
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('JavaScript状态管理器已初始化');
-    console.log('当前状态:', window.stateManager.getState());
+    window.controlledLog?.log('JavaScript状态管理器已初始化');
+    window.controlledLog?.log('当前状态:', window.stateManager.getState());
 });

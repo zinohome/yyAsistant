@@ -17,7 +17,7 @@ class StateSyncManager {
     init() {
         if (this.isInitialized) return;
         
-        console.log('🔄 状态同步管理器已初始化');
+        window.controlledLog?.log('🔄 状态同步管理器已初始化');
         this.isInitialized = true;
         
         // 启动同步处理
@@ -58,7 +58,7 @@ class StateSyncManager {
             }
         });
         
-        console.log(`🔄 状态 ${stateName} 已注册`);
+        window.controlledLog?.log(`🔄 状态 ${stateName} 已注册`);
         return this.getState(stateName);
     }
     
@@ -76,7 +76,7 @@ class StateSyncManager {
         let currentState = this.states.get(stateName);
         if (!currentState) {
             // 如果状态不存在，尝试自动注册默认状态
-            console.log(`🔄 状态 ${stateName} 不存在，尝试自动注册`);
+            window.controlledLog?.log(`🔄 状态 ${stateName} 不存在，尝试自动注册`);
             this.registerState(stateName, {
                 status: 'idle',
                 isConnected: false,
@@ -109,7 +109,7 @@ class StateSyncManager {
         // 添加到更新队列
         this.addToUpdateQueue(stateName, newState, options);
         
-        console.log(`🔄 状态 ${stateName} 已更新`);
+        window.controlledLog?.log(`🔄 状态 ${stateName} 已更新`);
         return true;
     }
     
@@ -129,7 +129,7 @@ class StateSyncManager {
         
         this.listeners.get(stateName).push(listener);
         
-        console.log(`🔄 状态监听器已添加: ${stateName}`);
+        window.controlledLog?.log(`🔄 状态监听器已添加: ${stateName}`);
         return listener.id;
     }
     
@@ -144,7 +144,7 @@ class StateSyncManager {
         if (index === -1) return false;
         
         listeners.splice(index, 1);
-        console.log(`🔄 状态监听器已移除: ${stateName}`);
+        window.controlledLog?.log(`🔄 状态监听器已移除: ${stateName}`);
         return true;
     }
     
@@ -253,10 +253,10 @@ class StateSyncManager {
         const isVisible = !document.hidden;
         
         if (isVisible) {
-            console.log('🔄 页面变为可见，同步所有状态');
+            window.controlledLog?.log('🔄 页面变为可见，同步所有状态');
             this.syncAllStates();
         } else {
-            console.log('🔄 页面变为隐藏，暂停非关键状态更新');
+            window.controlledLog?.log('🔄 页面变为隐藏，暂停非关键状态更新');
             this.pauseNonCriticalUpdates();
         }
     }
@@ -265,12 +265,12 @@ class StateSyncManager {
      * 处理窗口焦点变化
      */
     handleWindowFocus() {
-        console.log('🔄 窗口获得焦点，同步状态');
+        window.controlledLog?.log('🔄 窗口获得焦点，同步状态');
         this.syncAllStates();
     }
     
     handleWindowBlur() {
-        console.log('🔄 窗口失去焦点，暂停状态更新');
+        window.controlledLog?.log('🔄 窗口失去焦点，暂停状态更新');
         this.pauseNonCriticalUpdates();
     }
     
@@ -358,7 +358,7 @@ class StateSyncManager {
             }
         }
         
-        console.log('🔄 状态快照已恢复');
+        window.controlledLog?.log('🔄 状态快照已恢复');
     }
     
     /**
@@ -387,7 +387,7 @@ class StateSyncManager {
         this.listeners.clear();
         this.updateQueue = [];
         this.stopSyncProcessing();
-        console.log('🔄 状态同步管理器已清理');
+        window.controlledLog?.log('🔄 状态同步管理器已清理');
     }
     
     /**
@@ -395,7 +395,7 @@ class StateSyncManager {
      */
     initSmartStatePredictor() {
         if (window.smartStatePredictor) {
-            console.log('🔮 智能状态预测器已连接');
+            window.controlledLog?.log('🔮 智能状态预测器已连接');
             
             // 监听状态变化，记录用户行为
             this.addGlobalStateListener();
@@ -442,7 +442,7 @@ class StateSyncManager {
      * 调试信息
      */
     debug() {
-        console.log('🔄 状态同步管理器调试信息:', {
+        window.controlledLog?.log('🔄 状态同步管理器调试信息:', {
             states: Array.from(this.states.keys()),
             listeners: Array.from(this.listeners.entries()).map(([name, listeners]) => ({
                 state: name,
@@ -461,7 +461,7 @@ function initStateSyncManager() {
     if (!stateSyncManager) {
         stateSyncManager = new StateSyncManager();
         window.stateSyncManager = stateSyncManager;
-        console.log('🔄 状态同步管理器已启动');
+        window.controlledLog?.log('🔄 状态同步管理器已启动');
     }
 }
 

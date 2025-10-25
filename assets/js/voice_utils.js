@@ -15,7 +15,7 @@ class VoiceUtils {
             if (window.voiceWebSocketManager) {
                 const ws = await window.voiceWebSocketManager.waitForConnection();
                 if (ws) {
-                    console.log('使用共享WebSocket连接');
+                    window.controlledLog?.log('使用共享WebSocket连接');
                     // 注册消息处理器
                     Object.entries(messageHandlers).forEach(([type, handler]) => {
                         window.voiceWebSocketManager.registerMessageHandler(type, handler);
@@ -71,7 +71,7 @@ class VoiceUtils {
                         metadata 
                     }
                 });
-                console.log('状态已更新:', { state, scenario, metadata });
+                window.controlledLog?.log('状态已更新:', { state, scenario, metadata });
             } else {
                 console.warn('Dash clientside不可用，无法更新状态');
             }
@@ -95,7 +95,7 @@ class VoiceUtils {
                         ...data 
                     }
                 });
-                console.log('事件已触发:', { type, data });
+                window.controlledLog?.log('事件已触发:', { type, data });
             } else {
                 console.warn('Dash clientside不可用，无法触发事件');
             }
@@ -134,9 +134,9 @@ class VoiceUtils {
             if (message.includes('WebSocket连接不可用')) {
                 // 尝试自动重连
                 if (window.voiceWebSocketManager) {
-                    console.log('🔄 检测到WebSocket连接错误，尝试自动重连...');
+                    window.controlledLog?.log('🔄 检测到WebSocket连接错误，尝试自动重连...');
                     window.voiceWebSocketManager.connect().then(() => {
-                        console.log('✅ WebSocket自动重连成功');
+                        window.controlledLog?.log('✅ WebSocket自动重连成功');
                         // 显示重连成功提示
                         this.showSuccess('语音连接已恢复');
                     }).catch((error) => {
@@ -170,7 +170,7 @@ class VoiceUtils {
                 window.dash_clientside.set_props('global-message', {
                     children: message
                 });
-                console.log('已显示错误消息:', message);
+                window.controlledLog?.log('已显示错误消息:', message);
             } else {
                 console.warn('语音系统提示:', message);
             }
@@ -190,9 +190,9 @@ class VoiceUtils {
                 window.dash_clientside.set_props('global-message', {
                     children: message
                 });
-                console.log('已显示成功消息:', message);
+                window.controlledLog?.log('已显示成功消息:', message);
             } else {
-                console.log('语音系统提示:', message);
+                window.controlledLog?.log('语音系统提示:', message);
             }
         } catch (error) {
             console.error('显示成功消息失败:', error);
@@ -324,7 +324,7 @@ class VoiceUtils {
                 window.voiceConfig = {};
             }
             window.voiceConfig[key] = value;
-            console.log('配置已更新:', { key, value });
+            window.controlledLog?.log('配置已更新:', { key, value });
         } catch (error) {
             console.error('设置配置失败:', error);
         }

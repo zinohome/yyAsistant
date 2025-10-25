@@ -17,7 +17,7 @@ class AdaptiveUI {
      * 初始化
      */
     init() {
-        console.log('🎨 自适应UI系统初始化中...');
+        window.controlledLog?.log('🎨 自适应UI系统初始化中...');
         
         // 加载用户偏好
         this.applyUserPreferences();
@@ -28,7 +28,7 @@ class AdaptiveUI {
         // 监听用户交互
         this.setupInteractionListeners();
         
-        console.log('✅ 自适应UI系统已初始化');
+        window.controlledLog?.log('✅ 自适应UI系统已初始化');
     }
     
     /**
@@ -69,7 +69,7 @@ class AdaptiveUI {
     saveUserPreferences() {
         try {
             localStorage.setItem('ui_preferences', JSON.stringify(this.userPreferences));
-            console.log('💾 用户偏好已保存');
+            window.controlledLog?.log('💾 用户偏好已保存');
         } catch (error) {
             console.error('❌ 保存用户偏好失败:', error);
         }
@@ -95,7 +95,7 @@ class AdaptiveUI {
             this.enableHighContrast();
         }
         
-        console.log('🎨 用户偏好已应用:', this.userPreferences);
+        window.controlledLog?.log('🎨 用户偏好已应用:', this.userPreferences);
     }
     
     /**
@@ -131,7 +131,7 @@ class AdaptiveUI {
      */
     enableReducedMotion() {
         document.documentElement.classList.add('reduced-motion');
-        console.log('🎬 减少动画模式已启用');
+        window.controlledLog?.log('🎬 减少动画模式已启用');
     }
     
     /**
@@ -139,7 +139,7 @@ class AdaptiveUI {
      */
     enableHighContrast() {
         document.documentElement.classList.add('high-contrast');
-        console.log('🎨 高对比度模式已启用');
+        window.controlledLog?.log('🎨 高对比度模式已启用');
     }
     
     /**
@@ -151,7 +151,7 @@ class AdaptiveUI {
             this.adaptToPerformance();
         }, 5000); // 每5秒检查一次
         
-        console.log('📊 性能监控已启动');
+        window.controlledLog?.log('📊 性能监控已启动');
     }
     
     /**
@@ -161,7 +161,7 @@ class AdaptiveUI {
         if (this.monitoringInterval) {
             clearInterval(this.monitoringInterval);
             this.monitoringInterval = null;
-            console.log('📊 性能监控已停止');
+            window.controlledLog?.log('📊 性能监控已停止');
         }
     }
     
@@ -239,11 +239,11 @@ class AdaptiveUI {
         if (avgFPS < 30 && !this.adaptations.has('low_fps')) {
             this.adaptations.set('low_fps', true);
             this.reduceAnimationComplexity();
-            console.log('⚡ 检测到低FPS，已降低动画复杂度');
+            window.controlledLog?.log('⚡ 检测到低FPS，已降低动画复杂度');
         } else if (avgFPS >= 50 && this.adaptations.has('low_fps')) {
             this.adaptations.delete('low_fps');
             this.restoreAnimationComplexity();
-            console.log('✨ FPS恢复正常，已恢复动画复杂度');
+            window.controlledLog?.log('✨ FPS恢复正常，已恢复动画复杂度');
         }
     }
     
@@ -279,7 +279,7 @@ class AdaptiveUI {
         if (window.matchMedia) {
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
                 if (this.userPreferences.colorTheme === 'auto') {
-                    console.log('🎨 系统主题已变化:', e.matches ? 'dark' : 'light');
+                    window.controlledLog?.log('🎨 系统主题已变化:', e.matches ? 'dark' : 'light');
                 }
             });
             
@@ -299,7 +299,7 @@ class AdaptiveUI {
         this.saveUserPreferences();
         this.applyUserPreferences();
         
-        console.log('🔄 用户偏好已更新:', preference);
+        window.controlledLog?.log('🔄 用户偏好已更新:', preference);
     }
     
     /**
@@ -330,7 +330,7 @@ class AdaptiveUI {
         this.stopPerformanceMonitoring();
         this.performanceMetrics.clear();
         this.adaptations.clear();
-        console.log('🧹 自适应UI系统已销毁');
+        window.controlledLog?.log('🧹 自适应UI系统已销毁');
     }
 }
 
@@ -344,7 +344,7 @@ function initAdaptiveUI() {
     }
     
     window.adaptiveUI = new AdaptiveUI();
-    console.log('🎨 自适应UI系统已初始化');
+    window.controlledLog?.log('🎨 自适应UI系统已初始化');
 }
 
 // 页面加载完成后初始化

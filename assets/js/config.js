@@ -245,7 +245,7 @@ window.config = new Config();
 window.controlledLog = {
     log: function(...args) {
         if (window.config.get('app.show_console_log', true)) {
-            console.log(...args);
+            window.controlledLog?.log(...args);
         }
     },
     warn: function(...args) {

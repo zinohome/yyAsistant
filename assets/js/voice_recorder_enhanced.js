@@ -61,7 +61,7 @@ class VoiceRecorderEnhanced {
      * 状态变化处理
      */
     onStateChange(oldState, newState, oldScenario = null, scenario = null, metadata = {}) {
-        console.log(`录音器状态变化: ${oldState} → ${newState} (${scenario})`);
+        window.controlledLog?.log(`录音器状态变化: ${oldState} → ${newState} (${scenario})`);
         
         // 如果状态变为中断，停止录音
         if (newState === 'interrupted' && this.isRecording) {
@@ -78,25 +78,25 @@ class VoiceRecorderEnhanced {
      * 清理资源
      */
     cleanup() {
-        console.log('🎤 开始清理录音器资源...');
+        window.controlledLog?.log('🎤 开始清理录音器资源...');
         
         // 停止录音
         if (this.isRecording) {
-            console.log('🎤 停止录音中...');
+            window.controlledLog?.log('🎤 停止录音中...');
             this.stopRecording();
         }
         
         // 停止音频流（如果还存在）
         if (this.audioStream) {
-            console.log('🎤 停止音频流，释放麦克风');
+            window.controlledLog?.log('🎤 停止音频流，释放麦克风');
             this.audioStream.getTracks().forEach(track => {
-                console.log('🎤 停止音频轨道:', track.label, track.readyState);
+                window.controlledLog?.log('🎤 停止音频轨道:', track.label, track.readyState);
                 track.stop();
-                console.log('🎤 音频轨道已停止');
+                window.controlledLog?.log('🎤 音频轨道已停止');
             });
             this.audioStream = null;
         } else {
-            console.log('🎤 音频流已为空，无需释放');
+            window.controlledLog?.log('🎤 音频流已为空，无需释放');
         }
         
         // 清理音频块
@@ -104,38 +104,38 @@ class VoiceRecorderEnhanced {
         
         // 清理MediaRecorder对象
         if (this.mediaRecorder) {
-            console.log('🎤 清理MediaRecorder对象');
+            window.controlledLog?.log('🎤 清理MediaRecorder对象');
             this.mediaRecorder = null;
-            console.log('🎤 MediaRecorder已清空');
+            window.controlledLog?.log('🎤 MediaRecorder已清空');
         }
         
         // 清理音频上下文（如果还存在）
         if (this.audioContext && this.audioContext.state !== 'closed') {
-            console.log('🎤 关闭音频上下文');
+            window.controlledLog?.log('🎤 关闭音频上下文');
             try {
                 this.audioContext.close();
             } catch (error) {
-                console.log('🎤 音频上下文已关闭或无法关闭:', error.message);
+                window.controlledLog?.log('🎤 音频上下文已关闭或无法关闭:', error.message);
             }
             this.audioContext = null;
         } else {
-            console.log('🎤 音频上下文已关闭或不存在');
+            window.controlledLog?.log('🎤 音频上下文已关闭或不存在');
         }
         
         // 清理麦克风节点（如果还存在）
         if (this.microphone) {
-            console.log('🎤 断开麦克风节点');
+            window.controlledLog?.log('🎤 断开麦克风节点');
             this.microphone.disconnect();
             this.microphone = null;
         }
         
         // 最终检查所有资源状态
-        console.log('🎤 最终资源状态检查:');
-        console.log('🎤 - audioStream:', this.audioStream ? '存在' : '已清空');
-        console.log('🎤 - audioContext:', this.audioContext ? '存在' : '已清空');
-        console.log('🎤 - microphone:', this.microphone ? '存在' : '已清空');
-        console.log('🎤 - mediaRecorder:', this.mediaRecorder ? '存在' : '已清空');
-        console.log('🎤 - isRecording:', this.isRecording);
+        window.controlledLog?.log('🎤 最终资源状态检查:');
+        window.controlledLog?.log('🎤 - audioStream:', this.audioStream ? '存在' : '已清空');
+        window.controlledLog?.log('🎤 - audioContext:', this.audioContext ? '存在' : '已清空');
+        window.controlledLog?.log('🎤 - microphone:', this.microphone ? '存在' : '已清空');
+        window.controlledLog?.log('🎤 - mediaRecorder:', this.mediaRecorder ? '存在' : '已清空');
+        window.controlledLog?.log('🎤 - isRecording:', this.isRecording);
         
         // 最终强制释放所有资源
         this.forceReleaseMicrophone();
@@ -143,55 +143,55 @@ class VoiceRecorderEnhanced {
         // 最终检查麦克风状态
         this.checkMicrophoneStatus();
         
-        console.log('🎤 录音器资源已完全清理，麦克风已释放');
+        window.controlledLog?.log('🎤 录音器资源已完全清理，麦克风已释放');
     }
     
     /**
      * 强制释放所有麦克风相关资源
      */
     forceReleaseMicrophone() {
-        console.log('🎤 强制释放所有麦克风资源...');
+        window.controlledLog?.log('🎤 强制释放所有麦克风资源...');
         
         // 1. 停止所有MediaStream tracks
         if (this.audioStream) {
-            console.log('🎤 强制停止所有音频轨道');
+            window.controlledLog?.log('🎤 强制停止所有音频轨道');
             this.audioStream.getTracks().forEach(track => {
-                console.log('🎤 强制停止轨道:', track.label, '状态:', track.readyState);
+                window.controlledLog?.log('🎤 强制停止轨道:', track.label, '状态:', track.readyState);
                 if (track.readyState !== 'ended') {
                     track.stop();
-                    console.log('🎤 轨道已强制停止');
+                    window.controlledLog?.log('🎤 轨道已强制停止');
                 } else {
-                    console.log('🎤 轨道已结束，无需停止');
+                    window.controlledLog?.log('🎤 轨道已结束，无需停止');
                 }
             });
             // 注意：在这里清空audioStream，确保麦克风被释放
             this.audioStream = null;
-            console.log('🎤 MediaStream已清空');
+            window.controlledLog?.log('🎤 MediaStream已清空');
         } else {
-            console.log('🎤 MediaStream已为空，无需释放');
+            window.controlledLog?.log('🎤 MediaStream已为空，无需释放');
         }
         
         // 2. 断开所有音频节点
         if (this.microphone) {
-            console.log('🎤 强制断开麦克风节点');
+            window.controlledLog?.log('🎤 强制断开麦克风节点');
             this.microphone.disconnect();
             this.microphone = null;
         }
         
         // 3. 关闭AudioContext
         if (this.audioContext && this.audioContext.state !== 'closed') {
-            console.log('🎤 强制关闭音频上下文');
+            window.controlledLog?.log('🎤 强制关闭音频上下文');
             try {
                 this.audioContext.close();
             } catch (error) {
-                console.log('🎤 音频上下文关闭错误:', error.message);
+                window.controlledLog?.log('🎤 音频上下文关闭错误:', error.message);
             }
             this.audioContext = null;
         }
         
         // 4. 清理MediaRecorder
         if (this.mediaRecorder) {
-            console.log('🎤 强制清理MediaRecorder');
+            window.controlledLog?.log('🎤 强制清理MediaRecorder');
             this.mediaRecorder = null;
         }
         
@@ -200,43 +200,43 @@ class VoiceRecorderEnhanced {
         this.analyser = null;
         this.dataArray = null;
         
-        console.log('🎤 强制释放完成');
+        window.controlledLog?.log('🎤 强制释放完成');
     }
     
     /**
      * 检查浏览器麦克风状态
      */
     checkMicrophoneStatus() {
-        console.log('🎤 检查浏览器麦克风状态:');
+        window.controlledLog?.log('🎤 检查浏览器麦克风状态:');
         
         // 检查navigator.mediaDevices
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            console.log('🎤 - navigator.mediaDevices 可用');
+            window.controlledLog?.log('🎤 - navigator.mediaDevices 可用');
         } else {
-            console.log('🎤 - navigator.mediaDevices 不可用');
+            window.controlledLog?.log('🎤 - navigator.mediaDevices 不可用');
         }
         
         // 检查当前活动的MediaStream
         if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
             navigator.mediaDevices.enumerateDevices().then(devices => {
                 const audioInputs = devices.filter(device => device.kind === 'audioinput');
-                console.log('🎤 - 音频输入设备数量:', audioInputs.length);
+                window.controlledLog?.log('🎤 - 音频输入设备数量:', audioInputs.length);
                 audioInputs.forEach((device, index) => {
-                    console.log(`🎤 - 设备[${index}]:`, {
+                    window.controlledLog?.log(`🎤 - 设备[${index}]:`, {
                         label: device.label,
                         deviceId: device.deviceId
                     });
                 });
             }).catch(error => {
-                console.log('🎤 - 枚举设备失败:', error);
+                window.controlledLog?.log('🎤 - 枚举设备失败:', error);
             });
         }
         
         // 检查是否有全局的MediaStream
         if (window.currentMediaStream) {
-            console.log('🎤 - 全局MediaStream存在:', window.currentMediaStream.active);
+            window.controlledLog?.log('🎤 - 全局MediaStream存在:', window.currentMediaStream.active);
         } else {
-            console.log('🎤 - 全局MediaStream不存在');
+            window.controlledLog?.log('🎤 - 全局MediaStream不存在');
         }
     }
     
@@ -249,7 +249,7 @@ class VoiceRecorderEnhanced {
             };
             
             this.websocket = await VoiceUtils.initWebSocket(window.voiceWebSocketManager, messageHandlers);
-            console.log('录音器WebSocket连接已建立');
+            window.controlledLog?.log('录音器WebSocket连接已建立');
         } catch (error) {
             VoiceUtils.handleError(error, '录音器WebSocket初始化');
         }
@@ -259,7 +259,7 @@ class VoiceRecorderEnhanced {
         if (!this.websocket) return;
         
         this.websocket.onopen = () => {
-            console.log('语音WebSocket连接已建立');
+            window.controlledLog?.log('语音WebSocket连接已建立');
         };
         
         this.websocket.onmessage = (event) => {
@@ -271,20 +271,20 @@ class VoiceRecorderEnhanced {
         };
         
         this.websocket.onclose = () => {
-            console.log('语音WebSocket连接已关闭');
+            window.controlledLog?.log('语音WebSocket连接已关闭');
         };
     }
     
     bindEvents() {
-        console.log('绑定录音按钮事件监听器...');
+        window.controlledLog?.log('绑定录音按钮事件监听器...');
         
         // 监听录音按钮点击事件 - 使用新的按钮ID
         document.addEventListener('click', async (event) => {
-            // console.log('文档点击事件触发，目标元素:', event.target);
+            // window.controlledLog?.log('文档点击事件触发，目标元素:', event.target);
             
             // 检查是否是录音按钮
             if (event.target.closest('#voice-record-button')) {
-                console.log('录音按钮被点击');
+                window.controlledLog?.log('录音按钮被点击');
                 event.preventDefault();
                 event.stopPropagation();
                 await this.toggleRecording();
@@ -293,12 +293,12 @@ class VoiceRecorderEnhanced {
             else if (event.target.closest('#realtime-start-btn') || 
                      event.target.closest('#realtime-stop-btn') || 
                      event.target.closest('#realtime-mute-btn')) {
-                console.log('实时语音对话按钮被点击，让Dash回调处理');
+                window.controlledLog?.log('实时语音对话按钮被点击，让Dash回调处理');
                 // 不阻止事件，让Dash的nClicks回调处理
             }
         });
         
-        console.log('录音按钮事件监听器绑定完成');
+        window.controlledLog?.log('录音按钮事件监听器绑定完成');
     }
     
     async toggleRecording() {
@@ -319,7 +319,7 @@ class VoiceRecorderEnhanced {
     }
     
     async startRecording() {
-        console.log('startRecording 被调用');
+        window.controlledLog?.log('startRecording 被调用');
         
         // 检查是否已经在录音
         if (this.isRecording) {
@@ -327,7 +327,7 @@ class VoiceRecorderEnhanced {
             return true;
         }
         
-        console.log('准备开始录音');
+        window.controlledLog?.log('准备开始录音');
         
         try {
             // 使用公共工具触发录音开始事件
@@ -339,11 +339,11 @@ class VoiceRecorderEnhanced {
                 window.dash_clientside.set_props('button-event-trigger', {
                     data: {type: 'recording_start', timestamp: Date.now()}
                 });
-                console.log('录音开始，触发状态更新');
+                window.controlledLog?.log('录音开始，触发状态更新');
             }
             
             // 请求麦克风权限
-            console.log('正在请求麦克风权限...');
+            window.controlledLog?.log('正在请求麦克风权限...');
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     sampleRate: this.config.sampleRate,
@@ -352,7 +352,7 @@ class VoiceRecorderEnhanced {
                     noiseSuppression: true
                 }
             });
-            console.log('麦克风权限获取成功，音频流:', stream);
+            window.controlledLog?.log('麦克风权限获取成功，音频流:', stream);
             
             // 保存音频流引用
             this.audioStream = stream;
@@ -389,7 +389,7 @@ class VoiceRecorderEnhanced {
             // 监听停止事件
             this.mediaRecorder.onstop = () => {
                 // 不在这里处理，避免重复调用
-                console.log('录音停止事件触发');
+                window.controlledLog?.log('录音停止事件触发');
             };
             
             // 开始录音
@@ -402,7 +402,7 @@ class VoiceRecorderEnhanced {
             // 禁用输入框
             this.disableInput();
             
-            console.log('开始录音');
+            window.controlledLog?.log('开始录音');
             return true; // 录音开始成功
             
         } catch (error) {
@@ -440,15 +440,15 @@ class VoiceRecorderEnhanced {
             
             // 🔧 停止音频轨道但不立即清空audioStream
             if (this.audioStream) {
-                console.log('🎤 录音停止，停止音频轨道');
+                window.controlledLog?.log('🎤 录音停止，停止音频轨道');
                 this.audioStream.getTracks().forEach(track => {
-                    console.log('🎤 停止音频轨道:', track.label, track.readyState);
+                    window.controlledLog?.log('🎤 停止音频轨道:', track.label, track.readyState);
                     track.stop();
-                    console.log('🎤 音频轨道已停止');
+                    window.controlledLog?.log('🎤 音频轨道已停止');
                 });
                 // 注意：不在这里设置 this.audioStream = null，让forceReleaseMicrophone处理
             } else {
-                console.log('🎤 录音停止时，音频流已为空');
+                window.controlledLog?.log('🎤 录音停止时，音频流已为空');
             }
             
             // 使用公共工具触发录音停止事件
@@ -460,7 +460,7 @@ class VoiceRecorderEnhanced {
                 window.dash_clientside.set_props('button-event-trigger', {
                     data: {type: 'recording_stop', timestamp: Date.now()}
                 });
-                console.log('录音停止，触发状态更新');
+                window.controlledLog?.log('录音停止，触发状态更新');
             }
             
             // 停止波形动画
@@ -474,39 +474,39 @@ class VoiceRecorderEnhanced {
             
             // 立即释放所有资源
             if (this.microphone) {
-                console.log('🎤 断开麦克风节点');
-                console.log('🎤 麦克风节点状态:', this.microphone.context.state);
+                window.controlledLog?.log('🎤 断开麦克风节点');
+                window.controlledLog?.log('🎤 麦克风节点状态:', this.microphone.context.state);
                 this.microphone.disconnect();
                 this.microphone = null;
-                console.log('🎤 麦克风节点已断开并清空');
+                window.controlledLog?.log('🎤 麦克风节点已断开并清空');
             }
             if (this.audioContext && this.audioContext.state !== 'closed') {
-                console.log('🎤 关闭音频上下文');
-                console.log('🎤 音频上下文状态:', this.audioContext.state);
+                window.controlledLog?.log('🎤 关闭音频上下文');
+                window.controlledLog?.log('🎤 音频上下文状态:', this.audioContext.state);
                 try {
                     this.audioContext.close();
-                    console.log('🎤 音频上下文关闭成功');
+                    window.controlledLog?.log('🎤 音频上下文关闭成功');
                 } catch (error) {
-                    console.log('🎤 音频上下文已关闭或无法关闭:', error.message);
+                    window.controlledLog?.log('🎤 音频上下文已关闭或无法关闭:', error.message);
                 }
                 this.audioContext = null;
-                console.log('🎤 音频上下文已清空');
+                window.controlledLog?.log('🎤 音频上下文已清空');
             }
             
             // 清理MediaRecorder对象
             if (this.mediaRecorder) {
-                console.log('🎤 清理MediaRecorder对象');
+                window.controlledLog?.log('🎤 清理MediaRecorder对象');
                 this.mediaRecorder = null;
-                console.log('🎤 MediaRecorder已清空');
+                window.controlledLog?.log('🎤 MediaRecorder已清空');
             }
             
             // 检查MediaStream是否真的被释放
             if (this.audioStream) {
-                console.log('🎤 检查MediaStream状态:');
-                console.log('🎤 - active:', this.audioStream.active);
-                console.log('🎤 - tracks数量:', this.audioStream.getTracks().length);
+                window.controlledLog?.log('🎤 检查MediaStream状态:');
+                window.controlledLog?.log('🎤 - active:', this.audioStream.active);
+                window.controlledLog?.log('🎤 - tracks数量:', this.audioStream.getTracks().length);
                 this.audioStream.getTracks().forEach((track, index) => {
-                    console.log(`🎤 - track[${index}]:`, {
+                    window.controlledLog?.log(`🎤 - track[${index}]:`, {
                         label: track.label,
                         readyState: track.readyState,
                         enabled: track.enabled,
@@ -514,19 +514,19 @@ class VoiceRecorderEnhanced {
                     });
                 });
             } else {
-                console.log('🎤 MediaStream已为空');
+                window.controlledLog?.log('🎤 MediaStream已为空');
             }
             
             // 检查麦克风状态
             this.checkMicrophoneStatus();
             
-            console.log('停止录音，开始处理音频');
+            window.controlledLog?.log('停止录音，开始处理音频');
             
             // 更新状态为处理中
             if (window.voiceStateManager) {
-                console.log('录音器调用startProcessing，当前状态:', window.voiceStateManager.getState());
+                window.controlledLog?.log('录音器调用startProcessing，当前状态:', window.voiceStateManager.getState());
                 window.voiceStateManager.startProcessing();
-                console.log('录音器调用startProcessing后，状态:', window.voiceStateManager.getState());
+                window.controlledLog?.log('录音器调用startProcessing后，状态:', window.voiceStateManager.getState());
             } else {
                 console.error('voiceStateManager不存在！');
             }
@@ -538,19 +538,19 @@ class VoiceRecorderEnhanced {
     
     async processRecording() {
         try {
-            console.log('开始处理录音数据，音频块数量:', this.audioChunks.length);
+            window.controlledLog?.log('开始处理录音数据，音频块数量:', this.audioChunks.length);
             
             // 创建音频Blob
             const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-            console.log('音频Blob创建完成，大小:', audioBlob.size, 'bytes');
+            window.controlledLog?.log('音频Blob创建完成，大小:', audioBlob.size, 'bytes');
             
             // 显示处理中状态
             this.showProcessingStatus();
             
             // 发送音频到后端进行语音转文本
-            console.log('准备发送音频到后端进行STT...');
+            window.controlledLog?.log('准备发送音频到后端进行STT...');
             await this.sendAudioForTranscription(audioBlob);
-            console.log('STT请求发送完成');
+            window.controlledLog?.log('STT请求发送完成');
             
             // 音频数据发送完成后，强制释放麦克风资源
             this.forceReleaseMicrophone();
@@ -598,7 +598,7 @@ class VoiceRecorderEnhanced {
                     sample_rate: this.config.sampleRate
                 }).then((success) => {
                     if (success) {
-                        console.log('发送语音转文本请求成功');
+                        window.controlledLog?.log('发送语音转文本请求成功');
                         resolve();
                     } else {
                         reject(new Error('发送语音转文本请求失败'));
@@ -627,7 +627,7 @@ class VoiceRecorderEnhanced {
                     window.dash_clientside.set_props('voice-websocket-connection', {
                         data: { connected: true, client_id: data.client_id, timestamp: Date.now() }
                     });
-                    // console.log('已从WS消息同步client_id到Store:', data.client_id);
+                    // window.controlledLog?.log('已从WS消息同步client_id到Store:', data.client_id);
                 }
             } catch (e) { /* noop */ }
             
@@ -660,7 +660,7 @@ class VoiceRecorderEnhanced {
                     this.showError(errorMessage);
                     break;
                 default:
-                    console.log('收到WebSocket消息:', data);
+                    window.controlledLog?.log('收到WebSocket消息:', data);
             }
         } catch (error) {
             console.error('处理WebSocket消息失败:', error);
@@ -668,7 +668,7 @@ class VoiceRecorderEnhanced {
     }
     
     handleTranscriptionResult(data) {
-        console.log('收到转录结果:', data);
+        window.controlledLog?.log('收到转录结果:', data);
         
         if (data.text && data.text.trim()) {
             // 使用公共工具触发STT完成事件
@@ -699,10 +699,10 @@ class VoiceRecorderEnhanced {
             this.hideProcessingStatus();
             
             // 转录完成，状态保持为处理中，等待SSE和TTS完成
-            console.log('语音转文本成功:', data.text);
-            console.log('当前状态保持为处理中，等待SSE和TTS完成');
+            window.controlledLog?.log('语音转文本成功:', data.text);
+            window.controlledLog?.log('当前状态保持为处理中，等待SSE和TTS完成');
         } else {
-            console.log('转录结果为空或无效:', data);
+            window.controlledLog?.log('转录结果为空或无效:', data);
             this.showError('未识别到语音内容');
             
             // 使用公共工具重置状态
@@ -716,7 +716,7 @@ class VoiceRecorderEnhanced {
                 window.dash_clientside.set_props('button-event-trigger', {
                     data: {type: 'stt_failed', timestamp: Date.now()}
                 });
-                console.log('STT失败，触发状态重置');
+                window.controlledLog?.log('STT失败，触发状态重置');
             }
             
             // 隐藏处理状态
@@ -729,7 +729,7 @@ class VoiceRecorderEnhanced {
      */
     autoSendMessage(text) {
         try {
-            console.log('自动发送消息:', text);
+            window.controlledLog?.log('自动发送消息:', text);
             
             // 模拟点击发送按钮
             const sendButton = document.getElementById('ai-chat-x-send-btn');
@@ -744,7 +744,7 @@ class VoiceRecorderEnhanced {
                 
                 // 点击发送按钮
                 sendButton.click();
-                console.log('已自动点击发送按钮');
+                window.controlledLog?.log('已自动点击发送按钮');
             } else {
                 console.warn('发送按钮不可用或已禁用');
             }
@@ -770,7 +770,7 @@ class VoiceRecorderEnhanced {
                     window.dash_clientside.set_props('voice-transcription-store-server', {
                         data: { text: text, ts }
                     });
-                    console.log('已通过set_props更新voice-transcription-store 与 -server:', text);
+                    window.controlledLog?.log('已通过set_props更新voice-transcription-store 与 -server:', text);
                 } catch (setPropsError) {
                     console.error('set_props调用失败:', setPropsError);
                     // 使用备用方案
@@ -778,7 +778,7 @@ class VoiceRecorderEnhanced {
                         detail: { text: text }
                     });
                     document.dispatchEvent(event);
-                    console.log('已触发语音转录完成事件:', text);
+                    window.controlledLog?.log('已触发语音转录完成事件:', text);
                 }
             } else {
                 // 使用简单的事件触发
@@ -786,7 +786,7 @@ class VoiceRecorderEnhanced {
                     detail: { text: text }
                 });
                 document.dispatchEvent(event);
-                console.log('已触发语音转录完成事件:', text);
+                window.controlledLog?.log('已触发语音转录完成事件:', text);
             }
         } catch (error) {
             console.error('触发Dash回调失败:', error);
@@ -800,7 +800,7 @@ class VoiceRecorderEnhanced {
      */
     updateInputBoxDirectly(text) {
         const inputElement = document.getElementById('ai-chat-x-input');
-        console.log('查找输入框:', inputElement);
+        window.controlledLog?.log('查找输入框:', inputElement);
         
         if (inputElement) {
             // 尝试多种方式设置值
@@ -819,7 +819,7 @@ class VoiceRecorderEnhanced {
             inputElement.dispatchEvent(new Event('change', { bubbles: true }));
             inputElement.focus();
             
-            console.log('文本已直接填入输入框:', text);
+            window.controlledLog?.log('文本已直接填入输入框:', text);
         } else {
             console.error('未找到输入框元素 ai-chat-x-input');
         }
@@ -833,12 +833,12 @@ class VoiceRecorderEnhanced {
         if (audioVisualizerContainer && audioVisualizer) {
             // 显示音频可视化区域
             audioVisualizerContainer.style.display = 'inline-block';
-            console.log('🎨 录音聊天：显示音频可视化区域');
+            window.controlledLog?.log('🎨 录音聊天：显示音频可视化区域');
             
             // 初始化增强的音频可视化器
             if (window.enhancedAudioVisualizer) {
                 window.enhancedAudioVisualizer.updateState('recording');
-                console.log('🎨 录音聊天：更新音频可视化器状态为录音');
+                window.controlledLog?.log('🎨 录音聊天：更新音频可视化器状态为录音');
             }
             
             // 开始波形动画
@@ -897,7 +897,7 @@ class VoiceRecorderEnhanced {
         const audioVisualizerContainer = document.getElementById('audio-visualizer-container');
         if (audioVisualizerContainer) {
             audioVisualizerContainer.style.display = 'none';
-            console.log('🎨 录音聊天：隐藏音频可视化区域');
+            window.controlledLog?.log('🎨 录音聊天：隐藏音频可视化区域');
         }
         
         // 备用方案：隐藏录音波形容器
@@ -1031,7 +1031,7 @@ class VoiceRecorderEnhanced {
             window.dash_clientside.set_props('global-message', {
                 children: message
             });
-            console.log('已发送toast提示:', message);
+            window.controlledLog?.log('已发送toast提示:', message);
         } else {
             // 如果不在聊天页面或Dash不可用，使用console.warn
             console.warn('语音功能提示:', message);
@@ -1042,24 +1042,24 @@ class VoiceRecorderEnhanced {
 
 // 初始化语音录制器
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('初始化语音录制器...');
+    window.controlledLog?.log('初始化语音录制器...');
     window.voiceRecorder = new VoiceRecorderEnhanced();
-    console.log('语音录制器初始化完成:', window.voiceRecorder);
+    window.controlledLog?.log('语音录制器初始化完成:', window.voiceRecorder);
     
     // 延迟检查录音按钮，因为Dash组件可能还没有渲染
     setTimeout(() => {
         const recordButton = document.getElementById('voice-record-button');
-        console.log('延迟检查录音按钮元素:', recordButton);
+        window.controlledLog?.log('延迟检查录音按钮元素:', recordButton);
         
         if (recordButton) {
-            console.log('录音按钮找到，直接事件绑定完成');
+            window.controlledLog?.log('录音按钮找到，直接事件绑定完成');
         } else {
             console.warn('录音按钮仍未找到，将在页面完全加载后重试');
             // 使用MutationObserver监听DOM变化
             const observer = new MutationObserver(() => {
                 const button = document.getElementById('voice-record-button');
                 if (button) {
-                    console.log('录音按钮已渲染，停止观察');
+                    window.controlledLog?.log('录音按钮已渲染，停止观察');
                     observer.disconnect();
                 }
             });
@@ -1075,7 +1075,7 @@ window.dash_clientside.voiceTranscription = window.dash_clientside.voiceTranscri
 
 // 镜像转录存储的回调函数
 window.dash_clientside.voiceTranscription.mirrorTranscriptionStore = function(data) {
-    console.log('镜像转录存储回调被触发:', data);
+    window.controlledLog?.log('镜像转录存储回调被触发:', data);
     return data; // 直接返回数据，实现镜像
 };
 

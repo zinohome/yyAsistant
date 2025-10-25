@@ -14,7 +14,7 @@ const DOM_CACHE = {
 
 // 等待DOM加载完成
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('实时语音回调初始化...');
+    window.controlledLog?.log('实时语音回调初始化...');
     
     // 初始化DOM缓存
     initDOMCache();
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 绑定音频可视化事件
     bindAudioVisualizationEvents();
     
-    console.log('实时语音回调初始化完成');
+    window.controlledLog?.log('实时语音回调初始化完成');
 });
 
 /**
@@ -54,7 +54,7 @@ function bindVoiceCallButtonWithDelegate() {
     document.addEventListener('click', function(event) {
         // 检查点击的是否是语音通话按钮
         if (event.target && event.target.closest('#voice-call-btn')) {
-            console.log('语音通话按钮被点击');
+            window.controlledLog?.log('语音通话按钮被点击');
             
             // 触发语音通话事件
             if (window.dash_clientside && window.dash_clientside.set_props) {
@@ -68,7 +68,7 @@ function bindVoiceCallButtonWithDelegate() {
                     button.disabled === true // 按钮被禁用表示通话中
                 );
                 
-                console.log('🔍 按钮状态检测:', {
+                window.controlledLog?.log('🔍 按钮状态检测:', {
                     button: !!button,
                     backgroundColor: button?.style.backgroundColor,
                     isCalling: isCalling
@@ -76,11 +76,11 @@ function bindVoiceCallButtonWithDelegate() {
                 
                 if (isCalling) {
                     // 停止语音通话
-                    console.log('🛑 停止语音通话 - 按钮被点击');
+                    window.controlledLog?.log('🛑 停止语音通话 - 按钮被点击');
                     
                     // 🔍 详细打印所有相关变量状态
-                    console.log('🔍 [语音通话停止调试] 开始打印所有变量状态');
-                    console.log('🔍 [语音通话停止调试] voicePlayerEnhanced状态:', {
+                    window.controlledLog?.log('🔍 [语音通话停止调试] 开始打印所有变量状态');
+                    window.controlledLog?.log('🔍 [语音通话停止调试] voicePlayerEnhanced状态:', {
                         isPlaying: window.voicePlayerEnhanced?.isPlaying,
                         audioQueue: window.voicePlayerEnhanced?.audioQueue?.length,
                         playQueue: window.voicePlayerEnhanced?.playQueue?.length,
@@ -88,14 +88,14 @@ function bindVoiceCallButtonWithDelegate() {
                         playedMessages: window.voicePlayerEnhanced?.playedMessages?.size,
                         isVoiceCallActive: window.voiceWebSocketManager?.isVoiceCallActive
                     });
-                    console.log('🔍 [语音通话停止调试] voiceWebSocketManager状态:', {
+                    window.controlledLog?.log('🔍 [语音通话停止调试] voiceWebSocketManager状态:', {
                         isVoiceCallActive: window.voiceWebSocketManager?.isVoiceCallActive,
                         isInterrupting: window.voiceWebSocketManager?.isInterrupting,
                         isUserSpeaking: window.voiceWebSocketManager?.isUserSpeaking,
                         audioStream: !!window.voiceWebSocketManager?.audioStream,
                         audioContext: !!window.voiceWebSocketManager?.audioContext
                     });
-                    console.log('🔍 [语音通话停止调试] 全局状态检查:', {
+                    window.controlledLog?.log('🔍 [语音通话停止调试] 全局状态检查:', {
                         stateManager: !!window.stateManager,
                         stateManagerType: typeof window.stateManager,
                         stateManagerMethods: window.stateManager ? Object.getOwnPropertyNames(window.stateManager) : 'undefined'
@@ -103,13 +103,13 @@ function bindVoiceCallButtonWithDelegate() {
                     
                     // 🚀 立即停止所有语音播放（最高优先级）
                     if (window.voicePlayerEnhanced) {
-                        console.log('🛑 强制停止当前语音播放并清空队列');
+                        window.controlledLog?.log('🛑 强制停止当前语音播放并清空队列');
                         window.voicePlayerEnhanced.forceStopAllAudio();
                     }
                     
                     // 🚀 立即停止音频流处理（不等待网络消息）
                     if (window.voiceWebSocketManager) {
-                        console.log('🛑 强制停止音频流处理');
+                        window.controlledLog?.log('🛑 强制停止音频流处理');
                         window.voiceWebSocketManager.stopAudioStreaming();
                         
                         // 隐藏音频可视化区域
@@ -117,20 +117,20 @@ function bindVoiceCallButtonWithDelegate() {
                         
                         // 🔧 关键修复：不要立即释放麦克风资源，保持录音动画可用
                         // 只停止音频轨道，但保持 audioStream 对象
-                        console.log('🎤 语音通话停止，停止音频轨道但保持流对象');
+                        window.controlledLog?.log('🎤 语音通话停止，停止音频轨道但保持流对象');
                         if (window.voiceWebSocketManager.audioStream) {
                             window.voiceWebSocketManager.audioStream.getTracks().forEach(track => {
                                 track.stop();
-                                console.log('🎤 音频轨道已停止');
+                                window.controlledLog?.log('🎤 音频轨道已停止');
                             });
                             // 不要设置为 null，保持流对象用于录音动画
                         }
                         
                         // 🔧 关键优化：立即重新启动录音动画，不等待网络消息
-                        console.log('🛑 立即重新启动用户说话录音动画');
+                        window.controlledLog?.log('🛑 立即重新启动用户说话录音动画');
                         setTimeout(() => {
                             if (window.voiceWebSocketManager.audioContext && window.voiceWebSocketManager.audioStream) {
-                                console.log('🔍 [语音通话调试] 立即重新启动录音动画');
+                                window.controlledLog?.log('🔍 [语音通话调试] 立即重新启动录音动画');
                                 window.voiceWebSocketManager.startVoiceCallRecordingAnimation();
                                 window.voiceWebSocketManager.updateStatusIndicator('通话中，等待用户说话', 'blue');
                             } else {
@@ -141,7 +141,7 @@ function bindVoiceCallButtonWithDelegate() {
                     
                     // 🚀 异步发送中断信号到后端（不阻塞UI）
                     if (window.voiceWebSocketManager) {
-                        console.log('🛑 发送中断信号到后端');
+                        window.controlledLog?.log('🛑 发送中断信号到后端');
                         window.voiceWebSocketManager.sendMessage({
                             type: 'interrupt',
                             timestamp: Date.now() / 1000,
@@ -167,20 +167,20 @@ function bindVoiceCallButtonWithDelegate() {
                     // 立即隐藏音频可视化区域
                     if (window.voiceWebSocketManager) {
                         window.voiceWebSocketManager.hideAudioVisualizer();
-                        console.log('🎨 语音通话：点击挂断图标后隐藏音频可视化区域');
+                        window.controlledLog?.log('🎨 语音通话：点击挂断图标后隐藏音频可视化区域');
                     }
                     
                     // 🔧 关键修复：不要强制重置按钮状态，让其他场景自然管理状态
                     // 语音通话停止后，其他场景（录音聊天、文字聊天）应该保持自己的状态
-                    console.log('语音通话停止，不强制重置按钮状态，让其他场景自然管理');
+                    window.controlledLog?.log('语音通话停止，不强制重置按钮状态，让其他场景自然管理');
                 } else {
                     // 启动语音通话
-                    console.log('启动语音通话');
+                    window.controlledLog?.log('启动语音通话');
                     
                     // 立即显示音频可视化区域
                     if (window.voiceWebSocketManager) {
                         window.voiceWebSocketManager.showAudioVisualizer();
-                        console.log('🎨 语音通话：立即显示音频可视化区域');
+                        window.controlledLog?.log('🎨 语音通话：立即显示音频可视化区域');
                     }
                     
                     window.dash_clientside.set_props('button-event-trigger', {
@@ -196,7 +196,7 @@ function bindVoiceCallButtonWithDelegate() {
         }
     });
     
-    console.log('语音通话按钮事件委托绑定完成');
+    window.controlledLog?.log('语音通话按钮事件委托绑定完成');
 }
 
 /**
@@ -208,7 +208,7 @@ function bindVoiceCallButton() {
     if (voiceCallBtn) {
         voiceCallBtn.addEventListener('click', async function() {
             try {
-                console.log('通话按钮被点击');
+                window.controlledLog?.log('通话按钮被点击');
                 
                 if (window.realtimeVoiceManager.isActive) {
                     // 停止实时语音
@@ -235,7 +235,7 @@ function bindStatusUpdateEvents() {
     if (window.realtimeVoiceManager) {
         // 监听状态变化
         window.realtimeVoiceManager.on('state_changed', function(data) {
-            console.log('状态变化:', data);
+            window.controlledLog?.log('状态变化:', data);
             updateStatusDisplay(data.newState);
         });
         
@@ -247,13 +247,13 @@ function bindStatusUpdateEvents() {
         
         // 监听启动事件
         window.realtimeVoiceManager.on('started', function() {
-            console.log('实时语音已启动');
+            window.controlledLog?.log('实时语音已启动');
             updateButtonState(true);
         });
         
         // 监听停止事件
         window.realtimeVoiceManager.on('stopped', function() {
-            console.log('实时语音已停止');
+            window.controlledLog?.log('实时语音已停止');
             updateButtonState(false);
         });
     }
@@ -470,7 +470,7 @@ function initializeChecks() {
 
 // 执行初始化检查
 if (initializeChecks()) {
-    console.log('实时语音功能初始化成功');
+    window.controlledLog?.log('实时语音功能初始化成功');
 } else {
     console.error('实时语音功能初始化失败');
 }

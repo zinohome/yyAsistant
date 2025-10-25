@@ -544,11 +544,11 @@ app.clientside_callback(
     function(animation, status) {
         // 处理SSE状态变化
         if (status !== undefined) {
-            // console.log('SSE连接状态:', status);
+            // window.controlledLog?.log('SSE连接状态:', status);
             
             // 新增：处理SSE连接错误状态
             if (status === 'error' || status === 'closed' || status === 'timeout') {
-                // console.log('SSE连接出现错误、关闭或超时，尝试自动重连');
+                // window.controlledLog?.log('SSE连接出现错误、关闭或超时，尝试自动重连');
                 
                 // 获取当前会话和消息信息
                 const sessionIdEl = document.getElementById('ai-chat-x-current-session-id');
@@ -593,7 +593,7 @@ app.clientside_callback(
         }
         
         try {
-            //console.log('接收到SSE动画消息:', animation);
+            //window.controlledLog?.log('接收到SSE动画消息:', animation);
             
             // 1. 拆分连续的JSON对象
             let messages = [];
@@ -887,7 +887,7 @@ app.clientside_callback(
         
         // 如果是页面加载时触发（historyId输入）
         if (triggeredId === 'ai-chat-x-history.id') {
-            // console.log('页面加载，初始化滚动监听器');
+            // window.controlledLog?.log('页面加载，初始化滚动监听器');
             // 初始化滚动监听器
             if (window.dash_clientside.clientside_basic && window.dash_clientside.clientside_basic.initScrollListener) {
                 // 延迟初始化，确保DOM完全加载
@@ -898,7 +898,7 @@ app.clientside_callback(
         }
         // 如果是消息存储更新触发
         else if (triggeredId === 'ai-chat-x-messages-store.data' && messages && messages.length > 0) {
-            // console.log('消息存储更新，触发自动滚动，消息数量:', messages.length);
+            // window.controlledLog?.log('消息存储更新，触发自动滚动，消息数量:', messages.length);
             
             // 使用优化的自动滚动函数
             if (window.dash_clientside.clientside_basic && window.dash_clientside.clientside_basic.autoScrollToBottom) {
@@ -1113,18 +1113,18 @@ app.clientside_callback(
             return window.dash_clientside.no_update;
         }
         
-        // console.log('复制回调被触发:', triggered);
+        // window.controlledLog?.log('复制回调被触发:', triggered);
         
         // 处理复制按钮点击
         if (triggered.prop_id.includes('ai-chat-x-copy') || triggered.prop_id.includes('user-chat-x-copy')) {
-            // console.log('处理复制按钮点击');
+            // window.controlledLog?.log('处理复制按钮点击');
             try {
                 // 解析消息ID
                 const propId = triggered.prop_id;
                 const idPart = propId.split('.')[0];
                 const idDict = JSON.parse(idPart);
                 const messageId = idDict.index;
-                // console.log('消息ID:', messageId);
+                // window.controlledLog?.log('消息ID:', messageId);
                 
                 // 从消息存储中获取原始内容
                 if (messages) {
@@ -1136,7 +1136,7 @@ app.clientside_callback(
                         // 尝试使用现代clipboard API
                         if (navigator.clipboard && navigator.clipboard.writeText) {
                             navigator.clipboard.writeText(content).then(() => {
-                                // console.log('复制成功');
+                                // window.controlledLog?.log('复制成功');
                             }).catch(() => {
                                 // 如果现代API失败，使用fallback
                                 fallbackCopyToClipboard(content);
@@ -1161,12 +1161,12 @@ app.clientside_callback(
                         try {
                             const successful = document.execCommand('copy');
                             if (successful) {
-                                // console.log('复制成功 (fallback)');
+                                // window.controlledLog?.log('复制成功 (fallback)');
                             } else {
-                                // console.log('复制失败 (fallback)');
+                                // window.controlledLog?.log('复制失败 (fallback)');
                             }
                         } catch (err) {
-                            // console.log('复制失败 (fallback):', err);
+                            // window.controlledLog?.log('复制失败 (fallback):', err);
                         }
                         
                         document.body.removeChild(textArea);

@@ -56,7 +56,7 @@ class VoiceStateCoordinator {
      * 初始化协调器
      */
     init() {
-        console.log('语音状态协调器已初始化');
+        window.controlledLog?.log('语音状态协调器已初始化');
         
         // 注册默认消息处理器
         this.registerDefaultHandlers();
@@ -137,7 +137,7 @@ class VoiceStateCoordinator {
         this.currentScenario = scenario;
         this.currentMetadata = { ...metadata };
         
-        console.log('状态已更新:', {
+        window.controlledLog?.log('状态已更新:', {
             oldState,
             newState,
             oldScenario,
@@ -221,7 +221,7 @@ class VoiceStateCoordinator {
      * 处理中断状态
      */
     handleInterruption() {
-        console.log('处理中断状态');
+        window.controlledLog?.log('处理中断状态');
         // 停止所有音频播放
         if (window.voicePlayerEnhanced) {
             window.voicePlayerEnhanced.forceStopAllAudio();
@@ -236,7 +236,7 @@ class VoiceStateCoordinator {
      * 处理空闲状态
      */
     handleIdle() {
-        console.log('处理空闲状态');
+        window.controlledLog?.log('处理空闲状态');
         // 清理资源
         this.cleanup();
     }
@@ -251,7 +251,7 @@ class VoiceStateCoordinator {
             for (const [messageId, state] of window.voicePlayerEnhanced.streamStates.entries()) {
                 if (messageId.includes('voice_call')) {
                     window.voicePlayerEnhanced.streamStates.delete(messageId);
-                    console.log('🧹 状态协调器清理语音通话流状态:', messageId);
+                    window.controlledLog?.log('🧹 状态协调器清理语音通话流状态:', messageId);
                 }
             }
             
@@ -259,7 +259,7 @@ class VoiceStateCoordinator {
             for (const messageId of window.voicePlayerEnhanced.playedMessages) {
                 if (messageId.includes('voice_call')) {
                     window.voicePlayerEnhanced.playedMessages.delete(messageId);
-                    console.log('🧹 状态协调器清理语音通话播放消息:', messageId);
+                    window.controlledLog?.log('🧹 状态协调器清理语音通话播放消息:', messageId);
                 }
             }
         }
@@ -271,7 +271,7 @@ class VoiceStateCoordinator {
      * @param {Object} data - 消息数据
      */
     handleMessage(messageType, data) {
-        console.log('处理消息:', { messageType, data });
+        window.controlledLog?.log('处理消息:', { messageType, data });
         
         const handler = this.messageHandlers.get(messageType);
         if (handler) {
@@ -297,7 +297,7 @@ class VoiceStateCoordinator {
      */
     registerStateListener(id, listener) {
         this.stateListeners.set(id, listener);
-        console.log('状态监听器已注册:', id);
+        window.controlledLog?.log('状态监听器已注册:', id);
     }
     
     /**
@@ -306,7 +306,7 @@ class VoiceStateCoordinator {
      */
     unregisterStateListener(id) {
         this.stateListeners.delete(id);
-        console.log('状态监听器已注销:', id);
+        window.controlledLog?.log('状态监听器已注销:', id);
     }
     
     /**
@@ -316,7 +316,7 @@ class VoiceStateCoordinator {
      */
     registerMessageHandler(messageType, handler) {
         this.messageHandlers.set(messageType, handler);
-        console.log('消息处理器已注册:', messageType);
+        window.controlledLog?.log('消息处理器已注册:', messageType);
     }
     
     /**
@@ -325,7 +325,7 @@ class VoiceStateCoordinator {
      */
     unregisterMessageHandler(messageType) {
         this.messageHandlers.delete(messageType);
-        console.log('消息处理器已注销:', messageType);
+        window.controlledLog?.log('消息处理器已注销:', messageType);
     }
     
     /**
@@ -338,7 +338,7 @@ class VoiceStateCoordinator {
             this.eventListeners.set(eventType, new Set());
         }
         this.eventListeners.get(eventType).add(listener);
-        console.log('事件监听器已注册:', eventType);
+        window.controlledLog?.log('事件监听器已注册:', eventType);
     }
     
     /**
@@ -349,7 +349,7 @@ class VoiceStateCoordinator {
     removeEventListener(eventType, listener) {
         if (this.eventListeners.has(eventType)) {
             this.eventListeners.get(eventType).delete(listener);
-            console.log('事件监听器已注销:', eventType);
+            window.controlledLog?.log('事件监听器已注销:', eventType);
         }
     }
     
@@ -440,4 +440,4 @@ class VoiceStateCoordinator {
 // 创建全局实例
 window.voiceStateCoordinator = new VoiceStateCoordinator();
 
-console.log('语音状态协调器已初始化');
+window.controlledLog?.log('语音状态协调器已初始化');

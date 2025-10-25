@@ -3,7 +3,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     if (window.config) {
         window.appConfig = window.config;
-        console.log('前端配置已加载(assets):', window.appConfig);
+        window.controlledLog?.log('前端配置已加载(assets):', window.appConfig);
     } else {
         console.error('config.js未加载，无法初始化appConfig');
     }

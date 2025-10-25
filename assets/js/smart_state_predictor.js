@@ -35,7 +35,7 @@ class SmartStatePredictor {
             probability: 0.6
         });
         
-        console.log('🔮 智能状态预测器已初始化，常见模式:', Array.from(this.patterns.keys()));
+        window.controlledLog?.log('🔮 智能状态预测器已初始化，常见模式:', Array.from(this.patterns.keys()));
     }
     
     /**
@@ -59,7 +59,7 @@ class SmartStatePredictor {
         // 更新模式
         this.updatePatterns();
         
-        console.log(`📝 记录用户行为: ${action}`, context);
+        window.controlledLog?.log(`📝 记录用户行为: ${action}`, context);
     }
     
     /**
@@ -83,7 +83,7 @@ class SmartStatePredictor {
             // 更新模式概率
             const pattern = this.patterns.get(matchedPattern);
             pattern.probability = Math.min(pattern.probability + 0.01, 1.0);
-            console.log(`📈 更新模式概率: ${matchedPattern} -> ${pattern.probability.toFixed(2)}`);
+            window.controlledLog?.log(`📈 更新模式概率: ${matchedPattern} -> ${pattern.probability.toFixed(2)}`);
         }
     }
     
@@ -146,7 +146,7 @@ class SmartStatePredictor {
             timestamp: Date.now()
         });
         
-        console.log(`🔮 预测下一个状态: ${currentState} -> ${prediction.mostLikely.state} (${(prediction.confidence * 100).toFixed(1)}%)`);
+        window.controlledLog?.log(`🔮 预测下一个状态: ${currentState} -> ${prediction.mostLikely.state} (${(prediction.confidence * 100).toFixed(1)}%)`);
         
         return prediction;
     }
@@ -259,7 +259,7 @@ class SmartStatePredictor {
     clearHistory() {
         this.userBehavior = [];
         this.predictionCache.clear();
-        console.log('🧹 预测历史已清除');
+        window.controlledLog?.log('🧹 预测历史已清除');
     }
 }
 
@@ -273,7 +273,7 @@ function initSmartStatePredictor() {
     }
     
     window.smartStatePredictor = new SmartStatePredictor();
-    console.log('🔮 智能状态预测器已初始化');
+    window.controlledLog?.log('🔮 智能状态预测器已初始化');
     
     // 集成到状态同步管理器
     if (window.stateSyncManager) {
@@ -284,7 +284,7 @@ function initSmartStatePredictor() {
             });
         });
         
-        console.log('🔗 状态预测器已集成到状态同步管理器');
+        window.controlledLog?.log('🔗 状态预测器已集成到状态同步管理器');
     }
 }
 

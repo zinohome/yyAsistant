@@ -81,9 +81,9 @@ class VoiceConfig {
                 const parsedConfig = JSON.parse(saved);
                 // 合并配置，保留默认值
                 this.config = { ...this.defaults, ...parsedConfig };
-                console.log('语音配置已加载:', this.config);
+                window.controlledLog?.log('语音配置已加载:', this.config);
             } else {
-                console.log('使用默认语音配置');
+                window.controlledLog?.log('使用默认语音配置');
             }
         } catch (error) {
             console.error('加载语音配置失败:', error);
@@ -97,7 +97,7 @@ class VoiceConfig {
     saveConfig() {
         try {
             localStorage.setItem('voiceConfig', JSON.stringify(this.config));
-            console.log('语音配置已保存');
+            window.controlledLog?.log('语音配置已保存');
         } catch (error) {
             console.error('保存语音配置失败:', error);
         }
@@ -126,7 +126,7 @@ class VoiceConfig {
         if (this.validateConfig(key, value)) {
             this.config[key] = value;
             this.saveConfig();
-            console.log('配置已更新:', { key, value });
+            window.controlledLog?.log('配置已更新:', { key, value });
             return true;
         } else {
             console.error('配置验证失败:', { key, value });
@@ -155,7 +155,7 @@ class VoiceConfig {
         if (allValid) {
             Object.assign(this.config, validConfigs);
             this.saveConfig();
-            console.log('批量配置已更新:', validConfigs);
+            window.controlledLog?.log('批量配置已更新:', validConfigs);
         }
         
         return allValid;
@@ -212,14 +212,14 @@ class VoiceConfig {
             if (this.defaults.hasOwnProperty(key)) {
                 this.config[key] = this.defaults[key];
                 this.saveConfig();
-                console.log('配置已重置:', key);
+                window.controlledLog?.log('配置已重置:', key);
             } else {
                 console.warn('未知配置项:', key);
             }
         } else {
             this.config = { ...this.defaults };
             this.saveConfig();
-            console.log('所有配置已重置为默认值');
+            window.controlledLog?.log('所有配置已重置为默认值');
         }
     }
     
@@ -345,4 +345,4 @@ window.voiceConfig.getPlaybackRate = function() {
     return this.get('speed');
 };
 
-console.log('语音配置系统已初始化');
+window.controlledLog?.log('语音配置系统已初始化');

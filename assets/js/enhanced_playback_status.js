@@ -62,11 +62,11 @@ class EnhancedPlaybackStatus {
         this.recordState(state, message);
         
         // 🔧 强制显示调试日志，帮助诊断问题
-        console.log(`🔊 播放状态更新: ${state} - ${message}`);
+        window.controlledLog?.log(`🔊 播放状态更新: ${state} - ${message}`);
         
         // 只在调试模式下显示状态更新日志
         if (window.DEBUG_UI_OPTIMIZATION) {
-            console.log(`🔊 播放状态更新: ${state} - ${message}`);
+            window.controlledLog?.log(`🔊 播放状态更新: ${state} - ${message}`);
         }
     }
     
@@ -318,7 +318,7 @@ function initEnhancedPlaybackStatus() {
     }
     
     window.enhancedPlaybackStatus = new EnhancedPlaybackStatus();
-    console.log('🔊 增强播放状态指示器已初始化');
+    window.controlledLog?.log('🔊 增强播放状态指示器已初始化');
 }
 
 // 页面加载完成后初始化

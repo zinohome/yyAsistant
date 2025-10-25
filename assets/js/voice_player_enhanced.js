@@ -70,7 +70,7 @@ class VoicePlayerEnhanced {
     initEnhancedPlaybackStatus() {
         if (window.enhancedPlaybackStatus) {
             this.enhancedPlaybackStatus = window.enhancedPlaybackStatus;
-            console.log('🔊 增强播放状态指示器已初始化');
+            window.controlledLog?.log('🔊 增强播放状态指示器已初始化');
         } else {
             console.warn('🔊 增强播放状态指示器未找到');
         }
@@ -81,7 +81,7 @@ class VoicePlayerEnhanced {
      */
     initSmartErrorHandler() {
         if (window.smartErrorHandler) {
-            console.log('🔧 语音播放器已连接智能错误处理系统');
+            window.controlledLog?.log('🔧 语音播放器已连接智能错误处理系统');
         } else {
             console.warn('🔧 智能错误处理系统未找到');
         }
@@ -100,7 +100,7 @@ class VoicePlayerEnhanced {
                 error: null
             });
             
-            console.log('🔄 语音播放器已连接状态同步管理器');
+            window.controlledLog?.log('🔄 语音播放器已连接状态同步管理器');
         } else {
             console.warn('🔄 状态同步管理器未找到');
         }
@@ -111,7 +111,7 @@ class VoicePlayerEnhanced {
      */
     initAdaptiveUI() {
         if (window.adaptiveUI) {
-            console.log('🎨 语音播放器已连接自适应UI系统');
+            window.controlledLog?.log('🎨 语音播放器已连接自适应UI系统');
             
             // 根据用户偏好调整播放器设置
             this.applyAdaptiveSettings();
@@ -143,7 +143,7 @@ class VoicePlayerEnhanced {
                 this.enableSpaciousMode();
             }
             
-            console.log('🎨 自适应设置已应用:', preferences);
+            window.controlledLog?.log('🎨 自适应设置已应用:', preferences);
         }
     }
     
@@ -189,7 +189,7 @@ class VoicePlayerEnhanced {
      * 状态变化处理
      */
     onStateChange(oldState, newState, oldScenario = null, scenario = null, metadata = {}) {
-        console.log(`播放器状态变化: ${oldState} → ${newState} (${scenario})`);
+        window.controlledLog?.log(`播放器状态变化: ${oldState} → ${newState} (${scenario})`);
         
         // 如果状态变为中断，停止播放
         if (newState === 'interrupted' && this.isPlaying) {
@@ -204,10 +204,10 @@ class VoicePlayerEnhanced {
                                       (metadata && metadata.scenario === 'voice_call');
             
             if (isVoiceCallScenario) {
-                console.log('🧹 语音通话场景：清理资源');
+                window.controlledLog?.log('🧹 语音通话场景：清理资源');
                 this.cleanup();
             } else {
-                console.log('🧹 非语音通话场景：跳过资源清理，保留其他场景状态');
+                window.controlledLog?.log('🧹 非语音通话场景：跳过资源清理，保留其他场景状态');
             }
         }
     }
@@ -221,7 +221,7 @@ class VoicePlayerEnhanced {
         for (const [messageId, state] of this.streamStates.entries()) {
             if (messageId.includes('voice_call')) {
                 this.streamStates.delete(messageId);
-                console.log('🧹 清理语音通话流状态:', messageId);
+                window.controlledLog?.log('🧹 清理语音通话流状态:', messageId);
             }
         }
         
@@ -229,12 +229,12 @@ class VoicePlayerEnhanced {
         for (const messageId of this.playedMessages) {
             if (messageId.includes('voice_call')) {
                 this.playedMessages.delete(messageId);
-                console.log('🧹 清理语音通话播放消息:', messageId);
+                window.controlledLog?.log('🧹 清理语音通话播放消息:', messageId);
             }
         }
         
         this.shouldStop = false;
-        console.log('播放器资源已清理（保留其他场景状态）');
+        window.controlledLog?.log('播放器资源已清理（保留其他场景状态）');
     }
     
     initAudioContext() {
@@ -242,7 +242,7 @@ class VoicePlayerEnhanced {
         const initAudio = () => {
             if (!this.audioContext) {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                console.log('音频上下文已初始化');
+                window.controlledLog?.log('音频上下文已初始化');
             }
         };
         
@@ -262,7 +262,7 @@ class VoicePlayerEnhanced {
             };
             
             this.websocket = await VoiceUtils.initWebSocket(window.voiceWebSocketManager, messageHandlers);
-            console.log('播放器WebSocket连接已建立');
+            window.controlledLog?.log('播放器WebSocket连接已建立');
         } catch (error) {
             VoiceUtils.handleError(error, '播放器WebSocket初始化');
         }
@@ -272,12 +272,12 @@ class VoicePlayerEnhanced {
      * 处理语音响应消息
      */
     handleVoiceResponse(data) {
-        console.log('收到voice_response消息:', data);
+        window.controlledLog?.log('收到voice_response消息:', data);
         
         // 检查是否已经播放过这个消息
         const messageId = data.message_id;
         if (messageId && this.playedMessages.has(messageId)) {
-            console.log('消息已播放过，跳过:', messageId);
+            window.controlledLog?.log('消息已播放过，跳过:', messageId);
             return;
         }
         
@@ -285,13 +285,13 @@ class VoicePlayerEnhanced {
         this.stopCurrentAudio();
         
         if (data.audio) {
-            console.log('收到voice_response，音频长度:', data.audio.length);
+            window.controlledLog?.log('收到voice_response，音频长度:', data.audio.length);
             this.enqueueSingleShot(data.audio, data.message_id, data.session_id, data.codec || 'audio/mpeg');
             if (messageId) {
                 this.playedMessages.add(messageId);
             }
         } else if (data.audio_data) {
-            console.log('收到voice_response，音频长度:', data.audio_data.length);
+            window.controlledLog?.log('收到voice_response，音频长度:', data.audio_data.length);
             this.enqueueSingleShot(data.audio_data, data.message_id, data.session_id, data.codec || 'audio/mpeg');
             if (messageId) {
                 this.playedMessages.add(messageId);
@@ -305,7 +305,7 @@ class VoicePlayerEnhanced {
         if (!this.websocket) return;
         
         this.websocket.onopen = () => {
-            console.log('语音播放WebSocket连接已建立');
+            window.controlledLog?.log('语音播放WebSocket连接已建立');
         };
         
         this.websocket.onmessage = (event) => {
@@ -317,7 +317,7 @@ class VoicePlayerEnhanced {
         };
         
         this.websocket.onclose = () => {
-            console.log('语音播放WebSocket连接已关闭');
+            window.controlledLog?.log('语音播放WebSocket连接已关闭');
         };
     }
     
@@ -325,16 +325,16 @@ class VoicePlayerEnhanced {
         // 监听SSE完成事件，触发TTS播放
         document.addEventListener('messageCompleted', (event) => {
             try {
-                console.log('🎵 SSE完成事件触发:', event.detail);
+                window.controlledLog?.log('🎵 SSE完成事件触发:', event.detail);
                 
                 // 强制启用TTS播放，确保功能正常
                 if (event.detail && event.detail.text) {
-                    console.log('🎵 开始TTS播放:', event.detail.text.substring(0, 50) + '...');
+                    window.controlledLog?.log('🎵 开始TTS播放:', event.detail.text.substring(0, 50) + '...');
                     
                     // 立即触发TTS播放，不延迟
                     this.synthesizeAndPlay(event.detail.text);
                 } else {
-                    console.log('🎵 SSE完成，但没有文本内容');
+                    window.controlledLog?.log('🎵 SSE完成，但没有文本内容');
                 }
             } catch (e) {
                 console.error('messageCompleted TTS 处理失败:', e);
@@ -349,14 +349,14 @@ class VoicePlayerEnhanced {
     async synthesizeAndPlay(text) {
         try {
             if (!text || !text.trim()) {
-                console.log('没有文本需要合成语音');
+                window.controlledLog?.log('没有文本需要合成语音');
                 return;
             }
             
             // 使用公共工具更新状态
             VoiceUtils.updateState('processing', 'text_chat', { tts_playing: true });
             
-            console.log('🎵 开始语音合成:', text.substring(0, 100) + '...');
+            window.controlledLog?.log('🎵 开始语音合成:', text.substring(0, 100) + '...');
             
             // 更新状态为播放中
             if (window.voiceStateManager) {
@@ -406,7 +406,7 @@ class VoicePlayerEnhanced {
                 
                 // 检查连接状态
                 if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-                    console.log('🔌 WebSocket未连接，等待连接建立...');
+                    window.controlledLog?.log('🔌 WebSocket未连接，等待连接建立...');
                     // 等待连接建立，而不是重新连接
                     const maxWait = 5000; // 最多等待5秒
                     const startTime = Date.now();
@@ -439,11 +439,11 @@ class VoicePlayerEnhanced {
                 use_tools: true
             };
             
-            console.log('🎵 发送TTS请求:', { type: message.type, content: text.substring(0, 50) + '...', enable_voice: true });
+            window.controlledLog?.log('🎵 发送TTS请求:', { type: message.type, content: text.substring(0, 50) + '...', enable_voice: true });
             
             try {
                 this.websocket.send(JSON.stringify(message));
-                console.log('🎵 TTS请求发送成功');
+                window.controlledLog?.log('🎵 TTS请求发送成功');
                 resolve();
             } catch (sendError) {
                 console.error('🎵 TTS请求发送失败:', sendError);
@@ -472,7 +472,7 @@ class VoicePlayerEnhanced {
                 case 'voice_response':
                     // 一次性音频响应（base64）
                     if (data.audio_data) {
-                        console.log('收到voice_response，音频长度:', data.audio_data.length);
+                        window.controlledLog?.log('收到voice_response，音频长度:', data.audio_data.length);
                         this.playAudioFromBase64(data.audio_data);
                     }
                     break;
@@ -487,7 +487,7 @@ class VoicePlayerEnhanced {
                     this.handleError(data);
                     break;
                 default:
-                    console.log('收到语音播放WebSocket消息:', data);
+                    window.controlledLog?.log('收到语音播放WebSocket消息:', data);
             }
         } catch (error) {
             console.error('处理语音播放WebSocket消息失败:', error);
@@ -511,19 +511,19 @@ class VoicePlayerEnhanced {
             const isVoiceCall = sessionId && !sessionId.includes('conv-');
             const isTextChat = messageId && messageId.includes('ai-message');
             
-            console.log(`🎵 音频流场景判断: 录音聊天=${isRecordingChat}, 语音通话=${isVoiceCall}, 文本聊天=${isTextChat}`);
+            window.controlledLog?.log(`🎵 音频流场景判断: 录音聊天=${isRecordingChat}, 语音通话=${isVoiceCall}, 文本聊天=${isTextChat}`);
             
             if (isRecordingChat || isTextChat) {
                 // 录音聊天TTS 或 文本聊天TTS：简单按序播放，不使用分片管理
-                console.log('🎧 聊天TTS（录音/文本），简单按序播放');
+                window.controlledLog?.log('🎧 聊天TTS（录音/文本），简单按序播放');
                 this.playSimpleTTS(base64, messageId, seq);
             } else if (isVoiceCall) {
                 // 语音通话TTS：使用复杂分片管理
-                console.log('🎤 语音通话TTS，使用分片管理');
+                window.controlledLog?.log('🎤 语音通话TTS，使用分片管理');
                 this.playVoiceCallTTS(base64, messageId, sessionId, codec, seq);
             } else {
                 // 未知场景：默认简单播放
-                console.log('❓ 未知场景TTS，默认简单播放');
+                window.controlledLog?.log('❓ 未知场景TTS，默认简单播放');
                 this.playSimpleTTS(base64, messageId);
             }
         } catch (error) {
@@ -536,19 +536,19 @@ class VoicePlayerEnhanced {
      * 使用简单队列确保按序播放
      */
     async playSimpleTTS(base64, messageId, seq = null) {
-        console.log('🎧 简单TTS播放:', messageId);
+        window.controlledLog?.log('🎧 简单TTS播放:', messageId);
         
         try {
             // 确保音频上下文可用
             if (!this.audioContext || this.audioContext.state === 'closed') {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                console.log('🎧 重新创建音频上下文');
+                window.controlledLog?.log('🎧 重新创建音频上下文');
             }
             
             // 恢复音频上下文（如果被暂停）
             if (this.audioContext.state === 'suspended') {
                 await this.audioContext.resume();
-                console.log('🎧 音频上下文已恢复');
+                window.controlledLog?.log('🎧 音频上下文已恢复');
             }
             
             // 解码base64音频数据
@@ -562,7 +562,7 @@ class VoicePlayerEnhanced {
             
             // 解码为AudioBuffer
             const decodedBuffer = await this.audioContext.decodeAudioData(audioBuffer);
-            console.log('🎧 简单TTS音频解码完成，时长:', decodedBuffer.duration.toFixed(2), '秒');
+            window.controlledLog?.log('🎧 简单TTS音频解码完成，时长:', decodedBuffer.duration.toFixed(2), '秒');
             
             // 添加到简单播放队列，确保按序播放
             this.addToSimpleQueue(decodedBuffer, messageId, seq);
@@ -578,7 +578,7 @@ class VoicePlayerEnhanced {
     async playSimpleAudioBuffer(audioBuffer, messageId = null) {
         return new Promise((resolve, reject) => {
             try {
-                console.log('🎧 简单音频播放:', messageId);
+                window.controlledLog?.log('🎧 简单音频播放:', messageId);
                 
                 const source = this.audioContext.createBufferSource();
                 const gainNode = this.audioContext.createGain();
@@ -592,14 +592,14 @@ class VoicePlayerEnhanced {
                 
                 // 设置播放结束回调
                 source.onended = () => {
-                    console.log('🎧 简单音频播放完成:', messageId);
+                    window.controlledLog?.log('🎧 简单音频播放完成:', messageId);
                     
                     // 从队列中移除已播放的音频
                     if (this.simpleQueue && this.simpleQueue.length > 0) {
                         const index = this.simpleQueue.findIndex(item => item.messageId === messageId);
                         if (index !== -1) {
                             this.simpleQueue.splice(index, 1);
-                            console.log('🎧 已从队列中移除:', messageId, '剩余队列长度:', this.simpleQueue.length);
+                            window.controlledLog?.log('🎧 已从队列中移除:', messageId, '剩余队列长度:', this.simpleQueue.length);
                         }
                     }
                     
@@ -625,7 +625,7 @@ class VoicePlayerEnhanced {
                 
                 // 开始播放
                 source.start();
-                console.log('🎧 简单音频开始播放:', messageId);
+                window.controlledLog?.log('🎧 简单音频开始播放:', messageId);
                 
                 // 显示播放状态指示器（只在第一个片段播放时显示）
                 if (!this.isTtsPlaying) {
@@ -693,7 +693,7 @@ class VoicePlayerEnhanced {
             return a.timestamp - b.timestamp;
         });
         
-        console.log('🎧 添加到简单播放队列:', messageId, 'seq:', seq, '队列长度:', this.simpleQueue.length);
+        window.controlledLog?.log('🎧 添加到简单播放队列:', messageId, 'seq:', seq, '队列长度:', this.simpleQueue.length);
         
         // 如果当前没有播放，开始处理队列
         if (!this.simplePlaying) {
@@ -728,14 +728,14 @@ class VoicePlayerEnhanced {
         // 找到下一个可播放的音频（按序列号顺序）
         const nextAudio = this.findNextPlayableSimpleAudio();
         if (nextAudio) {
-            console.log('🎧 处理简单播放队列:', nextAudio.messageId, 'seq:', nextAudio.seq);
+            window.controlledLog?.log('🎧 处理简单播放队列:', nextAudio.messageId, 'seq:', nextAudio.seq);
             
             try {
                 await this.playSimpleAudioBuffer(nextAudio.buffer, nextAudio.messageId);
                 
                 // 播放完成后，继续处理队列中的下一个音频
                 if (this.simpleQueue.length > 0) {
-                    console.log('🎧 继续处理队列中的下一个音频，剩余队列长度:', this.simpleQueue.length);
+                    window.controlledLog?.log('🎧 继续处理队列中的下一个音频，剩余队列长度:', this.simpleQueue.length);
                     // 延迟一点时间再处理下一个音频，避免重叠
                     setTimeout(() => {
                         this.processSimpleQueue();
@@ -747,7 +747,7 @@ class VoicePlayerEnhanced {
         }
         
         this.simplePlaying = false;
-        console.log('🎧 简单播放队列处理完成');
+        window.controlledLog?.log('🎧 简单播放队列处理完成');
     }
     
     /**
@@ -780,12 +780,12 @@ class VoicePlayerEnhanced {
      * 语音通话TTS播放（使用分片管理）
      */
     playVoiceCallTTS(base64, messageId, sessionId, codec, seq) {
-        console.log('🎤 语音通话TTS播放:', messageId);
+        window.controlledLog?.log('🎤 语音通话TTS播放:', messageId);
         
         // 🔧 关键修复：启动语音通话播放动画
-        console.log('🔍 [语音通话调试] 在playVoiceCallTTS中启动播放动画');
+        window.controlledLog?.log('🔍 [语音通话调试] 在playVoiceCallTTS中启动播放动画');
         if (window.voiceWebSocketManager && window.voiceWebSocketManager.startVoiceCallPlaybackAnimation) {
-            console.log('🔍 [语音通话调试] 调用startVoiceCallPlaybackAnimation');
+            window.controlledLog?.log('🔍 [语音通话调试] 调用startVoiceCallPlaybackAnimation');
             window.voiceWebSocketManager.startVoiceCallPlaybackAnimation();
         } else {
             console.warn('🔍 [语音通话调试] voiceWebSocketManager或startVoiceCallPlaybackAnimation方法未找到');
@@ -823,7 +823,7 @@ class VoicePlayerEnhanced {
         // 根据seq排序，确保按序播放
         state.chunks.sort((a, b) => a.seq - b.seq);
         
-        console.log(`🎤 语音通话音频分片 seq:${actualSeq}, 总分片:${state.chunks.length}`);
+        window.controlledLog?.log(`🎤 语音通话音频分片 seq:${actualSeq}, 总分片:${state.chunks.length}`);
 
         // 若未在播放该消息，则启动播放循环
         if (!state.playing) {
@@ -839,13 +839,13 @@ class VoicePlayerEnhanced {
         const state = this.streamStates.get(messageId);
         if (!state) return;
 
-        console.log(`🎵 开始播放流状态，当前分片数:${state.chunks.length}, 合成完成:${state.synthComplete}`);
+        window.controlledLog?.log(`🎵 开始播放流状态，当前分片数:${state.chunks.length}, 合成完成:${state.synthComplete}`);
 
         // 持续处理音频分片，直到合成完成且无更多分片
         while (state.chunks.length > 0 || !state.synthComplete) {
             // 检查是否所有分片都已播放完成
             if (state.synthComplete && state.chunks.length === 0) {
-                console.log('🎵 所有分片已播放完成，退出播放循环');
+                window.controlledLog?.log('🎵 所有分片已播放完成，退出播放循环');
                 break;
             }
             if (state.chunks.length > 0) {
@@ -860,7 +860,7 @@ class VoicePlayerEnhanced {
                     const chunkIndex = state.chunks.findIndex(c => c.seq === nextChunk.seq);
                     if (chunkIndex !== -1) {
                         const chunk = state.chunks.splice(chunkIndex, 1)[0];
-                        console.log(`🎵 播放分片 seq:${chunk.seq}, 剩余分片:${state.chunks.length}`);
+                        window.controlledLog?.log(`🎵 播放分片 seq:${chunk.seq}, 剩余分片:${state.chunks.length}`);
                         
                         try {
                             // 🔧 语音通话音频播放：添加播放间隔，避免一股脑播放
@@ -871,8 +871,8 @@ class VoicePlayerEnhanced {
                             const minInterval = 50; // 最小间隔50ms（增加间隔）
                             const interval = Math.max(minInterval, playbackDuration * 0.1); // 播放时长的10%作为间隔（增加间隔）
                             
-                            console.log(`🎵 播放间隔: ${interval}ms (播放时长: ${playbackDuration}ms)`);
-                            console.log('🔍 [语音通话调试] 等待播放间隔:', interval, 'ms');
+                            window.controlledLog?.log(`🎵 播放间隔: ${interval}ms (播放时长: ${playbackDuration}ms)`);
+                            window.controlledLog?.log('🔍 [语音通话调试] 等待播放间隔:', interval, 'ms');
                             await new Promise(resolve => setTimeout(resolve, interval));
                             
                         } catch (e) {
@@ -890,7 +890,7 @@ class VoicePlayerEnhanced {
         }
 
         state.playing = false;
-        console.log(`🎵 播放流状态完成，messageId:${messageId}`);
+        window.controlledLog?.log(`🎵 播放流状态完成，messageId:${messageId}`);
         // 播放循环结束后尝试收尾
         this.maybeFinalize(messageId);
     }
@@ -915,7 +915,7 @@ class VoicePlayerEnhanced {
             // 转换为毫秒
             const durationMs = durationSeconds * 1000;
             
-            console.log(`🎵 音频时长估算: ${durationMs.toFixed(0)}ms (数据大小: ${dataSize} bytes)`);
+            window.controlledLog?.log(`🎵 音频时长估算: ${durationMs.toFixed(0)}ms (数据大小: ${dataSize} bytes)`);
             return Math.max(50, durationMs); // 最小50ms
         } catch (error) {
             console.warn('音频时长估算失败，使用默认值:', error);
@@ -936,7 +936,7 @@ class VoicePlayerEnhanced {
         // 检查是否所有分片都已播放完成
         // 如果合成已完成且没有更多分片，返回null
         if (state.synthComplete && state.chunks.length === 0) {
-            console.log('🎵 所有分片已播放完成，合成完成');
+            window.controlledLog?.log('🎵 所有分片已播放完成，合成完成');
             return null;
         }
         
@@ -989,7 +989,7 @@ class VoicePlayerEnhanced {
             const oldNextSeq = state.nextSeq;
             state.nextSeq = nextAvailableChunk.seq + 1;
             
-            console.log(`🎵 期望值更新: ${oldNextSeq} → ${state.nextSeq} (播放分片${nextAvailableChunk.seq})`);
+            window.controlledLog?.log(`🎵 期望值更新: ${oldNextSeq} → ${state.nextSeq} (播放分片${nextAvailableChunk.seq})`);
             return nextAvailableChunk;
         }
         
@@ -1023,7 +1023,7 @@ class VoicePlayerEnhanced {
                     const oldNextSeq = state.nextSeq;
                     state.nextSeq = nextChunk.seq + 1;
                     
-                    console.log(`🎵 强制跳跃: 期望值${oldNextSeq} → ${state.nextSeq} (播放分片${nextChunk.seq})`);
+                    window.controlledLog?.log(`🎵 强制跳跃: 期望值${oldNextSeq} → ${state.nextSeq} (播放分片${nextChunk.seq})`);
                     return nextChunk;
                 }
             }
@@ -1062,7 +1062,7 @@ class VoicePlayerEnhanced {
                 const oldNextSeq = state.nextSeq;
                 state.nextSeq = nextAvailableChunk.seq + 1;
                 
-                console.log(`🎵 超时跳跃: 期望值${oldNextSeq} → ${state.nextSeq} (播放分片${nextAvailableChunk.seq})`);
+                window.controlledLog?.log(`🎵 超时跳跃: 期望值${oldNextSeq} → ${state.nextSeq} (播放分片${nextAvailableChunk.seq})`);
                 return nextAvailableChunk;
             }
         }
@@ -1106,7 +1106,7 @@ class VoicePlayerEnhanced {
             try {
                 this.currentAudio.stop();
                 this.currentAudio.disconnect();
-                console.log('停止当前音频播放');
+                window.controlledLog?.log('停止当前音频播放');
             } catch (error) {
                 console.warn('停止音频播放失败:', error);
             }
@@ -1117,9 +1117,9 @@ class VoicePlayerEnhanced {
     
     async playAudioFromBase64(base64Audio, messageId = null) {
         try {
-            console.log('🎵 收到音频分片，base64长度:', base64Audio.length);
-            console.log('🔍 [语音通话调试] playAudioFromBase64 开始执行');
-            console.log('🔍 [语音通话调试] 输入参数:', {
+            window.controlledLog?.log('🎵 收到音频分片，base64长度:', base64Audio.length);
+            window.controlledLog?.log('🔍 [语音通话调试] playAudioFromBase64 开始执行');
+            window.controlledLog?.log('🔍 [语音通话调试] 输入参数:', {
                 base64Length: base64Audio.length,
                 messageId: messageId,
                 messageIdType: typeof messageId
@@ -1127,7 +1127,7 @@ class VoicePlayerEnhanced {
             
             // 聊天TTS（录音聊天和文本聊天）：完全独立处理，不受任何状态影响
             const isChatTTSEarly = messageId && (messageId.includes('ai-message') || messageId.includes('usr-message'));
-            console.log('🔍 [语音通话调试] 早期聊天TTS检查:', {
+            window.controlledLog?.log('🔍 [语音通话调试] 早期聊天TTS检查:', {
                 isChatTTSEarly: isChatTTSEarly,
                 messageId: messageId,
                 includesAiMessage: messageId ? messageId.includes('ai-message') : false,
@@ -1135,14 +1135,14 @@ class VoicePlayerEnhanced {
             });
             
             if (isChatTTSEarly) {
-                console.log('🎧 聊天TTS播放，完全独立处理');
+                window.controlledLog?.log('🎧 聊天TTS播放，完全独立处理');
                 this.playStandardAudio(base64Audio, messageId);
                 return;
             }
             
             // 🛑 检查是否正在打断，如果是则忽略新的音频
             if (this.shouldStop) {
-                console.log('🛑 正在打断中，忽略新的音频数据');
+                window.controlledLog?.log('🛑 正在打断中，忽略新的音频数据');
                 return;
             }
             
@@ -1152,12 +1152,12 @@ class VoicePlayerEnhanced {
                     sampleRate: 24000, // 明确指定采样率
                     latencyHint: 'interactive' // 低延迟模式
                 });
-                console.log('🎧 音频上下文已创建，采样率:', this.audioContext.sampleRate);
+                window.controlledLog?.log('🎧 音频上下文已创建，采样率:', this.audioContext.sampleRate);
             }
             
             // 🚀 检查音频上下文状态，如果被关闭则重新创建
             if (this.audioContext.state === 'closed') {
-                console.log('🔄 音频上下文已关闭，重新创建');
+                window.controlledLog?.log('🔄 音频上下文已关闭，重新创建');
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
                     sampleRate: 24000,
                     latencyHint: 'interactive'
@@ -1167,7 +1167,7 @@ class VoicePlayerEnhanced {
             // 恢复音频上下文（如果被暂停）
             if (this.audioContext.state === 'suspended') {
                 await this.audioContext.resume();
-                console.log('▶️ 音频上下文已恢复');
+                window.controlledLog?.log('▶️ 音频上下文已恢复');
             }
             
             // 🔧 关键修复：语音通话判断逻辑
@@ -1176,12 +1176,12 @@ class VoicePlayerEnhanced {
             const isChatTTS = messageId && (messageId.includes('ai-message') || messageId.includes('usr-message'));
             const isVoiceCall = !isChatTTS; // 不是聊天TTS就是语音通话
             
-            console.log('🎧 音频来源判断:', {
+            window.controlledLog?.log('🎧 音频来源判断:', {
                 messageId: messageId,
                 isChatTTS: isChatTTS,
                 isVoiceCall: isVoiceCall
             });
-            console.log('🔍 [语音通话调试] 最终路由决策:', {
+            window.controlledLog?.log('🔍 [语音通话调试] 最终路由决策:', {
                 isChatTTS: isChatTTS,
                 isVoiceCall: isVoiceCall,
                 willUseVoiceCall: isVoiceCall,
@@ -1190,19 +1190,19 @@ class VoicePlayerEnhanced {
             
             if (isVoiceCall) {
                 // 语音通话：直接流式播放，不显示播放指示器
-                console.log('🎧 语音通话音频，直接流式播放（不显示播放指示器）');
-                console.log('🔍 [语音通话调试] 调用 playVoiceCallAudio');
+                window.controlledLog?.log('🎧 语音通话音频，直接流式播放（不显示播放指示器）');
+                window.controlledLog?.log('🔍 [语音通话调试] 调用 playVoiceCallAudio');
                 await this.playVoiceCallAudio(base64Audio, messageId);
             } else {
                 // 录音聊天TTS：使用标准音频格式，显示播放指示器
-                console.log('🎧 录音聊天TTS，使用标准音频格式（显示播放指示器）');
-                console.log('🔍 [语音通话调试] 调用 playStandardAudio');
+                window.controlledLog?.log('🎧 录音聊天TTS，使用标准音频格式（显示播放指示器）');
+                window.controlledLog?.log('🔍 [语音通话调试] 调用 playStandardAudio');
                 await this.playStandardAudio(base64Audio, messageId);
             }
             
         } catch (error) {
             console.error('❌ 处理音频分片失败:', error);
-            console.log('🔍 [语音通话调试] 播放失败详情:', {
+            window.controlledLog?.log('🔍 [语音通话调试] 播放失败详情:', {
                 error: error.message,
                 stack: error.stack,
                 messageId: messageId
@@ -1213,7 +1213,7 @@ class VoicePlayerEnhanced {
     // 语音通话音频播放（参考备份中的正确实现）
     async playVoiceCallAudio(base64Audio, messageId = null) {
         try {
-            console.log('🎧 播放语音通话音频，base64长度:', base64Audio.length);
+            window.controlledLog?.log('🎧 播放语音通话音频，base64长度:', base64Audio.length);
             
             // 解码base64音频数据
             const binaryString = atob(base64Audio);
@@ -1237,7 +1237,7 @@ class VoicePlayerEnhanced {
             const audioBufferNode = this.audioContext.createBuffer(1, float32Data.length, 24000);
             audioBufferNode.copyToChannel(float32Data, 0);
             
-            console.log('🎵 语音通话音频准备完成，时长:', audioBufferNode.duration.toFixed(2), '秒');
+            window.controlledLog?.log('🎵 语音通话音频准备完成，时长:', audioBufferNode.duration.toFixed(2), '秒');
             
             // 🔧 关键修复：使用播放队列管理，确保顺序播放（参考备份实现）
             this.addToPlayQueue(audioBufferNode, messageId);
@@ -1250,7 +1250,7 @@ class VoicePlayerEnhanced {
     // 标准音频播放（用于录音聊天TTS）
     async playStandardAudio(base64Audio, messageId = null) {
         try {
-            console.log('🎧 播放标准音频格式，base64长度:', base64Audio.length);
+            window.controlledLog?.log('🎧 播放标准音频格式，base64长度:', base64Audio.length);
             
             // 🚀 检查是否是语音通话的残留音频
             if (messageId && messageId.includes('voice_call_')) {
@@ -1274,12 +1274,12 @@ class VoicePlayerEnhanced {
                     playingSources: 0,
                     lastChunkTs: Date.now()
                 });
-                console.log('🎧 录音聊天流状态已初始化:', messageId);
+                window.controlledLog?.log('🎧 录音聊天流状态已初始化:', messageId);
             }
             
             // 检查音频上下文状态
             if (!this.audioContext || this.audioContext.state === 'closed') {
-                console.log('🔄 音频上下文已关闭，重新创建');
+                window.controlledLog?.log('🔄 音频上下文已关闭，重新创建');
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
                     sampleRate: 24000,
                     latencyHint: 'interactive'
@@ -1298,7 +1298,7 @@ class VoicePlayerEnhanced {
             // 解码为AudioBuffer（标准格式）
             const decodedBuffer = await this.audioContext.decodeAudioData(audioBuffer);
             
-            console.log('🎵 标准音频解码完成，时长:', decodedBuffer.duration.toFixed(2), '秒');
+            window.controlledLog?.log('🎵 标准音频解码完成，时长:', decodedBuffer.duration.toFixed(2), '秒');
             
             // 🚀 录音聊天TTS使用简单播放队列，确保按序播放
             this.addToSimpleQueue(decodedBuffer, messageId);
@@ -1312,7 +1312,7 @@ class VoicePlayerEnhanced {
     addToPlayQueue(audioBuffer, messageId = null) {
         // 🚀 检查是否应该停止，如果是则忽略新的音频
         if (this.shouldStop) {
-            console.log('🛑 正在停止中，忽略新的音频数据');
+            window.controlledLog?.log('🛑 正在停止中，忽略新的音频数据');
             return;
         }
         
@@ -1323,7 +1323,7 @@ class VoicePlayerEnhanced {
             timestamp: Date.now()
         });
         
-        console.log('📋 音频分片已添加到播放队列，队列长度:', this.audioQueue.length);
+        window.controlledLog?.log('📋 音频分片已添加到播放队列，队列长度:', this.audioQueue.length);
         
         // 如果当前没有播放，开始播放队列
         if (!this.isPlaying) {
@@ -1333,7 +1333,7 @@ class VoicePlayerEnhanced {
     
     // 停止当前播放并清空队列（用于打断机制）
     stopCurrentPlayback() {
-        console.log('🛑 立即停止当前播放并清空队列');
+        window.controlledLog?.log('🛑 立即停止当前播放并清空队列');
         
         // 🚀 设置停止标志 - 不要重置，保持停止状态
         this.shouldStop = true;
@@ -1343,9 +1343,9 @@ class VoicePlayerEnhanced {
             try {
                 this.currentAudio.stop(0); // 立即停止，不等待
                 this.currentAudio.disconnect();
-                console.log('🛑 当前音频源已立即停止');
+                window.controlledLog?.log('🛑 当前音频源已立即停止');
             } catch (error) {
-                console.log('当前音频已停止');
+                window.controlledLog?.log('当前音频已停止');
             }
             this.currentAudio = null;
         }
@@ -1367,9 +1367,9 @@ class VoicePlayerEnhanced {
                 // 重新创建音频上下文以确保完全停止
                 this.audioContext.close();
                 this.audioContext = null;
-                console.log('🛑 音频上下文已强制关闭');
+                window.controlledLog?.log('🛑 音频上下文已强制关闭');
             } catch (error) {
-                console.log('音频上下文清理完成');
+                window.controlledLog?.log('音频上下文清理完成');
             }
         }
         
@@ -1381,32 +1381,32 @@ class VoicePlayerEnhanced {
         this.streamStates.clear();
         
         // 不要重置shouldStop标志，保持停止状态直到下次开始播放
-        console.log('✅ 播放已立即停止，队列已清空，状态已重置');
+        window.controlledLog?.log('✅ 播放已立即停止，队列已清空，状态已重置');
     }
     
     async processPlayQueue() {
         // 检查停止标志
         if (this.shouldStop) {
-            console.log('🛑 检测到停止标志，停止队列处理');
+            window.controlledLog?.log('🛑 检测到停止标志，停止队列处理');
             this.isPlaying = false;
             return;
         }
         
         if (this.audioQueue.length === 0) {
-            console.log('📋 播放队列为空');
+            window.controlledLog?.log('📋 播放队列为空');
             this.isPlaying = false;
             return;
         }
         
         if (this.isPlaying) {
-            console.log('🎵 正在播放中，等待当前音频完成');
+            window.controlledLog?.log('🎵 正在播放中，等待当前音频完成');
             return;
         }
         
         this.isPlaying = true;
         const audioItem = this.audioQueue.shift();
         
-        console.log('🎵 开始播放队列中的音频，剩余队列长度:', this.audioQueue.length);
+        window.controlledLog?.log('🎵 开始播放队列中的音频，剩余队列长度:', this.audioQueue.length);
         
         try {
             await this.playAudioBuffer(audioItem.buffer, audioItem.messageId);
@@ -1416,22 +1416,22 @@ class VoicePlayerEnhanced {
         
         // 播放完成后，检查停止标志
         this.isPlaying = false;
-        console.log('🎵 音频播放完成，检查队列状态:', {
+        window.controlledLog?.log('🎵 音频播放完成，检查队列状态:', {
             shouldStop: this.shouldStop,
             queueLength: this.audioQueue.length
         });
         
         if (!this.shouldStop && this.audioQueue.length > 0) {
-            console.log('🎵 继续播放队列中的下一个音频');
+            window.controlledLog?.log('🎵 继续播放队列中的下一个音频');
             this.processPlayQueue();
         } else {
-            console.log('🎵 播放队列处理完成');
+            window.controlledLog?.log('🎵 播放队列处理完成');
         }
     }
     
     async playPCM16Audio(audioBuffer, messageId = null) {
         try {
-            console.log('🎧 播放PCM16音频，数据长度:', audioBuffer.byteLength);
+            window.controlledLog?.log('🎧 播放PCM16音频，数据长度:', audioBuffer.byteLength);
             
             // 检查ArrayBuffer是否有效
             if (!audioBuffer || audioBuffer.byteLength === 0) {
@@ -1452,7 +1452,7 @@ class VoicePlayerEnhanced {
             const audioBufferNode = this.audioContext.createBuffer(1, float32Data.length, 24000);
             audioBufferNode.copyToChannel(float32Data, 0);
             
-            console.log('🎵 音频缓冲区创建完成，时长:', audioBufferNode.duration.toFixed(2), '秒');
+            window.controlledLog?.log('🎵 音频缓冲区创建完成，时长:', audioBufferNode.duration.toFixed(2), '秒');
             
             // 顺序播放：等待当前音频播放完成
             await this.playAudioBuffer(audioBufferNode, messageId);
@@ -1467,7 +1467,7 @@ class VoicePlayerEnhanced {
             try {
                 // 检查停止标志
                 if (this.shouldStop) {
-                    console.log('🛑 播放前检测到停止标志，跳过播放');
+                    window.controlledLog?.log('🛑 播放前检测到停止标志，跳过播放');
                     resolve();
                     return;
                 }
@@ -1489,13 +1489,13 @@ class VoicePlayerEnhanced {
                     
                     // 检查是否被停止
                     if (this.shouldStop) {
-                        console.log('🛑 播放结束回调检测到停止标志');
+                        window.controlledLog?.log('🛑 播放结束回调检测到停止标志');
                         resolve();
                         return;
                     }
                     
                     this.isPlaying = false;
-                    console.log('TTS片段播放完成');
+                    window.controlledLog?.log('TTS片段播放完成');
                     
                     // 不在这里隐藏播放状态指示器，让maybeFinalize统一处理
                     // if (this.enhancedPlaybackStatus) {
@@ -1518,12 +1518,12 @@ class VoicePlayerEnhanced {
                 // 设置定期检查停止标志 - 更频繁的检查
                 const stopCheckInterval = setInterval(() => {
                     if (this.shouldStop) {
-                        console.log('🛑 播放过程中检测到停止标志，立即停止');
+                        window.controlledLog?.log('🛑 播放过程中检测到停止标志，立即停止');
                         try {
                             source.stop(0);
                             source.disconnect();
                         } catch (error) {
-                            console.log('音频源已停止');
+                            window.controlledLog?.log('音频源已停止');
                         }
                         clearInterval(stopCheckInterval);
                         resolve();
@@ -1548,7 +1548,7 @@ class VoicePlayerEnhanced {
                             window.dash_clientside.set_props('button-event-trigger', {
                                 data: {type: 'tts_start', timestamp: Date.now()}
                             });
-                            console.log('TTS播放开始，触发状态更新');
+                            window.controlledLog?.log('TTS播放开始，触发状态更新');
                         } catch (setPropsError) {
                             console.error('set_props调用失败:', setPropsError);
                         }
@@ -1559,22 +1559,22 @@ class VoicePlayerEnhanced {
                     
                     if (isVoiceCall) {
                         // 语音通话：不显示播放指示器
-                        console.log('🎧 语音通话：不显示播放指示器');
+                        window.controlledLog?.log('🎧 语音通话：不显示播放指示器');
                     } else {
                         // 非语音通话场景：正常显示播放指示器
                         if (this.enhancedPlaybackStatus) {
                             this.enhancedPlaybackStatus.showStatus('speaking', '正在播放语音...');
-                            console.log('🎧 非语音通话场景：显示播放指示器');
+                            window.controlledLog?.log('🎧 非语音通话场景：显示播放指示器');
                         } else if (window.enhancedPlaybackStatus) {
                             window.enhancedPlaybackStatus.showStatus('speaking', '正在播放语音...');
-                            console.log('🎧 非语音通话场景：使用全局实例显示播放指示器');
+                            window.controlledLog?.log('🎧 非语音通话场景：使用全局实例显示播放指示器');
                         } else {
                             console.warn('🎧 enhancedPlaybackStatus 未找到，无法显示播放指示器');
                         }
                     }
                 }
                 
-                console.log('开始播放音频');
+                window.controlledLog?.log('开始播放音频');
                 
             } catch (error) {
                 reject(error);
@@ -1583,7 +1583,7 @@ class VoicePlayerEnhanced {
     }
     
     handleSynthesisComplete(data) {
-        console.log('语音合成完成');
+        window.controlledLog?.log('语音合成完成');
         // 注意：不要立即隐藏播放状态指示器
         // 因为TTS播放可能还在进行中，应该等待播放完成后再隐藏
         
@@ -1600,7 +1600,7 @@ class VoicePlayerEnhanced {
                 playingSources: 0,
                 lastChunkTs: Date.now()
             });
-            console.log('🎧 录音聊天TTS流状态已创建:', messageId);
+            window.controlledLog?.log('🎧 录音聊天TTS流状态已创建:', messageId);
         }
         
         if (this.streamStates.has(messageId)) {
@@ -1609,20 +1609,20 @@ class VoicePlayerEnhanced {
             state.synthTs = Date.now();
             // 更新lastChunkTs，确保静默窗口条件满足
             state.lastChunkTs = Date.now();
-            console.log('🎧 录音聊天TTS合成完成，更新lastChunkTs:', messageId);
+            window.controlledLog?.log('🎧 录音聊天TTS合成完成，更新lastChunkTs:', messageId);
             
             // 🔧 关键修复：不要立即调用maybeFinalize，等待所有音频播放完成
             // 让音频播放完成事件来触发maybeFinalize
-            console.log('🎧 合成完成，但不立即finalize，等待所有音频播放完成');
+            window.controlledLog?.log('🎧 合成完成，但不立即finalize，等待所有音频播放完成');
         }
         
         // 对于录音聊天，标记为完成，让maybeFinalize处理状态重置
         if (!messageId.includes('voice_call')) {
-            console.log('录音聊天TTS完成，标记为完成状态');
+            window.controlledLog?.log('录音聊天TTS完成，标记为完成状态');
             // 不在这里直接调用returnToIdle，让maybeFinalize统一处理
         }
         
-        console.log('所有TTS数据已发送，等待最后一段播放结束再回idle');
+        window.controlledLog?.log('所有TTS数据已发送，等待最后一段播放结束再回idle');
     }
     
     /**
@@ -1642,10 +1642,10 @@ class VoicePlayerEnhanced {
         const noPendingChunks = (state.chunks || []).length === 0;
         const silenceElapsed = timeSinceLastChunk > silenceWindow;
         
-        console.log(`maybeFinalize(${messageId}): synthComplete=${synthComplete}, playingSources=${state.playingSources}, chunks=${state.chunks.length}, silence=${timeSinceLastChunk}ms`);
+        window.controlledLog?.log(`maybeFinalize(${messageId}): synthComplete=${synthComplete}, playingSources=${state.playingSources}, chunks=${state.chunks.length}, silence=${timeSinceLastChunk}ms`);
         
         // 🔍 详细打印maybeFinalize的决策过程
-        console.log('🔍 [maybeFinalize调试] 详细状态检查:', {
+        window.controlledLog?.log('🔍 [maybeFinalize调试] 详细状态检查:', {
             messageId: messageId,
             synthComplete: synthComplete,
             noPlayingSources: noPlayingSources,
@@ -1663,8 +1663,8 @@ class VoicePlayerEnhanced {
         
         if (synthComplete && noPlayingSources && noPendingChunks && silenceElapsed && !hasQueuedAudio && !hasSimpleQueuedAudio) {
             // 满足条件，回idle
-            console.log(`消息${messageId}播放完成，回idle状态`);
-            console.log('🔍 [maybeFinalize调试] 即将回idle，最终检查:', {
+            window.controlledLog?.log(`消息${messageId}播放完成，回idle状态`);
+            window.controlledLog?.log('🔍 [maybeFinalize调试] 即将回idle，最终检查:', {
                 audioQueueLength: this.audioQueue?.length,
                 playQueueLength: this.playQueue?.length,
                 isPlaying: this.isPlaying,
@@ -1679,14 +1679,14 @@ class VoicePlayerEnhanced {
             }, 100);
         } else if (synthComplete && noPlayingSources && noPendingChunks && (hasQueuedAudio || hasSimpleQueuedAudio)) {
             // 🔧 关键修复：合成完成但队列中还有音频，等待播放完成
-            console.log(`消息${messageId}合成完成但队列中还有音频，等待播放完成: audioQueue=${this.audioQueue?.length}, playQueue=${this.playQueue?.length}`);
+            window.controlledLog?.log(`消息${messageId}合成完成但队列中还有音频，等待播放完成: audioQueue=${this.audioQueue?.length}, playQueue=${this.playQueue?.length}`);
             // 延迟重试，等待队列中的音频播放完成
             setTimeout(() => this.maybeFinalize(messageId), 200);
         } else if (synthComplete && noPlayingSources && noPendingChunks) {
             // 合成完成且无播放源且无待播放分片，但静默窗口未到，延迟重试
             const remaining = silenceWindow - timeSinceLastChunk;
             if (remaining > 0) {
-                console.log(`消息${messageId}等待静默窗口，${remaining}ms后重试`);
+                window.controlledLog?.log(`消息${messageId}等待静默窗口，${remaining}ms后重试`);
                 setTimeout(() => this.maybeFinalize(messageId), Math.min(remaining + 50, 200));
             }
         }
@@ -1698,7 +1698,7 @@ class VoicePlayerEnhanced {
     returnToIdle() {
         // 防止重复调用
         if (this.isReturningToIdle) {
-            console.log('正在回idle状态，跳过重复调用');
+            window.controlledLog?.log('正在回idle状态，跳过重复调用');
             return;
         }
         
@@ -1708,7 +1708,7 @@ class VoicePlayerEnhanced {
         this.isTtsPlaying = false;
         
         try {
-            console.log('🎵 开始回idle状态');
+            window.controlledLog?.log('🎵 开始回idle状态');
             
             // 使用EnhancedPlaybackStatus隐藏播放状态指示器
             if (this.enhancedPlaybackStatus) {
@@ -1725,34 +1725,34 @@ class VoicePlayerEnhanced {
             }
             
             // 🔧 录音聊天TTS完成后，确保释放麦克风
-            console.log('🎤 检查录音器实例:', window.voiceRecorder, window.voiceRecorderEnhanced);
+            window.controlledLog?.log('🎤 检查录音器实例:', window.voiceRecorder, window.voiceRecorderEnhanced);
             if (window.voiceRecorder) {
-                console.log('🎤 录音聊天TTS完成，释放麦克风资源');
-                console.log('🎤 调用录音器cleanup方法...');
+                window.controlledLog?.log('🎤 录音聊天TTS完成，释放麦克风资源');
+                window.controlledLog?.log('🎤 调用录音器cleanup方法...');
                 try {
                     window.voiceRecorder.cleanup();
-                    console.log('🎤 录音器cleanup方法调用完成');
+                    window.controlledLog?.log('🎤 录音器cleanup方法调用完成');
                 } catch (error) {
                     console.error('🎤 录音器cleanup方法调用失败:', error);
                 }
             } else if (window.voiceRecorderEnhanced) {
-                console.log('🎤 使用备用录音器实例');
+                window.controlledLog?.log('🎤 使用备用录音器实例');
                 try {
                     window.voiceRecorderEnhanced.cleanup();
-                    console.log('🎤 备用录音器cleanup方法调用完成');
+                    window.controlledLog?.log('🎤 备用录音器cleanup方法调用完成');
                 } catch (error) {
                     console.error('🎤 备用录音器cleanup方法调用失败:', error);
                 }
             } else {
-                console.log('🎤 录音器实例不存在，检查全局状态');
+                window.controlledLog?.log('🎤 录音器实例不存在，检查全局状态');
                 // 检查是否有其他方式释放麦克风
                 if (window.voiceStateManager) {
-                    console.log('🎤 通过状态管理器释放麦克风');
+                    window.controlledLog?.log('🎤 通过状态管理器释放麦克风');
                     window.voiceStateManager.cleanup();
                 }
             }
             
-            console.log('🎵 已回idle状态');
+            window.controlledLog?.log('🎵 已回idle状态');
             
             // 触发会话状态更新，确保"当前会话"状态正确
             if (window.dash_clientside && window.dash_clientside.set_props) {
@@ -1764,7 +1764,7 @@ class VoicePlayerEnhanced {
                     } 
                 });
             }
-            console.log('已回idle状态，会话状态已更新');
+            window.controlledLog?.log('已回idle状态，会话状态已更新');
         } catch (e) {
             VoiceUtils.handleError(e, '回idle状态');
         } finally {
@@ -1790,7 +1790,7 @@ class VoicePlayerEnhanced {
      * 停止播放
      */
     stopPlayback() {
-        console.log('停止播放');
+        window.controlledLog?.log('停止播放');
         
         // 通知统一按钮状态管理器停止播放
         if (window.unifiedButtonStateManager) {
@@ -1834,13 +1834,13 @@ class VoicePlayerEnhanced {
                         window.dash_clientside.set_props('button-event-trigger', {
                             data: {type: 'tts_stop', timestamp: Date.now()}
                         });
-                        console.log('TTS播放停止，触发状态更新');
+                        window.controlledLog?.log('TTS播放停止，触发状态更新');
                     } catch (setPropsError) {
                         console.error('set_props调用失败:', setPropsError);
                     }
                 }
                 
-                console.log('停止语音播放');
+                window.controlledLog?.log('停止语音播放');
             } catch (error) {
                 console.error('停止播放失败:', error);
             }
@@ -1853,7 +1853,7 @@ class VoicePlayerEnhanced {
     
     setVoiceSettings(settings) {
         this.synthesisSettings = { ...this.synthesisSettings, ...settings };
-        console.log('语音设置已更新:', this.synthesisSettings);
+        window.controlledLog?.log('语音设置已更新:', this.synthesisSettings);
     }
     
     // 公共方法：手动触发语音播放
@@ -1870,10 +1870,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 🚀 专门用于语音通话的停止方法 - 只停止语音通话相关，不影响其他场景
 VoicePlayerEnhanced.prototype.forceStopAllAudio = function() {
-    console.log('🛑 语音通话强制停止所有音频');
+    window.controlledLog?.log('🛑 语音通话强制停止所有音频');
     
     // 🔍 详细打印停止前的状态
-    console.log('🔍 [forceStopAllAudio调试] 停止前状态:', {
+    window.controlledLog?.log('🔍 [forceStopAllAudio调试] 停止前状态:', {
         isPlaying: this.isPlaying,
         audioQueueLength: this.audioQueue?.length,
         playQueueLength: this.playQueue?.length,
@@ -1882,7 +1882,7 @@ VoicePlayerEnhanced.prototype.forceStopAllAudio = function() {
         shouldStop: this.shouldStop,
         currentAudio: !!this.currentAudio
     });
-    console.log('🔍 [forceStopAllAudio调试] 流状态详情:', Array.from(this.streamStates.entries()).map(([id, state]) => ({
+    window.controlledLog?.log('🔍 [forceStopAllAudio调试] 流状态详情:', Array.from(this.streamStates.entries()).map(([id, state]) => ({
         messageId: id,
         synthComplete: state.synthComplete,
         playingSources: state.playingSources,
@@ -1897,9 +1897,9 @@ VoicePlayerEnhanced.prototype.forceStopAllAudio = function() {
         try {
             this.currentAudio.stop(0);
             this.currentAudio.disconnect();
-            console.log('🛑 当前音频源已立即停止');
+            window.controlledLog?.log('🛑 当前音频源已立即停止');
         } catch (error) {
-            console.log('当前音频已停止');
+            window.controlledLog?.log('当前音频已停止');
         }
         this.currentAudio = null;
     }
@@ -1914,7 +1914,7 @@ VoicePlayerEnhanced.prototype.forceStopAllAudio = function() {
     for (const [messageId, state] of this.streamStates.entries()) {
         if (messageId.includes('voice_call')) {
             this.streamStates.delete(messageId);
-            console.log('🛑 清理语音通话流状态:', messageId);
+            window.controlledLog?.log('🛑 清理语音通话流状态:', messageId);
         }
     }
     
@@ -1922,7 +1922,7 @@ VoicePlayerEnhanced.prototype.forceStopAllAudio = function() {
     for (const messageId of this.playedMessages) {
         if (messageId.includes('voice_call')) {
             this.playedMessages.delete(messageId);
-            console.log('🛑 清理语音通话播放消息:', messageId);
+            window.controlledLog?.log('🛑 清理语音通话播放消息:', messageId);
         }
     }
     
@@ -1940,13 +1940,13 @@ VoicePlayerEnhanced.prototype.forceStopAllAudio = function() {
     
     // 🚀 立即重置停止标志，允许后续播放（录音聊天等）
     this.shouldStop = false;
-    console.log('🛑 停止标志已重置，允许后续播放');
+    window.controlledLog?.log('🛑 停止标志已重置，允许后续播放');
     
     // 🔧 关键修复：重置TTS播放标志，确保后续录音聊天和文本聊天能正常显示播放指示器
     this.isTtsPlaying = false;
-    console.log('🔧 TTS播放标志已重置，允许后续播放指示器正常显示');
+    window.controlledLog?.log('🔧 TTS播放标志已重置，允许后续播放指示器正常显示');
     
-    console.log('🛑 语音通话强制停止完成，其他场景保持可用');
+    window.controlledLog?.log('🛑 语音通话强制停止完成，其他场景保持可用');
 };
 
 // 导出供其他模块使用

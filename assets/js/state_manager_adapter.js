@@ -329,4 +329,4 @@ class StateManagerAdapter {
 // 创建全局适配器实例
 window.unifiedButtonStateManager = new StateManagerAdapter();
 
-console.log('🔄 状态管理器兼容性适配器已初始化');
+window.controlledLog?.log('🔄 状态管理器兼容性适配器已初始化');

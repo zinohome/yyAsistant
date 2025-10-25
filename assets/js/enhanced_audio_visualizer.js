@@ -51,7 +51,7 @@ class EnhancedAudioVisualizer {
         this.canvas = document.getElementById('audio-visualizer');
         if (this.canvas) {
             this.initCanvas();
-            console.log('🎨 音频可视化Canvas已找到并初始化');
+            window.controlledLog?.log('🎨 音频可视化Canvas已找到并初始化');
         } else {
             console.warn('音频可视化Canvas未找到，将在显示时初始化');
             // 设置重试机制
@@ -68,9 +68,9 @@ class EnhancedAudioVisualizer {
                 this.canvas = document.getElementById('audio-visualizer');
                 if (this.canvas) {
                     this.initCanvas();
-                    console.log('🎨 音频可视化Canvas已找到并初始化（重试成功）');
+                    window.controlledLog?.log('🎨 音频可视化Canvas已找到并初始化（重试成功）');
                 } else {
-                    console.log(`🎨 音频可视化Canvas重试 ${this.retryCount}/${this.maxRetries}`);
+                    window.controlledLog?.log(`🎨 音频可视化Canvas重试 ${this.retryCount}/${this.maxRetries}`);
                     this.retryInitialization();
                 }
             }, 500);
@@ -103,7 +103,7 @@ class EnhancedAudioVisualizer {
         this.clearCanvas();
         this.drawVisualization();
         
-        console.log(`🎨 音频可视化状态更新: ${state} (${progress}%)`);
+        window.controlledLog?.log(`🎨 音频可视化状态更新: ${state} (${progress}%)`);
     }
     
     clearCanvas() {
@@ -271,7 +271,7 @@ function initEnhancedAudioVisualizer() {
     }
     
     window.enhancedAudioVisualizer = new EnhancedAudioVisualizer();
-    console.log('🎨 增强音频可视化器已初始化');
+    window.controlledLog?.log('🎨 增强音频可视化器已初始化');
 }
 
 // 页面加载完成后初始化

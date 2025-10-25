@@ -17,7 +17,7 @@ class SmartErrorHandler {
     init() {
         if (this.isInitialized) return;
         
-        console.log('🔧 智能错误处理系统已初始化');
+        window.controlledLog?.log('🔧 智能错误处理系统已初始化');
         this.isInitialized = true;
         
         // 监听全局错误事件
@@ -359,12 +359,12 @@ class SmartErrorHandler {
         const attempts = this.retryAttempts.get(retryKey) || 0;
         
         if (attempts >= this.maxRetryAttempts) {
-            console.log(`🔧 已达到最大重试次数: ${retryKey}`);
+            window.controlledLog?.log(`🔧 已达到最大重试次数: ${retryKey}`);
             return;
         }
         
         const delay = this.retryDelays[attempts] || 5000;
-        console.log(`🔧 安排重试 ${retryKey}，延迟 ${delay}ms`);
+        window.controlledLog?.log(`🔧 安排重试 ${retryKey}，延迟 ${delay}ms`);
         
         setTimeout(() => {
             this.executeRetry(analysis);
@@ -377,7 +377,7 @@ class SmartErrorHandler {
      * 执行重试
      */
     executeRetry(analysis) {
-        console.log(`🔧 执行重试: ${analysis.category}`);
+        window.controlledLog?.log(`🔧 执行重试: ${analysis.category}`);
         
         switch (analysis.category) {
             case 'connection':
@@ -612,7 +612,7 @@ class SmartErrorHandler {
     clearErrorHistory() {
         this.errorHistory = [];
         this.retryAttempts.clear();
-        console.log('🔧 错误历史已清除');
+        window.controlledLog?.log('🔧 错误历史已清除');
     }
 }
 
@@ -623,7 +623,7 @@ function initSmartErrorHandler() {
     if (!smartErrorHandler) {
         smartErrorHandler = new SmartErrorHandler();
         window.smartErrorHandler = smartErrorHandler;
-        console.log('🔧 智能错误处理系统已启动');
+        window.controlledLog?.log('🔧 智能错误处理系统已启动');
     }
 }
 
