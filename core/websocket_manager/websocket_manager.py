@@ -16,7 +16,7 @@ import logging
 from typing import Dict, Any, Optional, Callable, List
 from enum import Enum
 import threading
-from config.config import get_config
+# from config.config import get_config  # 暂时禁用，配置整理放到后面专题
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +37,10 @@ class WebSocketManager:
         """初始化WebSocket管理器"""
         self.websocket = None
         self.connection_state = ConnectionState.DISCONNECTED
-        self.url = get_config('websocket.url')
-        self.reconnect_attempts = get_config('websocket.reconnect_attempts', 5)
-        self.reconnect_interval = get_config('websocket.reconnect_interval', 5000)
-        self.heartbeat_interval = get_config('websocket.heartbeat_interval', 30000)
+        self.url = 'ws://192.168.32.168:9800/ws/chat'  # 硬编码默认值，配置整理放到后面专题
+        self.reconnect_attempts = 5
+        self.reconnect_interval = 5000
+        self.heartbeat_interval = 30000
         
         self.current_attempts = 0
         self.heartbeat_task = None

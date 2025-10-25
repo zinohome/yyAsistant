@@ -39,7 +39,7 @@ from core.error_handler.error_handler import ErrorHandler, ErrorType, ErrorSever
 from core.performance_monitor.performance_monitor import performance_monitor, start_performance_monitoring
 from core.resource_manager.resource_manager import resource_manager, start_resource_cleanup
 from core.health_checker.health_checker import health_checker, add_health_check, start_health_checking
-from config.config import config
+# from config.config import config  # 暂时禁用，配置整理放到后面专题
 
 # 检查Python版本
 check_python_version(min_version="3.8", max_version="3.13")
@@ -444,12 +444,8 @@ app.layout = lambda: fuc.FefferyTopProgress(
         html.Script(src="/assets/js/config.js"),
         # 新的状态管理器
         html.Script(src="/assets/js/state_manager.js"),
-        # 新的状态管理器V2
-        html.Script(src="/assets/js/state_manager_v2.js"),
-        # 新的WebSocket管理器V2
-        html.Script(src="/assets/js/websocket_manager_v2.js"),
-        # 统一按钮状态管理器脚本（保持兼容性）
-        html.Script(src="/assets/js/unified_button_state_manager.js"),
+        # 状态管理器兼容性适配器
+        html.Script(src="/assets/js/state_manager_adapter.js"),
         # 语音状态管理器脚本
         html.Script(src="/assets/js/voice_state_manager.js"),
     ],
@@ -664,6 +660,7 @@ if __name__ == "__main__":
     print("   - 性能监控: 10秒间隔")
     print("   - 资源清理: 5分钟间隔")
     print("   - 健康检查: 30秒间隔")
+    print("   - 自适应UI系统: 已启动")
     
     # 非正式环境下开发调试预览用
     app.run(debug=True, host='0.0.0.0', port=8050)

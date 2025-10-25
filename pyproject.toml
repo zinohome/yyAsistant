@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yyasistant"
+version = "2.0.0"
+description = "AI Assistant with Advanced UI Optimization"
+authors = [{name = "yyAsistant Team"}]
+dependencies = [
+    "dash>=2.14.0",
+    "flask>=2.3.0",
+    "websockets>=11.0.0",
+    "psutil>=5.9.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

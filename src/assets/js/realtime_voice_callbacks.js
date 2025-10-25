@@ -1,0 +1,421 @@
+/**
+ * 实时语音回调处理
+ * 处理前端JavaScript事件绑定和状态管理
+ * 使用公共工具类优化DOM操作和状态管理
+ */
+
+// DOM元素缓存
+const DOM_CACHE = {
+    voiceCallBtn: null,
+    statusElement: null,
+    statusTextElement: null,
+    audioVisualizer: null
+};
+
+// 等待DOM加载完成
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('实时语音回调初始化...');
+    
+    // 初始化DOM缓存
+    initDOMCache();
+    
+    // 初始化实时语音管理器
+    if (!window.realtimeVoiceManager) {
+        window.realtimeVoiceManager = new RealtimeVoiceManager();
+    }
+    
+    // 使用事件委托绑定通话按钮事件
+    bindVoiceCallButtonWithDelegate();
+    
+    // 绑定状态更新事件
+    bindStatusUpdateEvents();
+    
+    // 绑定音频可视化事件
+    bindAudioVisualizationEvents();
+    
+    console.log('实时语音回调初始化完成');
+});
+
+/**
+ * 初始化DOM缓存
+ */
+function initDOMCache() {
+    DOM_CACHE.voiceCallBtn = document.getElementById('voice-call-btn');
+    DOM_CACHE.statusElement = document.getElementById('realtime-voice-status');
+    DOM_CACHE.statusTextElement = document.getElementById('realtime-status-text');
+    DOM_CACHE.audioVisualizer = document.getElementById('audio-visualizer');
+}
+
+/**
+ * 使用事件委托绑定通话按钮事件
+ */
+function bindVoiceCallButtonWithDelegate() {
+    // 使用事件委托，监听整个文档的点击事件
+    document.addEventListener('click', function(event) {
+        // 检查点击的是否是语音通话按钮
+        if (event.target && event.target.closest('#voice-call-btn')) {
+            console.log('语音通话按钮被点击');
+            
+            // 触发语音通话事件
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                // 检查当前状态（通过按钮的disabled属性和背景色）
+                const button = event.target.closest('#voice-call-btn');
+                const isCalling = button && (
+                    button.style.backgroundColor.includes('rgb(220, 38, 38)') || // 红色表示通话中
+                    button.style.backgroundColor.includes('red') || // 红色
+                    button.getAttribute('data-calling') === 'true' // 数据属性
+                );
+                
+                console.log('🔍 按钮状态检测:', {
+                    button: !!button,
+                    backgroundColor: button?.style.backgroundColor,
+                    isCalling: isCalling
+                });
+                
+                if (isCalling) {
+                    // 停止语音通话
+                    console.log('🛑 停止语音通话 - 按钮被点击');
+                    
+                    // 🚀 立即停止所有语音播放（最高优先级）
+                    if (window.voicePlayerEnhanced) {
+                        console.log('🛑 强制停止当前语音播放并清空队列');
+                        window.voicePlayerEnhanced.forceStopAllAudio();
+                    }
+                    
+                    // 🚀 立即停止音频流处理（不等待网络消息）
+                    if (window.voiceWebSocketManager) {
+                        console.log('🛑 强制停止音频流处理');
+                        window.voiceWebSocketManager.stopAudioStreaming();
+                        // 隐藏音频可视化区域
+                        window.voiceWebSocketManager.hideAudioVisualizer();
+                    }
+                    
+                    // 🚀 异步发送中断信号到后端（不阻塞UI）
+                    if (window.voiceWebSocketManager) {
+                        console.log('🛑 发送中断信号到后端');
+                        window.voiceWebSocketManager.sendMessage({
+                            type: 'interrupt',
+                            timestamp: Date.now() / 1000,
+                            client_id: window.voiceWebSocketManager.clientId
+                        });
+                        
+                        // 🚀 延迟断开WebSocket连接，确保消息发送
+                        setTimeout(() => {
+                            if (window.voiceWebSocketManager.ws) {
+                                window.voiceWebSocketManager.ws.close();
+                            }
+                        }, 100);
+                    }
+                    
+                    // 发送停止信号
+                    window.dash_clientside.set_props('button-event-trigger', {
+                        data: {
+                            type: 'voice_call_stop',
+                            timestamp: Date.now()
+                        }
+                    });
+                    
+                    // 立即重置按钮状态到idle
+                    window.dash_clientside.set_props('unified-button-state', {
+                        data: {
+                            state: 'idle',
+                            scenario: null,
+                            timestamp: Date.now(),
+                            metadata: {}
+                        }
+                    });
+                    console.log('语音通话停止，按钮状态已重置为idle');
+                } else {
+                    // 启动语音通话
+                    console.log('启动语音通话');
+                    window.dash_clientside.set_props('button-event-trigger', {
+                        data: {
+                            type: 'voice_call_start',
+                            timestamp: Date.now()
+                        }
+                    });
+                }
+            } else {
+                console.warn('Dash clientside not available');
+            }
+        }
+    });
+    
+    console.log('语音通话按钮事件委托绑定完成');
+}
+
+/**
+ * 绑定通话按钮事件（旧方法，保留作为备用）
+ */
+function bindVoiceCallButton() {
+    const voiceCallBtn = document.getElementById('voice-call-btn');
+    
+    if (voiceCallBtn) {
+        voiceCallBtn.addEventListener('click', async function() {
+            try {
+                console.log('通话按钮被点击');
+                
+                if (window.realtimeVoiceManager.isActive) {
+                    // 停止实时语音
+                    await window.realtimeVoiceManager.stop();
+                } else {
+                    // 启动实时语音
+                    await window.realtimeVoiceManager.start();
+                }
+                
+            } catch (error) {
+                console.error('处理通话按钮点击失败:', error);
+                showError('实时语音操作失败: ' + error.message);
+            }
+        });
+    } else {
+        console.warn('未找到通话按钮元素');
+    }
+}
+
+/**
+ * 绑定状态更新事件
+ */
+function bindStatusUpdateEvents() {
+    if (window.realtimeVoiceManager) {
+        // 监听状态变化
+        window.realtimeVoiceManager.on('state_changed', function(data) {
+            console.log('状态变化:', data);
+            updateStatusDisplay(data.newState);
+        });
+        
+        // 监听错误事件
+        window.realtimeVoiceManager.on('error', function(error) {
+            console.error('实时语音错误:', error);
+            showError('实时语音错误: ' + error.message);
+        });
+        
+        // 监听启动事件
+        window.realtimeVoiceManager.on('started', function() {
+            console.log('实时语音已启动');
+            updateButtonState(true);
+        });
+        
+        // 监听停止事件
+        window.realtimeVoiceManager.on('stopped', function() {
+            console.log('实时语音已停止');
+            updateButtonState(false);
+        });
+    }
+}
+
+/**
+ * 绑定音频可视化事件
+ */
+function bindAudioVisualizationEvents() {
+    if (window.realtimeVoiceManager) {
+        // 监听音频可视化更新
+        window.realtimeVoiceManager.on('audio_visualization', function(data) {
+            updateAudioVisualization(data.audioLevel, data.dataArray);
+        });
+        
+        // 监听可视化更新
+        window.realtimeVoiceManager.on('visualization_update', function(data) {
+            updateVisualizationState(data.state);
+        });
+    }
+}
+
+/**
+ * 更新状态显示 - 使用DOM缓存和批量操作优化
+ */
+function updateStatusDisplay(state) {
+    if (!DOM_CACHE.statusElement || !DOM_CACHE.statusTextElement) {
+        console.warn('未找到状态元素');
+        return;
+    }
+    
+    const statusConfig = getStatusConfig(state);
+    
+    // 使用requestAnimationFrame优化DOM更新
+    requestAnimationFrame(() => {
+        // 批量更新DOM
+        VoiceUtils.batchDOMOperations([
+            {
+                selector: '#realtime-status-text',
+                callback: (element) => {
+                    element.textContent = statusConfig.text;
+                }
+            },
+            {
+                selector: '#realtime-voice-status .ant-badge',
+                callback: (badgeElement) => {
+                    // 移除旧的颜色类
+                    badgeElement.className = badgeElement.className.replace(/ant-badge-status-\w+/g, '');
+                    // 添加新的颜色类
+                    badgeElement.classList.add(`ant-badge-status-${statusConfig.color}`);
+                    
+                    const dotElement = badgeElement.querySelector('.ant-badge-status-dot');
+                    if (dotElement) {
+                        dotElement.className = dotElement.className.replace(/ant-badge-status-dot-\w+/g, '');
+                        dotElement.classList.add(`ant-badge-status-dot-${statusConfig.color}`);
+                    }
+                }
+            }
+        ]);
+    });
+}
+
+/**
+ * 获取状态配置
+ */
+function getStatusConfig(state) {
+    const configs = {
+        'idle': { text: '等待开始', color: 'gray' },
+        'connecting': { text: '正在连接...', color: 'blue' },
+        'listening': { text: '正在监听', color: 'red' },
+        'processing': { text: '处理中...', color: 'orange' },
+        'speaking': { text: 'AI说话中', color: 'green' },
+        'error': { text: '连接错误', color: 'red' }
+    };
+    
+    return configs[state] || { text: '未知状态', color: 'gray' };
+}
+
+/**
+ * 更新按钮状态 - 使用DOM缓存优化
+ */
+function updateButtonState(isActive) {
+    if (!DOM_CACHE.voiceCallBtn) {
+        console.warn('未找到通话按钮元素');
+        return;
+    }
+    
+    // 使用requestAnimationFrame优化DOM更新
+    requestAnimationFrame(() => {
+        DOM_CACHE.voiceCallBtn.disabled = isActive;
+        DOM_CACHE.voiceCallBtn.textContent = isActive ? '停止实时对话' : '开始实时对话';
+    });
+}
+
+/**
+ * 更新音频可视化 - 使用DOM缓存和性能优化
+ */
+function updateAudioVisualization(audioLevel, dataArray) {
+    if (!DOM_CACHE.audioVisualizer) {
+        return;
+    }
+    
+    // 使用requestAnimationFrame优化绘制性能
+    requestAnimationFrame(() => {
+        const ctx = DOM_CACHE.audioVisualizer.getContext('2d');
+        const width = DOM_CACHE.audioVisualizer.width;
+        const height = DOM_CACHE.audioVisualizer.height;
+        
+        // 清除画布
+        ctx.clearRect(0, 0, width, height);
+        
+        // 根据音频级别绘制可视化
+        const barWidth = width / dataArray.length;
+        const maxBarHeight = height * 0.8;
+        
+        for (let i = 0; i < dataArray.length; i++) {
+            const barHeight = (dataArray[i] / 255) * maxBarHeight;
+            const x = i * barWidth;
+            const y = height - barHeight;
+            
+            // 根据音频级别选择颜色
+            const intensity = dataArray[i] / 255;
+            if (intensity > 0.7) {
+                ctx.fillStyle = '#ff4d4f'; // 红色 - 高音量
+            } else if (intensity > 0.4) {
+                ctx.fillStyle = '#faad14'; // 橙色 - 中音量
+            } else if (intensity > 0.1) {
+                ctx.fillStyle = '#52c41a'; // 绿色 - 低音量
+            } else {
+                ctx.fillStyle = '#d9d9d9'; // 灰色 - 静音
+            }
+            
+            ctx.fillRect(x, y, barWidth - 1, barHeight);
+        }
+    });
+}
+
+/**
+ * 更新可视化状态
+ */
+function updateVisualizationState(state) {
+    const canvas = document.getElementById('audio-visualizer');
+    
+    if (!canvas) {
+        return;
+    }
+    
+    // 根据状态更新画布样式
+    if (state === 'listening' || state === 'speaking') {
+        canvas.style.borderColor = '#52c41a';
+        canvas.style.backgroundColor = '#f6ffed';
+    } else if (state === 'processing') {
+        canvas.style.borderColor = '#faad14';
+        canvas.style.backgroundColor = '#fffbe6';
+    } else if (state === 'error') {
+        canvas.style.borderColor = '#ff4d4f';
+        canvas.style.backgroundColor = '#fff2f0';
+    } else {
+        canvas.style.borderColor = '#d9d9d9';
+        canvas.style.backgroundColor = '#f5f5f5';
+    }
+}
+
+/**
+ * 显示错误消息 - 使用公共工具优化
+ */
+function showError(message) {
+    VoiceUtils.showError(message);
+}
+
+/**
+ * 检查浏览器支持
+ */
+function checkBrowserSupport() {
+    if (!RealtimeAudioProcessor.isSupported()) {
+        const reason = (typeof RealtimeAudioProcessor.getUnsupportedReason === 'function')
+            ? RealtimeAudioProcessor.getUnsupportedReason()
+            : '浏览器或运行环境不满足实时语音所需条件';
+        const hint = '请使用 HTTPS 域名或 localhost 访问，并允许麦克风权限。';
+        showError(`您的环境暂不支持实时语音：${reason}。${hint}`);
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * 初始化检查
+ */
+function initializeChecks() {
+    // 检查浏览器支持
+    if (!checkBrowserSupport()) {
+        return false;
+    }
+    
+    // 检查必要的元素
+    const requiredElements = [
+        'voice-call-btn',
+        'realtime-voice-status',
+        'audio-visualizer'
+    ];
+    
+    for (const elementId of requiredElements) {
+        if (!document.getElementById(elementId)) {
+            // 减少警告输出，只在调试模式下显示
+            if (window.DEBUG_VOICE_CALLBACKS) {
+                console.warn(`未找到必要元素: ${elementId}`);
+            }
+        }
+    }
+    
+    return true;
+}
+
+// 执行初始化检查
+if (initializeChecks()) {
+    console.log('实时语音功能初始化成功');
+} else {
+    console.error('实时语音功能初始化失败');
+}

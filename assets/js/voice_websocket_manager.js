@@ -38,8 +38,111 @@ class VoiceWebSocketManager {
         
         // 初始化全局状态
         this.initGlobalState();
+        
+        // 初始化智能错误处理系统
+        this.initSmartErrorHandler();
+        
+        // 初始化状态同步管理器
+        this.initStateSyncManager();
+        
+        // 初始化智能状态预测器
+        this.initSmartStatePredictor();
 
         // 移除复杂的队列机制，直接使用简单的更新方式
+    }
+    
+    /**
+     * 初始化智能错误处理系统
+     */
+    initSmartErrorHandler() {
+        // 延迟初始化，等待其他系统加载
+        setTimeout(() => {
+            if (window.smartErrorHandler) {
+                console.log('🔧 智能错误处理系统已连接');
+            } else {
+                console.warn('🔧 智能错误处理系统未找到');
+            }
+        }, 500);
+    }
+    
+    /**
+     * 初始化状态同步管理器
+     */
+    initStateSyncManager() {
+        // 延迟初始化，等待其他系统加载
+        setTimeout(() => {
+            if (window.stateSyncManager) {
+                // 检查并注册语音通话状态（如果不存在）
+                if (!window.stateSyncManager.getState('voice_call')) {
+                    window.stateSyncManager.registerState('voice_call', {
+                        status: 'idle',
+                        isConnected: false,
+                        isConnecting: false,
+                        error: null
+                    });
+                }
+                
+                // 检查并注册音频可视化状态（如果不存在）
+                if (!window.stateSyncManager.getState('audio_visualizer')) {
+                    window.stateSyncManager.registerState('audio_visualizer', {
+                        status: 'idle',
+                        isVisible: false,
+                        animation: 'static'
+                    });
+                }
+                
+                console.log('🔄 状态同步管理器已连接');
+            } else {
+                console.warn('🔄 状态同步管理器未找到');
+            }
+        }, 500);
+    }
+    
+    /**
+     * 初始化智能状态预测器
+     */
+    initSmartStatePredictor() {
+        // 延迟初始化，等待其他系统加载
+        setTimeout(() => {
+            if (window.smartStatePredictor) {
+                console.log('🔮 语音WebSocket管理器已连接智能状态预测器');
+                
+                // 记录语音通话相关的用户行为
+                this.recordVoiceCallBehavior();
+            } else {
+                console.warn('🔮 智能状态预测器未找到');
+            }
+        }, 500);
+    }
+    
+    /**
+     * 记录语音通话行为
+     */
+    recordVoiceCallBehavior() {
+        // 监听连接状态变化
+        const originalConnect = this.connect.bind(this);
+        this.connect = async () => {
+            const result = await originalConnect();
+            if (window.smartStatePredictor) {
+                window.smartStatePredictor.recordUserAction('voice_connect', {
+                    success: result,
+                    timestamp: Date.now()
+                });
+            }
+            return result;
+        };
+        
+        // 监听断开连接
+        const originalDisconnect = this.disconnect.bind(this);
+        this.disconnect = () => {
+            const result = originalDisconnect();
+            if (window.smartStatePredictor) {
+                window.smartStatePredictor.recordUserAction('voice_disconnect', {
+                    timestamp: Date.now()
+                });
+            }
+            return result;
+        };
     }
     
     /**
@@ -131,6 +234,16 @@ class VoiceWebSocketManager {
                     this.isConnecting = false;  // 重置连接中标志
                     // 新连接建立时，清空旧的 clientId，等待服务端下发新的 connection_established 进行绑定
                     this.clientId = null;
+                    
+                    // 更新状态同步管理器
+                    if (window.stateSyncManager) {
+                        window.stateSyncManager.updateState('voice_call', {
+                            status: 'connected',
+                            isConnected: true,
+                            isConnecting: false,
+                            error: null
+                        });
+                    }
                     window.voiceChatState.clientId = null;
                     
                     // 使用事件机制更新连接状态
@@ -189,6 +302,22 @@ class VoiceWebSocketManager {
                     console.error('语音WebSocket连接错误:', error);
                     this.isConnecting = false;  // 重置连接中标志
                     this.notifyConnectionHandlers(false);
+                    
+                    // 集成智能错误处理
+                    if (window.smartErrorHandler) {
+                        window.smartErrorHandler.handleError(error, 'websocket');
+                    }
+                    
+                    // 更新状态同步管理器
+                    if (window.stateSyncManager) {
+                        window.stateSyncManager.updateState('voice_call', {
+                            status: 'error',
+                            isConnected: false,
+                            isConnecting: false,
+                            error: error.message || 'WebSocket连接错误'
+                        });
+                    }
+                    
                     reject(error);
                 };
                 
@@ -263,11 +392,23 @@ class VoiceWebSocketManager {
             // 更新状态指示器
             this.updateStatusIndicator('通话中，等待用户说话', 'blue');
             // 启动音频可视化
-            if (window.audioVisualizer) {
+            if (window.enhancedAudioVisualizer) {
+                console.log('🎨 启动增强音频可视化');
+                window.enhancedAudioVisualizer.updateState('listening');
+            } else if (window.audioVisualizer) {
                 console.log('🎨 启动音频可视化');
                 window.audioVisualizer.startVisualization(stream);
             } else {
-                console.warn('❌ 音频可视化器未找到');
+                console.warn('❌ 音频可视化器未找到，尝试初始化');
+                // 尝试初始化增强音频可视化器
+                if (window.initEnhancedAudioVisualizer) {
+                    window.initEnhancedAudioVisualizer();
+                    setTimeout(() => {
+                        if (window.enhancedAudioVisualizer) {
+                            window.enhancedAudioVisualizer.updateState('listening');
+                        }
+                    }, 200);
+                }
             }
         })
         .catch(error => {
@@ -948,7 +1089,7 @@ class VoiceWebSocketManager {
                 } catch (error) {
                     console.error('❌ 重新启动音频可视化失败:', error);
                 }
-            }, 100);
+            }, 500);
         } catch (error) {
             console.error('❌ 停止音频可视化失败:', error);
         }
@@ -1074,10 +1215,28 @@ class VoiceWebSocketManager {
             container.style.display = 'inline-block';
             console.log('🎨 音频可视化区域已显示');
             
-            // 重新初始化音频可视化器
-            if (window.audioVisualizer) {
-                console.log('🎨 重新初始化音频可视化器');
-                window.audioVisualizer.init();
+            // 初始化增强的音频可视化器
+            if (window.enhancedAudioVisualizer) {
+                console.log('🎨 使用增强音频可视化器');
+                // 确保Canvas已初始化
+                if (!window.enhancedAudioVisualizer.canvas) {
+                    window.enhancedAudioVisualizer.initializeWhenReady();
+                }
+                window.enhancedAudioVisualizer.updateState('listening');
+            } else {
+                console.log('🎨 增强音频可视化器未找到，尝试重新初始化...');
+                // 重新初始化增强音频可视化器
+                if (window.initEnhancedAudioVisualizer) {
+                    window.initEnhancedAudioVisualizer();
+                    // 延迟更新状态
+                    setTimeout(() => {
+                        if (window.enhancedAudioVisualizer) {
+                            window.enhancedAudioVisualizer.updateState('listening');
+                        }
+                    }, 500);
+                } else {
+                    console.warn('🎨 增强音频可视化器初始化函数未找到');
+                }
             }
         }
     }
@@ -1090,6 +1249,22 @@ class VoiceWebSocketManager {
         if (container) {
             container.style.display = 'none';
             console.log('🎨 音频可视化区域已隐藏');
+            
+            // 停止增强音频可视化器动画
+            if (window.enhancedAudioVisualizer) {
+                window.enhancedAudioVisualizer.updateState('idle');
+                window.enhancedAudioVisualizer.stopAnimation();
+            }
+        }
+    }
+    
+    /**
+     * 更新音频可视化器状态
+     */
+    updateAudioVisualizerState(state, progress = 0) {
+        if (window.enhancedAudioVisualizer) {
+            window.enhancedAudioVisualizer.updateState(state, progress);
+            console.log(`🎨 音频可视化状态更新: ${state} (${progress}%)`);
         }
     }
     
@@ -1246,6 +1421,8 @@ class VoiceWebSocketManager {
             console.log('语音通话已启动:', data);
             // 显示音频可视化区域
             this.showAudioVisualizer();
+            // 更新音频可视化器状态
+            this.updateAudioVisualizerState('listening');
             // 启动音频流处理
             this.startAudioStreaming();
             // 更新状态指示器
@@ -1257,6 +1434,9 @@ class VoiceWebSocketManager {
             
             // 完全清理语音通话相关状态
             this.cleanupVoiceCallState();
+            
+            // 更新音频可视化器状态
+            this.updateAudioVisualizerState('idle');
             
             // 隐藏音频可视化区域
             this.hideAudioVisualizer();
@@ -1351,6 +1531,8 @@ class VoiceWebSocketManager {
         this.registerMessageHandler('processing_start', (data) => {
             console.log('🔄 开始处理:', data);
             this.updateStatusIndicator('AI思考中...', 'orange');
+            // 更新音频可视化器状态
+            this.updateAudioVisualizerState('processing');
         });
 
         // 注册中断通知消息处理器

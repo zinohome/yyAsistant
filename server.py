@@ -35,18 +35,27 @@ server = app.server
 # 添加静态文件路由，提供dash_table字体文件
 @app.server.route('/_dash-component-suites/dash/dash_table/<path:filename>')
 def serve_dash_table_assets(filename):
-    """提供dash_table字体文件，避免404错误"""
-    from flask import send_from_directory, abort
+    """提供dash_table静态文件，避免404错误"""
+    from flask import send_from_directory, abort, Response
     import os
     
     # 静态文件目录
     static_dir = os.path.join(os.path.dirname(__file__), 'static', '_dash-component-suites', 'dash', 'dash_table')
     
+    # 如果请求的是字体文件，直接返回空响应（避免404错误）
+    if filename.endswith(('.woff', '.woff2')):
+        return Response("", status=200, mimetype='font/woff2' if filename.endswith('.woff2') else 'font/woff')
+    
+    # 如果请求的是bundle.js但版本不匹配，返回现有的bundle.js
+    if filename.startswith('bundle.') and filename.endswith('.js'):
+        bundle_file = os.path.join(static_dir, 'bundle.js')
+        if os.path.exists(bundle_file):
+            return send_from_directory(static_dir, 'bundle.js')
+    
     try:
         return send_from_directory(static_dir, filename)
     except FileNotFoundError:
         # 如果文件不存在，返回空响应避免404错误
-        from flask import Response
         return Response("", status=200, mimetype='application/octet-stream')
 
 # 添加SSE相关导入
@@ -171,6 +180,22 @@ def check_browser():
                     )
                 )
 
+
+# 添加测试页面路由
+@app.server.route('/test_audio_visualizer.html')
+def test_audio_visualizer():
+    """提供音频可视化器测试页面"""
+    from flask import send_from_directory
+    import os
+    
+    # 获取项目根目录
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    test_file = os.path.join(project_root, 'test_audio_visualizer.html')
+    
+    if os.path.exists(test_file):
+        return send_from_directory(project_root, 'test_audio_visualizer.html')
+    else:
+        return "测试页面不存在", 404
 
 # 添加流式响应端点
 @app.server.post('/stream')

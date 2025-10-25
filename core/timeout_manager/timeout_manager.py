@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional, Callable
 from enum import Enum
 import time
 import logging
-from config.config import get_config
+# from config.config import get_config  # 暂时禁用，配置整理放到后面专题
 
 logger = logging.getLogger(__name__)
 
@@ -31,19 +31,19 @@ class TimeoutManager:
         """初始化超时管理器"""
         self.timeout_config = {
             TimeoutType.SSE: {
-                'base': get_config('timeouts.sse_base', 30),
-                'per_char': get_config('timeouts.sse_per_char', 0.1),
-                'max': get_config('timeouts.sse_max', 300)
+                'base': 30,  # 硬编码默认值，配置整理放到后面专题
+                'per_char': 0.1,
+                'max': 300
             },
             TimeoutType.TTS: {
-                'base': get_config('timeouts.tts_base', 60),
-                'per_char': get_config('timeouts.tts_per_char', 0.2),
-                'max': get_config('timeouts.tts_max', 600)
+                'base': 60,
+                'per_char': 0.2,
+                'max': 600
             },
             TimeoutType.STT: {
-                'base': get_config('timeouts.stt_base', 30),
-                'per_char': get_config('timeouts.stt_per_char', 0.05),
-                'max': get_config('timeouts.stt_max', 180)
+                'base': 30,
+                'per_char': 0.05,
+                'max': 180
             }
         }
         
