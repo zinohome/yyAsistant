@@ -32,7 +32,9 @@ class VoiceWebSocketManager {
         this.messageHandlers.set('stop_playback', () => {});
         
         // 使用配置类获取WebSocket URL，并附带持久化client_id
-        this.wsUrlBase = window.appConfig?.getWebSocketUrl() || 'ws://yychat:9800/ws/chat';
+        this.wsUrlBase = window.appConfig?.getWebSocketUrl() || 'ws://192.210.183.125:9800/ws/chat';
+        // 强制使用WS协议，避免HTTPS环境下自动升级为WSS
+        this.wsUrlBase = this.ensureWsProtocol(this.wsUrlBase);
         this.persistentClientId = this.ensurePersistentClientId();
         this.wsUrl = this.appendClientId(this.wsUrlBase, this.persistentClientId);
         
@@ -195,6 +197,29 @@ class VoiceWebSocketManager {
         }
     }
     
+    /**
+     * 确保WebSocket URL使用WS协议（避免HTTPS环境下自动升级为WSS）
+     */
+    ensureWsProtocol(url) {
+        try {
+            // 如果URL已经是ws://开头，直接返回
+            if (url.startsWith('ws://')) {
+                return url;
+            }
+            // 如果URL是wss://开头，替换为ws://
+            if (url.startsWith('wss://')) {
+                return url.replace('wss://', 'ws://');
+            }
+            // 如果URL没有协议，添加ws://
+            if (!url.includes('://')) {
+                return `ws://${url}`;
+            }
+            return url;
+        } catch (_) {
+            return url;
+        }
+    }
+
     /**
      * 追加client_id到WS URL
      */

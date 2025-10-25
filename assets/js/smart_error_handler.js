@@ -209,6 +209,30 @@ class SmartErrorHandler {
     }
     
     /**
+     * 记录错误到历史记录
+     */
+    recordError(analysis) {
+        try {
+            // 添加到错误历史
+            this.errorHistory.push({
+                timestamp: new Date().toISOString(),
+                analysis: analysis,
+                userAgent: navigator.userAgent,
+                url: window.location.href
+            });
+            
+            // 限制历史记录数量（保留最近100条）
+            if (this.errorHistory.length > 100) {
+                this.errorHistory = this.errorHistory.slice(-100);
+            }
+            
+            window.controlledLog?.log('🔧 错误已记录到历史:', analysis.type);
+        } catch (error) {
+            console.error('记录错误时发生异常:', error);
+        }
+    }
+
+    /**
      * 显示智能错误提示
      */
     showSmartError(analysis) {
