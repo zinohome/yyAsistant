@@ -496,8 +496,6 @@ app.layout = lambda: fuc.FefferyTopProgress(
         html.Script(src="/assets/js/wechat_compatibility.js"),
         # 微信浏览器调试工具
         html.Script(src="/assets/js/wechat_debug.js"),
-        # 移动端视口高度处理
-        html.Script(src="/assets/js/mobile_viewport.js"),
         # 新的状态管理器
         html.Script(src="/assets/js/state_manager.js"),
         # 状态管理器兼容性适配器

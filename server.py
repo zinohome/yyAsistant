@@ -25,8 +25,7 @@ app = DashProxy(
     update_title=None,
     external_stylesheets=[
         '/assets/css/responsive_chat.css',
-        '/assets/css/chat.css',
-        '/assets/css/mobile_viewport.css'
+        '/assets/css/chat.css'
     ],
     # 添加静态文件配置，避免dash_table字体文件404错误
     serve_locally=True
