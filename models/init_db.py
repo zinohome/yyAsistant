@@ -26,9 +26,15 @@ if __name__ == "__main__":
         user_role=AuthConfig.admin_role,
     )
     Users.add_user(
-        user_id="zhangjun",
+        user_id="ZhangJun",
         user_name="ZhangJun",
         password_hash=generate_password_hash("passw0rd"),
+        user_role=AuthConfig.normal_role,
+    )
+    Users.add_user(
+        user_id="User",
+        user_name="User",
+        password_hash=generate_password_hash("User"),
         user_role=AuthConfig.normal_role,
     )
     print(
