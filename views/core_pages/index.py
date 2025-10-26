@@ -1,4 +1,4 @@
-from dash import html
+from dash import html, dcc
 import feffery_antd_components as fac
 from feffery_dash_utils.style_utils import style
 
@@ -8,20 +8,27 @@ def render():
 
     return fac.AntdSpace(
         [
-            fac.AntdBreadcrumb(items=[{"title": "主要页面"}, {"title": "首页"}]),
+            fac.AntdBreadcrumb(items=[{"title": "首页"}, {"title": "快速导航"}]),
             fac.AntdAlert(
                 type="info",
                 showIcon=True,
-                message="欢迎来到首页！",
-                description=fac.AntdText(
-                    [
-                        "这里以首页为例，演示核心页面下，各子页面构建方式的简单示例😉~",
-                        html.Br(),
-                        "本页面模块路径：",
-                        fac.AntdText("views/core_pages/index.py", strong=True),
-                    ]
-                ),
-            ),
+                message="快速导航",
+                description=fac.AntdSpace(
+                        [
+                            fac.AntdText("点击下方按钮跳转到聊天页面："),
+                            fac.AntdButton(
+                                "前往聊天",
+                                type="primary",
+                                icon=fac.AntdIcon(icon="antd-message"),
+                                href="/core/chat",
+                                target="_self",
+                                style={"marginTop": "8px"}
+                            )
+                        ],
+                        direction="vertical",
+                        style=style(width="100%")
+                    ),
+            ), 
         ],
         direction="vertical",
         style=style(width="100%"),
