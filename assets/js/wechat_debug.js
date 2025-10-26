@@ -223,8 +223,10 @@ class WeChatDebugger {
         panel.style.cssText = `
             position: fixed;
             top: 10px;
+            left: 10px;
             right: 10px;
-            width: 400px;
+            width: calc(100vw - 20px);
+            max-width: 400px;
             max-height: 80vh;
             background: white;
             border: 2px solid #ccc;
@@ -235,12 +237,13 @@ class WeChatDebugger {
             font-family: monospace;
             font-size: 12px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin: 0 auto;
         `;
 
         panel.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; color: #333;">微信浏览器调试面板</h3>
-                <button onclick="this.parentElement.parentElement.remove()" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">关闭</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 5px;">
+                <h3 style="margin: 0; color: #333; font-size: 14px; flex: 1; min-width: 200px;">微信浏览器调试面板</h3>
+                <button onclick="this.parentElement.parentElement.remove()" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; flex-shrink: 0;">关闭</button>
             </div>
             
             <div style="margin-bottom: 15px;">
@@ -258,9 +261,9 @@ class WeChatDebugger {
 
             <div style="margin-bottom: 15px;">
                 <h4 style="margin: 0 0 5px 0; color: #666;">功能支持</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 5px;">
                     ${Object.entries(report.debugInfo.features).map(([key, value]) => `
-                        <div style="padding: 4px; background: ${value ? '#e8f5e8' : '#ffebee'}; border-radius: 3px;">
+                        <div style="padding: 4px; background: ${value ? '#e8f5e8' : '#ffebee'}; border-radius: 3px; font-size: 11px; word-break: break-word;">
                             ${key}: ${value ? '✅' : '❌'}
                         </div>
                     `).join('')}
@@ -270,15 +273,15 @@ class WeChatDebugger {
             <div style="margin-bottom: 15px;">
                 <h4 style="margin: 0 0 5px 0; color: #666;">建议</h4>
                 ${report.recommendations.map(rec => `
-                    <div style="margin: 3px 0; padding: 5px; background: #e3f2fd; border-radius: 3px;">
+                    <div style="margin: 3px 0; padding: 5px; background: #e3f2fd; border-radius: 3px; word-break: break-word; line-height: 1.4;">
                         💡 ${rec}
                     </div>
                 `).join('')}
             </div>
 
-            <div>
-                <button onclick="navigator.clipboard.writeText(JSON.stringify(window.wechatDebugger.generateReport(), null, 2))" style="background: #2196f3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; margin-right: 10px;">复制调试信息</button>
-                <button onclick="console.log(window.wechatDebugger.generateReport())" style="background: #4caf50; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">输出到控制台</button>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+                <button onclick="navigator.clipboard.writeText(JSON.stringify(window.wechatDebugger.generateReport(), null, 2))" style="background: #2196f3; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; flex: 1; min-width: 120px; font-size: 11px;">复制调试信息</button>
+                <button onclick="console.log(window.wechatDebugger.generateReport())" style="background: #4caf50; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; flex: 1; min-width: 120px; font-size: 11px;">输出到控制台</button>
             </div>
         `;
 
@@ -318,7 +321,7 @@ class WeChatDebugger {
 // 全局调试器实例
 window.wechatDebugger = new WeChatDebugger();
 
-// 页面加载完成后初始化
+// 页面加载完成后初始化（已禁用）
 document.addEventListener('DOMContentLoaded', function() {
-    window.wechatDebugger.init();
+    // window.wechatDebugger.init(); // 已禁用微信调试功能
 });

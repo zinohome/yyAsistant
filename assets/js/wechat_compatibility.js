@@ -226,9 +226,9 @@ class WeChatCompatibility {
 // 全局兼容性管理器
 window.wechatCompatibility = new WeChatCompatibility();
 
-// 页面加载完成后初始化
+// 页面加载完成后初始化（已禁用）
 document.addEventListener('DOMContentLoaded', function() {
-    window.wechatCompatibility.init();
+    // window.wechatCompatibility.init(); // 已禁用微信兼容性提示
 });
 
 // 导出兼容性检查函数
