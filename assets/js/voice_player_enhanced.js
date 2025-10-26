@@ -1622,7 +1622,121 @@ class VoicePlayerEnhanced {
             // 不在这里直接调用returnToIdle，让maybeFinalize统一处理
         }
         
+        // 🔧 微信浏览器兼容性修复：添加备用回idle机制
+        this.setupWeChatFallback(messageId);
+        
         window.controlledLog?.log('所有TTS数据已发送，等待最后一段播放结束再回idle');
+    }
+    
+    /**
+     * 微信浏览器兼容性修复：设置备用回idle机制
+     */
+    setupWeChatFallback(messageId) {
+        // 检测是否为微信浏览器
+        const isWeChat = navigator.userAgent.toLowerCase().includes('micromessenger');
+        if (!isWeChat) return;
+        
+        window.controlledLog?.log('🔧 微信浏览器检测到，设置备用回idle机制');
+        
+        // 设置多个备用定时器，确保在微信浏览器中能正常回idle
+        const fallbackTimers = [];
+        
+        // 备用定时器1：5秒后检查是否应该回idle（给足够时间播放）
+        fallbackTimers.push(setTimeout(() => {
+            window.controlledLog?.log('🔧 微信浏览器备用定时器1触发，检查回idle条件');
+            this.checkWeChatIdleCondition(messageId);
+        }, 5000));
+        
+        // 备用定时器2：8秒后检查是否应该回idle
+        fallbackTimers.push(setTimeout(() => {
+            window.controlledLog?.log('🔧 微信浏览器备用定时器2触发，检查回idle条件');
+            this.checkWeChatIdleCondition(messageId);
+        }, 8000));
+        
+        // 备用定时器3：12秒后强制回idle（最后的保险）
+        fallbackTimers.push(setTimeout(() => {
+            window.controlledLog?.log('🔧 微信浏览器备用定时器3触发，强制回idle');
+            this.forceReturnToIdle();
+        }, 12000));
+        
+        // 存储定时器，用于清理
+        if (!this.wechatFallbackTimers) {
+            this.wechatFallbackTimers = new Map();
+        }
+        this.wechatFallbackTimers.set(messageId, fallbackTimers);
+    }
+    
+    /**
+     * 检查微信浏览器回idle条件
+     */
+    checkWeChatIdleCondition(messageId) {
+        const state = this.streamStates.get(messageId);
+        if (!state) {
+            window.controlledLog?.log('🔧 微信浏览器检查：消息状态不存在，跳过');
+            return;
+        }
+        
+        const now = Date.now();
+        const timeSinceLastChunk = now - (state.lastChunkTs || 0);
+        const wechatSilenceElapsed = timeSinceLastChunk > 200;
+        
+        const synthComplete = state.synthComplete === true;
+        const noPlayingSources = (state.playingSources || 0) === 0;
+        const noPendingChunks = (state.chunks || []).length === 0;
+        const hasQueuedAudio = this.audioQueue && this.audioQueue.length > 0;
+        const hasSimpleQueuedAudio = this.playQueue && this.playQueue.length > 0;
+        
+        window.controlledLog?.log(`🔧 微信浏览器回idle条件检查: synthComplete=${synthComplete}, noPlayingSources=${noPlayingSources}, noPendingChunks=${noPendingChunks}, wechatSilence=${wechatSilenceElapsed}, hasQueuedAudio=${hasQueuedAudio}, hasSimpleQueuedAudio=${hasSimpleQueuedAudio}`);
+        
+        // 如果满足回idle条件，则回idle
+        if (synthComplete && noPlayingSources && noPendingChunks && wechatSilenceElapsed && !hasQueuedAudio && !hasSimpleQueuedAudio) {
+            window.controlledLog?.log('🔧 微信浏览器备用机制：满足回idle条件，执行回idle');
+            this.streamStates.delete(messageId);
+            setTimeout(() => {
+                this.returnToIdle();
+            }, 100);
+        } else {
+            window.controlledLog?.log('🔧 微信浏览器备用机制：不满足回idle条件，继续等待');
+        }
+    }
+    
+    /**
+     * 强制回idle状态（微信浏览器备用机制）
+     */
+    forceReturnToIdle() {
+        if (this.isReturningToIdle) {
+            window.controlledLog?.log('🔧 正在回idle状态，跳过强制回idle');
+            return;
+        }
+        
+        window.controlledLog?.log('🔧 强制回idle状态（微信浏览器备用机制）');
+        
+        // 清理所有备用定时器
+        if (this.wechatFallbackTimers) {
+            this.wechatFallbackTimers.forEach(timers => {
+                timers.forEach(timer => clearTimeout(timer));
+            });
+            this.wechatFallbackTimers.clear();
+        }
+        
+        // 强制重置状态
+        this.isTtsPlaying = false;
+        this.isPlaying = false;
+        this.shouldStop = false;
+        
+        // 清理所有流状态
+        this.streamStates.clear();
+        
+        // 清理播放队列
+        if (this.audioQueue) {
+            this.audioQueue.length = 0;
+        }
+        if (this.playQueue) {
+            this.playQueue.length = 0;
+        }
+        
+        // 调用正常的回idle流程
+        this.returnToIdle();
     }
     
     /**
@@ -1636,13 +1750,16 @@ class VoicePlayerEnhanced {
         const silenceWindow = 400; // 400ms静默窗口
         const timeSinceLastChunk = now - (state.lastChunkTs || 0);
         
+        // 检测是否为微信浏览器
+        const isWeChat = navigator.userAgent.toLowerCase().includes('micromessenger');
+        
         // 三个条件同时满足才回idle
         const synthComplete = state.synthComplete === true;
         const noPlayingSources = (state.playingSources || 0) === 0;
         const noPendingChunks = (state.chunks || []).length === 0;
         const silenceElapsed = timeSinceLastChunk > silenceWindow;
         
-        window.controlledLog?.log(`maybeFinalize(${messageId}): synthComplete=${synthComplete}, playingSources=${state.playingSources}, chunks=${state.chunks.length}, silence=${timeSinceLastChunk}ms`);
+        window.controlledLog?.log(`maybeFinalize(${messageId}): synthComplete=${synthComplete}, playingSources=${state.playingSources}, chunks=${state.chunks.length}, silence=${timeSinceLastChunk}ms, isWeChat=${isWeChat}`);
         
         // 🔍 详细打印maybeFinalize的决策过程
         window.controlledLog?.log('🔍 [maybeFinalize调试] 详细状态检查:', {
@@ -1654,23 +1771,48 @@ class VoicePlayerEnhanced {
             audioQueueLength: this.audioQueue?.length,
             playQueueLength: this.playQueue?.length,
             isPlaying: this.isPlaying,
-            shouldStop: this.shouldStop
+            shouldStop: this.shouldStop,
+            isWeChat: isWeChat
         });
         
         // 🔧 关键修复：检查是否还有音频在播放队列中
         const hasQueuedAudio = this.audioQueue && this.audioQueue.length > 0;
         const hasSimpleQueuedAudio = this.playQueue && this.playQueue.length > 0;
         
-        if (synthComplete && noPlayingSources && noPendingChunks && silenceElapsed && !hasQueuedAudio && !hasSimpleQueuedAudio) {
+        // 🔧 关键修复：必须等待所有音频播放完毕才能回idle
+        // 合成完成只是表示音频数据生成完毕，但播放可能还在进行中
+        let shouldReturnToIdle = false;
+        
+        if (isWeChat) {
+            // 微信浏览器：降低静默窗口要求，但仍需确保播放完毕
+            const wechatSilenceElapsed = timeSinceLastChunk > 200; // 降低到200ms
+            shouldReturnToIdle = synthComplete && noPlayingSources && noPendingChunks && wechatSilenceElapsed && !hasQueuedAudio && !hasSimpleQueuedAudio;
+            window.controlledLog?.log(`🔧 微信浏览器回idle条件检查: synthComplete=${synthComplete}, noPlayingSources=${noPlayingSources}, noPendingChunks=${noPendingChunks}, wechatSilence=${wechatSilenceElapsed}, hasQueuedAudio=${hasQueuedAudio}, hasSimpleQueuedAudio=${hasSimpleQueuedAudio}`);
+        } else {
+            // 正常浏览器：使用原有条件
+            shouldReturnToIdle = synthComplete && noPlayingSources && noPendingChunks && silenceElapsed && !hasQueuedAudio && !hasSimpleQueuedAudio;
+        }
+        
+        if (shouldReturnToIdle) {
             // 满足条件，回idle
-            window.controlledLog?.log(`消息${messageId}播放完成，回idle状态`);
+            window.controlledLog?.log(`消息${messageId}播放完成，回idle状态 (微信浏览器: ${isWeChat})`);
             window.controlledLog?.log('🔍 [maybeFinalize调试] 即将回idle，最终检查:', {
                 audioQueueLength: this.audioQueue?.length,
                 playQueueLength: this.playQueue?.length,
                 isPlaying: this.isPlaying,
                 hasQueuedAudio: hasQueuedAudio,
-                hasSimpleQueuedAudio: hasSimpleQueuedAudio
+                hasSimpleQueuedAudio: hasSimpleQueuedAudio,
+                isWeChat: isWeChat
             });
+            
+            // 清理备用定时器
+            if (this.wechatFallbackTimers && this.wechatFallbackTimers.has(messageId)) {
+                const timers = this.wechatFallbackTimers.get(messageId);
+                timers.forEach(timer => clearTimeout(timer));
+                this.wechatFallbackTimers.delete(messageId);
+                window.controlledLog?.log('🔧 清理微信浏览器备用定时器');
+            }
+            
             // 立即清理该消息状态，避免内存泄漏
             this.streamStates.delete(messageId);
             // 延迟一点时间确保所有音频都播放完成
