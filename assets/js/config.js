@@ -19,7 +19,7 @@ class Config {
                 name: 'yyAsistant',
                 version: '2.0.0',
                 debug: window.location.hostname === 'localhost',
-                show_console_log: false  // 控制台日志显示开关
+                show_console_log: true  // 控制台日志显示开关
             },
             
             // WebSocket配置

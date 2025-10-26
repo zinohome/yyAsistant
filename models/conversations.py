@@ -6,6 +6,7 @@ from typing import Union, Dict, List
 
 from . import db, BaseModel
 from .exceptions import InvalidConversationError, ExistingConversationError
+from utils.log import log
 
 
 class Conversations(BaseModel):
@@ -109,9 +110,20 @@ class Conversations(BaseModel):
     def delete_conversation_by_conv_id(cls, conv_id: str):
         """根据conv_id删除会话"""
         
-        with db.connection_context():
-            with db.atomic():
-                cls.delete().where(cls.conv_id == conv_id).execute()
+        try:
+            with db.connection_context():
+                with db.atomic():
+                    # 先检查会话是否存在
+                    existing = cls.select().where(cls.conv_id == conv_id).first()
+                    if not existing:
+                        return False
+                    
+                    # 删除会话
+                    deleted_count = cls.delete().where(cls.conv_id == conv_id).execute()
+                    return deleted_count > 0
+        except Exception as e:
+            log.error(f"删除会话失败 (conv_id: {conv_id}): {e}")
+            return False
 
     @classmethod
     def delete_user_conversations(cls, user_id: str):

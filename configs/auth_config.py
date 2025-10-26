@@ -27,6 +27,15 @@ class AuthConfig:
             "keys": [
                 # 常规用户禁止访问系统管理相关页面
                 "/core/login-logs",
+                "/core/users",
+                "/core/other-page1",
+                "/core/page1",
+                "/core/url-params-page",
+                "/core/independent-page",
+                "/core/independent-wildcard-page",
+                "/core/sub-menu-page1",
+                "/core/sub-menu-page2",
+                "/core/sub-menu-page3",
             ],
         },
         # "normal": {"type": "include", "keys": ["/core/page2", "/core/page5"]},

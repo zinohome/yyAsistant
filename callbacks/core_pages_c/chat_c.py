@@ -145,7 +145,10 @@ def register_chat_callbacks(app):
                         
                         # 返回新的时间戳以触发会话列表刷新，同时设置当前会话ID和清空消息列表
                         # log.debug(f"=== 新建会话完成，设置当前会话ID: {conv_id} ===")
-                        return [{'timestamp': time.time()}, dash.no_update, False, '', conv_id, [], dash.no_update]
+                        # 同时更新移动端会话列表
+                        from flask_login import current_user
+                        mobile_session_list = render_mobile_session_list(user_id=current_user.id, selected_session_id=conv_id)
+                        return [{'timestamp': time.time()}, dash.no_update, False, '', conv_id, [], mobile_session_list]
                     else:
                         # 用户未登录或无法获取用户ID
                         set_props(
@@ -195,7 +198,10 @@ def register_chat_callbacks(app):
                         )
                         
                         # 触发会话列表刷新
-                        return [{'timestamp': time.time()}, dash.no_update, False, '', conv_id, [], dash.no_update]
+                        # 同时更新移动端会话列表
+                        from flask_login import current_user
+                        mobile_session_list = render_mobile_session_list(user_id=current_user.id, selected_session_id=conv_id)
+                        return [{'timestamp': time.time()}, dash.no_update, False, '', conv_id, [], mobile_session_list]
                     else:
                         # 用户未登录
                         set_props(
@@ -239,7 +245,10 @@ def register_chat_callbacks(app):
                 )
                 
                 # 触发会话列表刷新
-                return [{'timestamp': time.time()}, dash.no_update, False, '', clicked_session_id, [], dash.no_update]
+                # 同时更新移动端会话列表
+                from flask_login import current_user
+                mobile_session_list = render_mobile_session_list(user_id=current_user.id, selected_session_id=clicked_session_id)
+                return [{'timestamp': time.time()}, dash.no_update, False, '', clicked_session_id, [], mobile_session_list]
             except Exception as e:
                 log.error(f"移动端会话切换失败: {e}")
                 set_props(
@@ -275,7 +284,10 @@ def register_chat_callbacks(app):
                     )
                     
                     # 触发会话列表刷新
-                    return [{'timestamp': time.time()}, dash.no_update, False, '', dash.no_update, [], dash.no_update]
+                    # 同时更新移动端会话列表
+                    from flask_login import current_user
+                    mobile_session_list = render_mobile_session_list(user_id=current_user.id, selected_session_id=None)
+                    return [{'timestamp': time.time()}, dash.no_update, False, '', dash.no_update, [], mobile_session_list]
                 else:
                     # 显示删除失败的消息
                     set_props(
@@ -318,24 +330,40 @@ def register_chat_callbacks(app):
                     # log.debug(f"=== 开始删除会话 ===")
                     # log.debug(f"要删除的会话ID: {conv_id}")
                     # 调用Conversations模型的delete_conversation_by_conv_id方法删除会话
-                    Conversations.delete_conversation_by_conv_id(conv_id)
-                    # log.debug(f"会话删除成功: {conv_id}")
+                    success = Conversations.delete_conversation_by_conv_id(conv_id)
                     
-                    # 显示删除成功的消息
-                    set_props(
-                        "global-message",
-                        {
-                            "children": fac.AntdMessage(
-                                type="success", 
-                                content="会话删除成功"
-                            )
-                        },
-                    )
+                    if success:
+                        # log.debug(f"会话删除成功: {conv_id}")
+                        # 显示删除成功的消息
+                        set_props(
+                            "global-message",
+                            {
+                                "children": fac.AntdMessage(
+                                    type="success", 
+                                    content="会话删除成功"
+                                )
+                            },
+                        )
+                    else:
+                        # 显示删除失败的消息
+                        set_props(
+                            "global-message",
+                            {
+                                "children": fac.AntdMessage(
+                                    type="error", 
+                                    content="删除会话失败"
+                                )
+                            },
+                        )
+                        return [dash.no_update, dash.no_update, False, '', dash.no_update, dash.no_update, dash.no_update]
                     
                     # 返回新的时间戳以触发会话列表刷新，不保持当前会话ID（让刷新逻辑智能选择）
                     refresh_timestamp = {'timestamp': time.time()}
                     # log.debug(f"删除会话后触发刷新，时间戳: {refresh_timestamp}")
-                    return [refresh_timestamp, dash.no_update, False, '', None, [], dash.no_update]
+                    # 同时更新移动端会话列表
+                    from flask_login import current_user
+                    mobile_session_list = render_mobile_session_list(user_id=current_user.id, selected_session_id=None)
+                    return [refresh_timestamp, dash.no_update, False, '', None, [], mobile_session_list]
                 except Exception as e:
                     # 显示删除失败的消息
                     set_props(
@@ -384,7 +412,10 @@ def register_chat_callbacks(app):
                     )
                     
                     # 返回新的时间戳以触发会话列表刷新，保持当前会话ID，并清空输入框和关闭对话框
-                    return [{'timestamp': time.time()}, None, False, '', dash.no_update, dash.no_update, dash.no_update]
+                    # 同时更新移动端会话列表
+                    from flask_login import current_user
+                    mobile_session_list = render_mobile_session_list(user_id=current_user.id, selected_session_id=current_rename_conv_id)
+                    return [{'timestamp': time.time()}, None, False, '', dash.no_update, dash.no_update, mobile_session_list]
                 except Exception as e:
                     # 显示改名失败的消息
                     set_props(
