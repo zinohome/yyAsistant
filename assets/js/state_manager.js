@@ -355,8 +355,10 @@ window.isState = function(state) {
     return window.stateManager.isState(state);
 };
 
-// 页面加载完成后初始化
+// 页面加载完成后初始化（仅在聊天页面）
 document.addEventListener('DOMContentLoaded', function() {
-    window.controlledLog?.log('JavaScript状态管理器已初始化');
-    window.controlledLog?.log('当前状态:', window.stateManager.getState());
+    if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+        window.controlledLog?.log('JavaScript状态管理器已初始化');
+        window.controlledLog?.log('当前状态:', window.stateManager.getState());
+    }
 });

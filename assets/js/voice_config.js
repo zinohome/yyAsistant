@@ -345,4 +345,7 @@ window.voiceConfig.getPlaybackRate = function() {
     return this.get('speed');
 };
 
-window.controlledLog?.log('语音配置系统已初始化');
+// 仅在聊天页面输出日志
+if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+    window.controlledLog?.log('语音配置系统已初始化');
+}

@@ -344,7 +344,10 @@ function initAdaptiveUI() {
     }
     
     window.adaptiveUI = new AdaptiveUI();
-    window.controlledLog?.log('🎨 自适应UI系统已初始化');
+    // 仅在聊天页面输出日志
+    if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+        window.controlledLog?.log('🎨 自适应UI系统已初始化');
+    }
 }
 
 // 页面加载完成后初始化

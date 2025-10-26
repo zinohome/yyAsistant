@@ -468,9 +468,11 @@ function initializeChecks() {
     return true;
 }
 
-// 执行初始化检查
-if (initializeChecks()) {
-    window.controlledLog?.log('实时语音功能初始化成功');
-} else {
-    console.error('实时语音功能初始化失败');
+// 执行初始化检查（仅在聊天页面）
+if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+    if (initializeChecks()) {
+        window.controlledLog?.log('实时语音功能初始化成功');
+    } else {
+        console.error('实时语音功能初始化失败');
+    }
 }

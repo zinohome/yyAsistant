@@ -488,7 +488,7 @@ app.layout = lambda: fuc.FefferyTopProgress(
         html.Div(
             id="root-container",
         ),
-        # 统一配置文件
+        # 基础配置文件（所有页面都需要）
         html.Script(src="/assets/js/config.js"),
         # 应用配置运行时
         html.Script(src="/assets/js/app_config_runtime.js"),
@@ -496,12 +496,10 @@ app.layout = lambda: fuc.FefferyTopProgress(
         html.Script(src="/assets/js/wechat_compatibility.js"),
         # 微信浏览器调试工具
         html.Script(src="/assets/js/wechat_debug.js"),
-        # 新的状态管理器
-        html.Script(src="/assets/js/state_manager.js"),
-        # 状态管理器兼容性适配器
-        html.Script(src="/assets/js/state_manager_adapter.js"),
-        # 语音状态管理器脚本
-        html.Script(src="/assets/js/voice_state_manager.js"),
+        # 移动端视口处理
+        html.Script(src="/assets/js/mobile_viewport_handler.js"),
+        # 聊天页面专用JS加载器（条件加载）
+        html.Script(src="/assets/js/chat_page_loader.js"),
     ],
     id="layout-top-progress",
     minimum=0.33,

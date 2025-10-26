@@ -318,7 +318,10 @@ function initEnhancedPlaybackStatus() {
     }
     
     window.enhancedPlaybackStatus = new EnhancedPlaybackStatus();
-    window.controlledLog?.log('🔊 增强播放状态指示器已初始化');
+    // 仅在聊天页面输出日志
+    if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+        window.controlledLog?.log('🔊 增强播放状态指示器已初始化');
+    }
 }
 
 // 页面加载完成后初始化

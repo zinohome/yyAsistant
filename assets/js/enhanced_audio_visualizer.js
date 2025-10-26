@@ -274,12 +274,22 @@ function initEnhancedAudioVisualizer() {
     window.controlledLog?.log('🎨 增强音频可视化器已初始化');
 }
 
-// 页面加载完成后初始化
+// 页面加载完成后初始化（仅在聊天页面）
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initEnhancedAudioVisualizer);
+    document.addEventListener('DOMContentLoaded', () => {
+        // 检查是否在聊天页面
+        if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+            initEnhancedAudioVisualizer();
+        }
+    });
 } else {
     // DOM已经加载完成，延迟一点时间确保所有元素都已渲染
-    setTimeout(initEnhancedAudioVisualizer, 200);
+    setTimeout(() => {
+        // 检查是否在聊天页面
+        if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+            initEnhancedAudioVisualizer();
+        }
+    }, 200);
 }
 
 // 添加全局初始化函数，供外部调用

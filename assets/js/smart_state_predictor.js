@@ -273,7 +273,10 @@ function initSmartStatePredictor() {
     }
     
     window.smartStatePredictor = new SmartStatePredictor();
-    window.controlledLog?.log('🔮 智能状态预测器已初始化');
+    // 仅在聊天页面输出日志
+    if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+        window.controlledLog?.log('🔮 智能状态预测器已初始化');
+    }
     
     // 集成到状态同步管理器
     if (window.stateSyncManager) {

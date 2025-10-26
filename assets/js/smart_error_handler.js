@@ -627,9 +627,15 @@ function initSmartErrorHandler() {
     }
 }
 
-// 页面加载完成后初始化
+// 页面加载完成后初始化（仅在聊天页面）
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSmartErrorHandler);
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+            initSmartErrorHandler();
+        }
+    });
 } else {
-    initSmartErrorHandler();
+    if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+        initSmartErrorHandler();
+    }
 }

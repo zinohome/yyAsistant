@@ -19,7 +19,7 @@ class Config {
                 name: 'yyAsistant',
                 version: '2.0.0',
                 debug: window.location.hostname === 'localhost',
-                show_console_log: false  // 控制台日志显示开关
+                show_console_log: true  // 控制台日志显示开关
             },
             
             // WebSocket配置
@@ -166,7 +166,7 @@ class Config {
                 heartbeatInterval: 30000
             },
             voice: {
-                synthesisVoice: 'zh-CN-XiaoxiaoNeural',
+                synthesisVoice: 'shimmer',
                 synthesisSpeed: 1.0,
                 synthesisVolume: 1.0,
                 recognitionLanguage: 'zh-CN'
@@ -241,34 +241,59 @@ class Config {
 // 全局配置实例
 window.config = new Config();
 
-// 日志控制系统
-window.controlledLog = {
-    log: function(...args) {
-        if (window.config.get('app.show_console_log', true)) {
-            window.controlledLog?.log(...args);
+// 日志控制系统 - 智能页面检测
+window.controlledLog = (function() {
+    // 检查是否在聊天页面 - 精确匹配
+    const currentPath = window.location.pathname;
+    const isChatPage = currentPath === '/core/chat' || currentPath.startsWith('/core/chat/') || currentPath.startsWith('/core/chat?') || currentPath.startsWith('/core/chat#');
+    
+    // 基础日志函数
+    const baseLog = {
+        log: function(...args) {
+            if (isChatPage && window.config && window.config.get('app.show_console_log', true)) {
+                console.log(...args);
+            }
+        },
+        warn: function(...args) {
+            if (isChatPage && window.config && window.config.get('app.show_console_log', true)) {
+                console.warn(...args);
+            }
+        },
+        error: function(...args) {
+            // 错误日志在所有页面都显示，但聊天页面有更多信息
+            if (window.config && window.config.get('app.show_console_log', true)) {
+                if (isChatPage) {
+                    console.error(...args);
+                } else {
+                    console.error('[非聊天页面]', ...args);
+                }
+            }
+        },
+        info: function(...args) {
+            if (isChatPage && window.config && window.config.get('app.show_console_log', true)) {
+                console.info(...args);
+            }
+        },
+        debug: function(...args) {
+            if (isChatPage && window.config && window.config.get('app.show_console_log', true)) {
+                console.debug(...args);
+            }
         }
-    },
-    warn: function(...args) {
-        if (window.config.get('app.show_console_log', true)) {
-            console.warn(...args);
-        }
-    },
-    error: function(...args) {
-        if (window.config.get('app.show_console_log', true)) {
-            console.error(...args);
-        }
-    },
-    info: function(...args) {
-        if (window.config.get('app.show_console_log', true)) {
-            console.info(...args);
-        }
-    },
-    debug: function(...args) {
-        if (window.config.get('app.show_console_log', true)) {
-            console.debug(...args);
-        }
+    };
+    
+    // 非聊天页面提供静默日志
+    if (!isChatPage) {
+        return {
+            log: function() {},
+            warn: function() {},
+            error: baseLog.error, // 保留错误日志
+            info: function() {},
+            debug: function() {}
+        };
     }
-};
+    
+    return baseLog;
+})();
 
 // 设置控制台日志开关的便捷函数
 window.setConsoleLogEnabled = function(enabled) {

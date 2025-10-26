@@ -357,36 +357,11 @@ def _create_state_stores():
     voice_js_integration = html.Div(
         id='voice-js-integration',
         children=[
-            # 语音配置文件（最先加载）
-            html.Script(src='/configs/voice_config.js'),
-            # WebSocket管理器（最先加载）
-            html.Script(src='/assets/js/voice_websocket_manager.js'),
-            # UI优化组件 - 第一阶段
-            html.Script(src='/assets/js/enhanced_audio_visualizer.js'),
-            html.Script(src='/assets/js/enhanced_playback_status.js'),
-            # UI优化组件 - 第二阶段
-            html.Script(src='/assets/js/smart_error_handler.js'),
-            html.Script(src='/assets/js/state_sync_manager.js'),
-            # UI优化组件 - 第三阶段
-            html.Script(src='/assets/js/smart_state_predictor.js'),
-            html.Script(src='/assets/js/adaptive_ui.js'),
-            # 语音录制器
-            html.Script(src='/assets/js/voice_recorder_enhanced.js'),
-               # 语音播放器
-               html.Script(src='/assets/js/voice_player_enhanced.js'),
-            # 语音调试器（开发环境）
-            #html.Script(src='/test/test_voice_debug.js'),
-            # 实时语音相关脚本
-            html.Script(src='/assets/js/realtime_api_client.js'),
-            html.Script(src='/assets/js/realtime_audio_processor.js'),
-            html.Script(src='/assets/js/realtime_adapter_client.js'),
-            html.Script(src='/assets/js/realtime_voice_manager.js'),
-            html.Script(src='/assets/js/realtime_voice_callbacks.js'),
-            # 语音功能初始化脚本 - 动态从Python配置获取
+            # 聊天页面初始化脚本 - 等待聊天JS加载完成后执行
             html.Script('''
-                // 语音功能初始化
-                document.addEventListener('DOMContentLoaded', function() {{
-                    window.controlledLog?.log('语音功能已加载');
+                // 聊天页面初始化 - 等待聊天相关JS加载完成
+                function initChatPage() {{
+                    window.controlledLog?.log('聊天页面初始化开始');
                     
                     // 从Python配置动态设置全局语音配置
                     window.voiceConfig = {{
@@ -588,7 +563,18 @@ def _create_state_stores():
                             console.warn('事件数据无效:', event.detail);
                         }}
                     }});
+                }}
+                
+                // 监听聊天页面就绪事件
+                document.addEventListener('chatPageReady', function(event) {{
+                    window.controlledLog?.log('聊天相关JS加载完成，开始初始化聊天页面');
+                    initChatPage();
                 }});
+                
+                // 如果聊天JS已经加载完成，立即初始化
+                if (window.chatPageConfig && window.chatPageConfig.isChatPage) {{
+                    setTimeout(initChatPage, 100);
+                }}
             ''')
         ]
     )

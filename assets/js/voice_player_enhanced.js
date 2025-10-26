@@ -1862,10 +1862,13 @@ class VoicePlayerEnhanced {
     }
 }
 
-// 初始化语音播放器
+// 初始化语音播放器（仅在聊天页面）
 document.addEventListener('DOMContentLoaded', () => {
-    window.voicePlayer = new VoicePlayerEnhanced();
-    window.voicePlayerEnhanced = window.voicePlayer; // 保持向后兼容
+    // 检查是否在聊天页面
+    if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
+        window.voicePlayer = new VoicePlayerEnhanced();
+        window.voicePlayerEnhanced = window.voicePlayer; // 保持向后兼容
+    }
 });
 
 // 🚀 专门用于语音通话的停止方法 - 只停止语音通话相关，不影响其他场景

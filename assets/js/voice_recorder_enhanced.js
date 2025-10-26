@@ -1040,8 +1040,13 @@ class VoiceRecorderEnhanced {
     }
 }
 
-// 初始化语音录制器
+// 初始化语音录制器（仅在聊天页面）
 document.addEventListener('DOMContentLoaded', () => {
+    // 检查是否在聊天页面
+    if (!window.chatPageConfig || !window.chatPageConfig.isChatPage) {
+        return;
+    }
+    
     window.controlledLog?.log('初始化语音录制器...');
     window.voiceRecorder = new VoiceRecorderEnhanced();
     window.controlledLog?.log('语音录制器初始化完成:', window.voiceRecorder);
