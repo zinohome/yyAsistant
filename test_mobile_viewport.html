@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移动端视口测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        .test-container {
+            height: 100vh;
+            height: 100dvh;
+            height: 100svh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            color: white;
+        }
+        
+        .header {
+            height: 50px;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .footer {
+            height: 100px;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .info-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .test-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .test-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        @media screen and (max-width: 480px) and (max-height: 900px) {
+            .header {
+                height: 45px;
+            }
+            
+            .footer {
+                height: 80px;
+            }
+            
+            .content {
+                padding: 15px;
+            }
+            
+            .info-item {
+                font-size: 13px;
+            }
+        }
+        
+        @media screen and (max-width: 844px) and (orientation: landscape) {
+            .header {
+                height: 40px;
+            }
+            
+            .footer {
+                height: 70px;
+            }
+            
+            .content {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="header">
+            <span>移动端视口测试 - 390px × 844px</span>
+        </div>
+        
+        <div class="content">
+            <div class="info-panel">
+                <h3>视口信息</h3>
+                <div class="info-item">屏幕宽度: <span id="screen-width"></span>px</div>
+                <div class="info-item">屏幕高度: <span id="screen-height"></span>px</div>
+                <div class="info-item">视口宽度: <span id="viewport-width"></span>px</div>
+                <div class="info-item">视口高度: <span id="viewport-height"></span>px</div>
+                <div class="info-item">设备像素比: <span id="device-pixel-ratio"></span></div>
+                <div class="info-item">用户代理: <span id="user-agent"></span></div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>CSS环境变量支持</h3>
+                <div class="info-item">100vh: <span id="vh-support"></span></div>
+                <div class="info-item">100dvh: <span id="dvh-support"></span></div>
+                <div class="info-item">100svh: <span id="svh-support"></span></div>
+            </div>
+            
+            <div class="test-buttons">
+                <button class="test-btn" onclick="testViewport()">测试视口</button>
+                <button class="test-btn" onclick="testOrientation()">测试方向</button>
+                <button class="test-btn" onclick="testResize()">测试调整</button>
+            </div>
+            
+            <div class="info-panel">
+                <h3>测试说明</h3>
+                <p>这个页面用于测试移动端视口处理效果：</p>
+                <ul>
+                    <li>390px × 844px 超小屏幕适配</li>
+                    <li>微信浏览器兼容性</li>
+                    <li>横屏/竖屏切换</li>
+                    <li>CSS环境变量支持</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <span>页脚区域 - 输入框位置</span>
+        </div>
+    </div>
+
+    <script>
+        function updateInfo() {
+            document.getElementById('screen-width').textContent = window.screen.width;
+            document.getElementById('screen-height').textContent = window.screen.height;
+            document.getElementById('viewport-width').textContent = window.innerWidth;
+            document.getElementById('viewport-height').textContent = window.innerHeight;
+            document.getElementById('device-pixel-ratio').textContent = window.devicePixelRatio;
+            document.getElementById('user-agent').textContent = navigator.userAgent.substring(0, 50) + '...';
+            
+            // 测试CSS环境变量支持
+            const testEl = document.createElement('div');
+            testEl.style.height = '100vh';
+            document.body.appendChild(testEl);
+            const vhHeight = testEl.offsetHeight;
+            testEl.remove();
+            
+            document.getElementById('vh-support').textContent = '支持';
+            
+            // 测试dvh支持
+            if (CSS.supports('height', '100dvh')) {
+                document.getElementById('dvh-support').textContent = '支持';
+            } else {
+                document.getElementById('dvh-support').textContent = '不支持';
+            }
+            
+            // 测试svh支持
+            if (CSS.supports('height', '100svh')) {
+                document.getElementById('svh-support').textContent = '支持';
+            } else {
+                document.getElementById('svh-support').textContent = '不支持';
+            }
+        }
+        
+        function testViewport() {
+            alert(`当前视口: ${window.innerWidth} × ${window.innerHeight}`);
+        }
+        
+        function testOrientation() {
+            alert(`当前方向: ${screen.orientation ? screen.orientation.type : '未知'}`);
+        }
+        
+        function testResize() {
+            const container = document.querySelector('.test-container');
+            const newHeight = window.innerHeight;
+            container.style.height = newHeight + 'px';
+            alert(`已调整容器高度为: ${newHeight}px`);
+        }
+        
+        // 页面加载时更新信息
+        updateInfo();
+        
+        // 监听窗口大小变化
+        window.addEventListener('resize', updateInfo);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(updateInfo, 500);
+        });
+        
+        // 定期更新信息
+        setInterval(updateInfo, 1000);
+    </script>
+</body>
+</html>
