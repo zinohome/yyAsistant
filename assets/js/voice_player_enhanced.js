@@ -205,7 +205,7 @@ class VoicePlayerEnhanced {
             
             if (isVoiceCallScenario) {
                 window.controlledLog?.log('🧹 语音通话场景：清理资源');
-                this.cleanup();
+            this.cleanup();
             } else {
                 window.controlledLog?.log('🧹 非语音通话场景：跳过资源清理，保留其他场景状态');
             }
@@ -405,7 +405,7 @@ class VoicePlayerEnhanced {
                 this.websocket = window.voiceWebSocketManager.ws;
                 
                 // 检查连接状态
-                if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+            if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
                     window.controlledLog?.log('🔌 WebSocket未连接，等待连接建立...');
                     // 等待连接建立，而不是重新连接
                     const maxWait = 5000; // 最多等待5秒
@@ -442,9 +442,9 @@ class VoicePlayerEnhanced {
             window.controlledLog?.log('🎵 发送TTS请求:', { type: message.type, content: text.substring(0, 50) + '...', enable_voice: true });
             
             try {
-                this.websocket.send(JSON.stringify(message));
+            this.websocket.send(JSON.stringify(message));
                 window.controlledLog?.log('🎵 TTS请求发送成功');
-                resolve();
+            resolve();
             } catch (sendError) {
                 console.error('🎵 TTS请求发送失败:', sendError);
                 reject(sendError);
@@ -1538,22 +1538,22 @@ class VoicePlayerEnhanced {
                 // 只在第一个片段播放时显示状态，避免闪烁
                 if (!this.isTtsPlaying) {
                     this.isTtsPlaying = true;
-                    
-                    // 通知统一按钮状态管理器TTS播放开始 (通过dcc.Store) - 只在/core/chat页面
-                    const currentPath = window.location.pathname;
-                    const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
-                    
-                    if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
-                        try {
-                            window.dash_clientside.set_props('button-event-trigger', {
-                                data: {type: 'tts_start', timestamp: Date.now()}
-                            });
+                
+                // 通知统一按钮状态管理器TTS播放开始 (通过dcc.Store) - 只在/core/chat页面
+                const currentPath = window.location.pathname;
+                const isChatPage = currentPath === '/core/chat' || currentPath.endsWith('/core/chat');
+                
+                if (isChatPage && window.dash_clientside && window.dash_clientside.set_props) {
+                    try {
+                        window.dash_clientside.set_props('button-event-trigger', {
+                            data: {type: 'tts_start', timestamp: Date.now()}
+                        });
                             window.controlledLog?.log('TTS播放开始，触发状态更新');
-                        } catch (setPropsError) {
-                            console.error('set_props调用失败:', setPropsError);
-                        }
+                    } catch (setPropsError) {
+                        console.error('set_props调用失败:', setPropsError);
                     }
-                    
+                }
+                
                     // 🔧 关键修复：语音通话时不显示播放指示器，其他场景正常显示
                     const isVoiceCall = messageId && messageId.includes('voice_call');
                     
@@ -2008,8 +2008,8 @@ class VoicePlayerEnhanced {
 document.addEventListener('DOMContentLoaded', () => {
     // 检查是否在聊天页面
     if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
-        window.voicePlayer = new VoicePlayerEnhanced();
-        window.voicePlayerEnhanced = window.voicePlayer; // 保持向后兼容
+    window.voicePlayer = new VoicePlayerEnhanced();
+    window.voicePlayerEnhanced = window.voicePlayer; // 保持向后兼容
     }
 });
 

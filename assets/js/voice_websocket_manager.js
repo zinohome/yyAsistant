@@ -2214,5 +2214,5 @@ class VoiceWebSocketManager {
 
 // 创建全局实例（仅在聊天页面）
 if (window.chatPageConfig && window.chatPageConfig.isChatPage) {
-    window.voiceWebSocketManager = new VoiceWebSocketManager();
+window.voiceWebSocketManager = new VoiceWebSocketManager();
 }

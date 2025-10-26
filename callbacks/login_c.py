@@ -36,10 +36,11 @@ def handle_login(nClicks, nSubmit, values, remember_me):
     user_agent = parse(str(request.user_agent))
     # 系统信息
     os_info = "{} {}".format(user_agent.os.family, user_agent.os.version_string)
-    # 浏览器信息
-    browser_info = "{} {}".format(
-        user_agent.browser.family, user_agent.browser.version[0]
-    )
+    # 浏览器信息 - 安全处理版本信息
+    browser_version = "Unknown"
+    if user_agent.browser.version and len(user_agent.browser.version) > 0:
+        browser_version = user_agent.browser.version[0]
+    browser_info = "{} {}".format(user_agent.browser.family, browser_version)
 
     # 若表单必要信息不完整
     if not (values.get("login-user-name") and values.get("login-password")):

@@ -248,7 +248,7 @@
     }
   },
   "settings": {
-    "max_topics_display": 4,
+    "max_topics_display": 3,
     "enable_categories": true,
     "enable_descriptions": false,
     "cache_duration": 300

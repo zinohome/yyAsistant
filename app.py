@@ -507,6 +507,64 @@ app.layout = lambda: fuc.FefferyTopProgress(
     manual=True,
 )
 
+# 添加移动端视口配置
+app.index_string = '''
+<!DOCTYPE html>
+<html>
+    <head>
+        {%metas%}
+        <title>{%title%}</title>
+        {%favicon%}
+        {%css%}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="format-detection" content="telephone=no">
+        <style>
+            /* 移动端视口修复 */
+            html, body {
+                height: 100%;
+                overflow-x: hidden;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* 防止iOS Safari缩放 */
+            input, textarea, select {
+                font-size: 16px !important;
+            }
+            
+            /* 修复iOS Safari地址栏问题 */
+            .mobile-viewport-fix {
+                height: 100vh;
+                height: -webkit-fill-available;
+            }
+            
+            /* 登录页面移动端优化 */
+            @media screen and (max-width: 768px) {
+                .login-left-side {
+                    display: none !important;
+                }
+                .login-right-side {
+                    padding: 20px !important;
+                }
+                .ant-form {
+                    width: 100% !important;
+                    max-width: 400px !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        {%app_entry%}
+        <footer>
+            {%config%}
+            {%scripts%}
+            {%renderer%}
+        </footer>
+    </body>
+</html>
+'''
+
 
 def handle_root_router_error(e):
     """处理根节点路由错误"""
