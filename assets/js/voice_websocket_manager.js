@@ -1715,36 +1715,58 @@ class VoiceWebSocketManager {
                         return;
                     }
                     
-                    if (window.dash_clientside && window.dash_clientside.set_props) {
-                        window.controlledLog?.log('使用dash_clientside.set_props更新Store，clientId:', this.clientId);
-                        
+                    // 检查Dash组件是否已经初始化（检查组件是否存在）
+                    const checkComponentReady = () => {
                         try {
-                            // 更新WebSocket连接状态 - 使用正确的语法
-                            window.dash_clientside.set_props('voice-websocket-connection', {
-                                data: { 
-                                    connected: true, 
-                                    client_id: this.clientId, 
-                                    timestamp: Date.now() 
-                                }
-                            });
-                            window.controlledLog?.log('voice-websocket-connection 更新成功');
+                            // 检查dash_clientside是否可用
+                            if (!window.dash_clientside || !window.dash_clientside.set_props) {
+                                return false;
+                            }
                             
-                            // 更新语音开关状态 - 使用正确的语法
-                            window.dash_clientside.set_props('voice-enable-voice', {
-                                data: { 
-                                    enable: true, 
-                                    client_id: this.clientId, 
-                                    ts: Date.now() 
-                                }
-                            });
-                            window.controlledLog?.log('voice-enable-voice 更新成功');
-                        } catch (setPropsError) {
-                            console.error('set_props调用失败:', setPropsError);
-                            // 延迟重试
-                            setTimeout(updateDashStore, 200);
+                            // 尝试通过document查找组件元素，确保组件已渲染
+                            // dcc.Store组件通常不会在DOM中直接可见，但可以通过其他方式检查
+                            // 这里我们检查dash_renderer是否已经初始化
+                            if (!window.dash_clientside || typeof window.dash_clientside.set_props !== 'function') {
+                                return false;
+                            }
+                            
+                            return true;
+                        } catch (e) {
+                            return false;
                         }
-                    } else {
-                        window.controlledLog?.log('dash_clientside.set_props 不可用，延迟重试');
+                    };
+                    
+                    if (!checkComponentReady()) {
+                        window.controlledLog?.log('Dash组件未就绪，延迟重试');
+                        setTimeout(updateDashStore, 200);
+                        return;
+                    }
+                    
+                    window.controlledLog?.log('使用dash_clientside.set_props更新Store，clientId:', this.clientId);
+                    
+                    try {
+                        // 更新WebSocket连接状态 - 使用正确的语法
+                        window.dash_clientside.set_props('voice-websocket-connection', {
+                            data: { 
+                                connected: true, 
+                                client_id: this.clientId, 
+                                timestamp: Date.now() 
+                            }
+                        });
+                        window.controlledLog?.log('voice-websocket-connection 更新成功');
+                        
+                        // 更新语音开关状态 - 使用正确的语法
+                        window.dash_clientside.set_props('voice-enable-voice', {
+                            data: { 
+                                enable: true, 
+                                client_id: this.clientId, 
+                                ts: Date.now() 
+                            }
+                        });
+                        window.controlledLog?.log('voice-enable-voice 更新成功');
+                    } catch (setPropsError) {
+                        console.error('set_props调用失败:', setPropsError);
+                        // 延迟重试
                         setTimeout(updateDashStore, 200);
                     }
                 } catch (e) {
@@ -1754,8 +1776,10 @@ class VoiceWebSocketManager {
                 }
             };
             
-            // 延迟执行，确保Dash完全初始化
+            // 延迟执行，确保Dash完全初始化（至少500ms）
             setTimeout(updateDashStore, 500);
+            // 备用：如果第一次更新失败，延迟1000ms后重试一次
+            setTimeout(updateDashStore, 1000);
             }
 
             // 消息验证 - 防串台机制（在完成绑定之后再校验）

@@ -563,6 +563,102 @@ def _create_state_stores():
                             console.warn('事件数据无效:', event.detail);
                         }}
                     }});
+                    
+                    // 拦截文本发送按钮点击，检查并确保WebSocket连接（与录音聊天保持一致）
+                    const sendButton = document.getElementById('ai-chat-x-send-btn');
+                    if (sendButton) {{
+                                               // 保存原始点击处理
+                        const originalClick = sendButton.onclick || null;
+                        
+                        // 包装点击处理，添加WebSocket连接检查
+                        sendButton.addEventListener('click', async function(event) {{
+                            window.controlledLog?.log('🔍 文本发送按钮被点击，检查WebSocket连接状态');
+                            
+                            // 检查WebSocket连接状态
+                            if (!window.voiceWebSocketManager || !window.voiceWebSocketManager.isConnected) {{
+                                window.controlledLog?.log('⚠️ WebSocket未连接，尝试连接...');
+                                
+                                try {{
+                                    // 连接WebSocket
+                                    await window.voiceWebSocketManager.connect();
+                                    
+                                    // 等待client_id可用（最多等待3秒）
+                                    let waitCount = 0;
+                                    const maxWait = 30; // 30 * 100ms = 3秒
+                                    while (!window.voiceWebSocketManager.clientId && waitCount < maxWait) {{
+                                        await new Promise(resolve => setTimeout(resolve, 100));
+                                        waitCount++;
+                                    }}
+                                    
+                                    if (window.voiceWebSocketManager.clientId) {{
+                                        window.controlledLog?.log('✅ WebSocket连接成功，client_id:', window.voiceWebSocketManager.clientId);
+                                        
+                                        // 确保Store已更新
+                                        if (window.dash_clientside && window.dash_clientside.set_props) {{
+                                            window.dash_clientside.set_props('voice-websocket-connection', {{
+                                                data: {{ 
+                                                    connected: true, 
+                                                    client_id: window.voiceWebSocketManager.clientId, 
+                                                    timestamp: Date.now() 
+                                                }}
+                                            }});
+                                            window.dash_clientside.set_props('voice-enable-voice', {{
+                                                data: {{ 
+                                                    enable: true, 
+                                                    client_id: window.voiceWebSocketManager.clientId, 
+                                                    ts: Date.now() 
+                                                }}
+                                            }});
+                                            window.controlledLog?.log('✅ Store已更新，继续发送文本');
+                                        }}
+                                    }} else {{
+                                        window.controlledLog?.warn('⚠️ WebSocket连接超时，但继续发送文本（TTS可能不可用）');
+                                    }}
+                                }} catch (error) {{
+                                    console.error('❌ WebSocket连接失败:', error);
+                                    window.controlledLog?.warn('⚠️ WebSocket连接失败，但继续发送文本（TTS可能不可用）');
+                                }}
+                            }} else {{
+                                window.controlledLog?.log('✅ WebSocket已连接，client_id:', window.voiceWebSocketManager.clientId);
+                            }}
+                            
+                            // 继续原有的点击处理（Dash会自动处理）
+                            // 不需要阻止默认行为，让Dash回调正常触发
+                        }});
+                        
+                        window.controlledLog?.log('✅ 文本发送按钮WebSocket连接检查已注册');
+                    }} else {{
+                        window.controlledLog?.warn('⚠️ 未找到发送按钮，延迟注册WebSocket连接检查');
+                        // 延迟重试
+                        setTimeout(() => {{
+                            const retrySendButton = document.getElementById('ai-chat-x-send-btn');
+                            if (retrySendButton) {{
+                                retrySendButton.addEventListener('click', async function(event) {{
+                                    if (!window.voiceWebSocketManager || !window.voiceWebSocketManager.isConnected) {{
+                                        try {{
+                                            await window.voiceWebSocketManager.connect();
+                                            let waitCount = 0;
+                                            const maxWait = 30;
+                                            while (!window.voiceWebSocketManager.clientId && waitCount < maxWait) {{
+                                                await new Promise(resolve => setTimeout(resolve, 100));
+                                                waitCount++;
+                                            }}
+                                            if (window.voiceWebSocketManager.clientId && window.dash_clientside && window.dash_clientside.set_props) {{
+                                                window.dash_clientside.set_props('voice-websocket-connection', {{
+                                                    data: {{ connected: true, client_id: window.voiceWebSocketManager.clientId, timestamp: Date.now() }}
+                                                }});
+                                                window.dash_clientside.set_props('voice-enable-voice', {{
+                                                    data: {{ enable: true, client_id: window.voiceWebSocketManager.clientId, ts: Date.now() }}
+                                                }});
+                                            }}
+                                        }} catch (e) {{
+                                            console.error('WebSocket连接检查失败:', e);
+                                        }}
+                                    }}
+                                }});
+                            }}
+                        }}, 500);
+                    }}
                 }}
                 
                 // 监听聊天页面就绪事件
