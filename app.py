@@ -691,6 +691,22 @@ def root_router(pathname, trigger):
 
                 return dash.no_update
 
+        # 普通用户页面访问限制：普通用户只能访问配置中允许的页面
+        if current_user.user_role == AuthConfig.normal_role:
+            # 检查当前访问的页面是否在允许列表中
+            if pathname not in AuthConfig.normal_user_allowed_pathnames:
+                # 重定向到配置的目标页面
+                set_props(
+                    "global-redirect",
+                    {
+                        "children": dcc.Location(
+                            pathname=AuthConfig.normal_user_redirect_pathname,
+                            id="global-redirect-target"
+                        )
+                    },
+                )
+                return dash.no_update
+
         # 处理核心功能页面渲染
         # 返回带水印的页面内容
         if BaseConfig.enable_fullscreen_watermark:

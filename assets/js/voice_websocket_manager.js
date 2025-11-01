@@ -32,7 +32,7 @@ class VoiceWebSocketManager {
         this.messageHandlers.set('stop_playback', () => {});
         
         // 使用配置类获取WebSocket URL，并附带持久化client_id
-        this.wsUrlBase = window.appConfig?.getWebSocketUrl() || 'ws://192.210.183.125:9800/ws/chat';
+        this.wsUrlBase = window.appConfig?.getWebSocketUrl() || 'ws://192.168.66.145:9800/ws/chat';
         this.persistentClientId = this.ensurePersistentClientId();
         this.wsUrl = this.appendClientId(this.wsUrlBase, this.persistentClientId);
         

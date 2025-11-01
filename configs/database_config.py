@@ -11,7 +11,7 @@ class DatabaseConfig:
 
     # 当database_type为'postgresql'时，对应的数据库连接配置参数，使用时请根据实际情况修改
     postgresql_config = {
-        "host": "192.168.32.11",
+        "host": "192.168.66.163",
         "port": 5432,
         "user": "yyasistant",
         "password": "passw0rd",
@@ -21,8 +21,7 @@ class DatabaseConfig:
     # 当database_type为'mysql'时，对应的数据库连接配置参数，使用时请根据实际情况修改
     mysql_config = {
         "host": "127.0.0.1",
-        "port": 3306,
-        "user": "root",
+        "port": 3306,        "user": "root",
         "password": "admin123",
         "database": "magic_dash_pro",
     }

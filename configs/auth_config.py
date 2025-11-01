@@ -40,3 +40,12 @@ class AuthConfig:
         },
         # "normal": {"type": "include", "keys": ["/core/page2", "/core/page5"]},
     }
+
+    # 普通用户允许访问的页面列表
+    # 普通用户只能访问此列表中的页面，其他页面将自动重定向到配置的重定向目标页面
+    normal_user_allowed_pathnames: list = [
+        "/core/chat",
+    ]
+
+    # 普通用户访问未授权页面时的重定向目标
+    normal_user_redirect_pathname: str = "/core/chat"
