@@ -754,12 +754,9 @@ def _create_state_stores():
         # 🔧 新增：语音实时对话文本显示Drawer（使用Drawer方式，不遮挡顶部和底部按钮）
         fac.AntdDrawer(
             id='voice-call-text-drawer',
-            title=fac.AntdSpace([
-                fac.AntdIcon(icon="antd-sound"),
-                fac.AntdText("语音实时对话", strong=True)
-            ]),
+            title=None,  # 🔧 移除header，让文本直接显示在当前会话下方
             placement='right',
-            width="300px",  # 🔧 进一步减小宽度，确保不遮挡右侧消息
+            width=None,  # 🔧 不设置固定宽度，通过JavaScript动态设置为chat-history的宽度
             visible=False,  # 默认隐藏
             mask=False,  # 🔧 禁用遮罩层，避免遮挡挂断按钮
             maskClosable=False,  # 🔧 禁用点击遮罩层关闭（挂断语音通话时自动关闭）
@@ -788,8 +785,12 @@ def _create_state_stores():
                         margin=0,
                         flex=1,  # 占据剩余空间
                         overflowY='auto',  # 内容区域可滚动
+                        overflowX='hidden',  # 🔧 关键修复：禁止横向滚动，防止内容溢出
                         backgroundColor='#fafafa',
-                        minHeight=0  # 允许flex收缩
+                        minHeight=0,  # 允许flex收缩
+                        width='100%',  # 🔧 关键修复：设置宽度为100%，确保不超出Drawer
+                        maxWidth='100%',  # 🔧 关键修复：限制最大宽度，防止溢出
+                        boxSizing='border-box'  # 🔧 关键修复：确保padding和border包含在宽度内
                     ),
                     children=[]
                 )

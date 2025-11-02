@@ -55,13 +55,25 @@ app.clientside_callback(
                                       drawer.querySelector('.ant-drawer-content') ||
                                       (drawer.classList && drawer.classList.contains('ant-drawer-content') ? drawer : null);
                 
+                // 🔧 关键修复：获取chat_history的宽度，用于设置Drawer宽度
+                const chatHistoryWidth = chatHistoryRect.width;
+                
                 // 设置Drawer content-wrapper样式（外层容器）
                 if (drawerContentWrapper) {
+                    // 🔧 关键修复：先移除display:none，确保Drawer能够显示
+                    const currentDisplay = drawerContentWrapper.style.getPropertyValue('display');
+                    if (currentDisplay === 'none') {
+                        drawerContentWrapper.style.removeProperty('display');
+                        window.controlledLog?.log('✅ [Clientside] 已移除Drawer的display:none，确保Drawer可见');
+                    }
+                    
                     drawerContentWrapper.style.setProperty('top', chatHistoryTop + 'px', 'important');
                     drawerContentWrapper.style.setProperty('height', chatHistoryHeight + 'px', 'important');
                     drawerContentWrapper.style.setProperty('max-height', chatHistoryHeight + 'px', 'important');
                     drawerContentWrapper.style.setProperty('position', 'fixed', 'important');
                     drawerContentWrapper.style.setProperty('bottom', 'auto', 'important');
+                    // 🔧 关键修复：设置Drawer宽度等于chat_history的宽度
+                    drawerContentWrapper.style.setProperty('width', chatHistoryWidth + 'px', 'important');
                 }
                 
                 // 设置Drawer content样式（内容容器）
@@ -73,6 +85,8 @@ app.clientside_callback(
                     drawerContent.style.setProperty('bottom', 'auto', 'important');
                     drawerContent.style.setProperty('display', 'flex', 'important');
                     drawerContent.style.setProperty('flex-direction', 'column', 'important');
+                    // 🔧 关键修复：设置Drawer宽度等于chat_history的宽度
+                    drawerContent.style.setProperty('width', chatHistoryWidth + 'px', 'important');
                 }
                 
                 // 🔧 关键修复：强制移除body的固定高度设置，让它自然占据剩余空间（减去header高度）
@@ -101,12 +115,12 @@ app.clientside_callback(
                 });
             };
             
+            // 🔧 关键修复：简化延迟逻辑，避免重复更新导致不稳定
             // 立即执行
             applyStyles();
-            // 延迟执行（确保DOM已完全渲染）
-            setTimeout(applyStyles, 50);
-            setTimeout(applyStyles, 200);
-            setTimeout(applyStyles, 500);
+            // 延迟执行（确保DOM已完全渲染）- 减少延迟次数
+            setTimeout(applyStyles, 100);
+            setTimeout(applyStyles, 300);
         } else if (!visible && window._voiceCallDrawerVisible) {
             // 🔧 关键修复：当Drawer隐藏时，更新previous value并确保完全隐藏
             window._voiceCallDrawerVisible = false;

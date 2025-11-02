@@ -92,6 +92,30 @@ class VoiceWebSocketManager {
                     });
                     window.controlledLog?.log('✅ 已直接设置Drawer为显示状态');
                     
+                    // 🔧 关键修复：立即移除可能存在的display:none !important，确保Drawer能够显示
+                    const removeDisplayNone = () => {
+                        const drawerElement = document.getElementById('voice-call-text-drawer');
+                        if (drawerElement) {
+                            const drawerContentWrapper = drawerElement.closest('.ant-drawer-content-wrapper') || 
+                                                           drawerElement.querySelector('.ant-drawer-content-wrapper') ||
+                                                           document.querySelector('[id="voice-call-text-drawer"] + .ant-drawer-content-wrapper') ||
+                                                           document.querySelector('.ant-drawer-content-wrapper [id="voice-call-text-drawer"]');
+                            if (drawerContentWrapper) {
+                                // 移除display:none !important，确保Drawer能够显示
+                                const currentDisplay = drawerContentWrapper.style.getPropertyValue('display');
+                                if (currentDisplay === 'none') {
+                                    drawerContentWrapper.style.removeProperty('display');
+                                    window.controlledLog?.log('✅ 已移除Drawer的display:none，确保Drawer可见');
+                                }
+                            }
+                        }
+                    };
+                    // 立即尝试移除（可能在DOM更新之前，所以需要多次尝试）
+                    removeDisplayNone();
+                    setTimeout(removeDisplayNone, 10);
+                    setTimeout(removeDisplayNone, 50);
+                    setTimeout(removeDisplayNone, 100);
+                    
                     // 🔧 关键修复：使用JavaScript动态计算Drawer的位置和高度，与chat_history完全对齐（强化版）
                     const applyDrawerStyles = () => {
                         // 获取chat_history元素的位置和高度
@@ -136,6 +160,13 @@ class VoiceWebSocketManager {
                         
                         // 设置Drawer content-wrapper样式（外层容器）
                         if (drawerContentWrapper) {
+                            // 🔧 关键修复：先移除display:none，确保Drawer能够显示
+                            const currentDisplay = drawerContentWrapper.style.getPropertyValue('display');
+                            if (currentDisplay === 'none') {
+                                drawerContentWrapper.style.removeProperty('display');
+                                window.controlledLog?.log('✅ 在applyDrawerStyles中已移除Drawer的display:none');
+                            }
+                            
                             drawerContentWrapper.style.setProperty('top', `${chatHistoryTop}px`, 'important');
                             drawerContentWrapper.style.setProperty('height', `${chatHistoryHeight}px`, 'important');
                             drawerContentWrapper.style.setProperty('max-height', `${chatHistoryHeight}px`, 'important');
@@ -153,7 +184,17 @@ class VoiceWebSocketManager {
                             drawerContent.style.setProperty('bottom', 'auto', 'important');
                             drawerContent.style.setProperty('display', 'flex', 'important');
                             drawerContent.style.setProperty('flex-direction', 'column', 'important');
-                            window.controlledLog?.log(`✅ 已设置Drawer content样式: top=${chatHistoryTop}px, height=${chatHistoryHeight}px`);
+                            // 🔧 关键修复：设置Drawer宽度等于chat_history的宽度
+                            const chatHistoryWidth = chatHistoryRect.width;
+                            drawerContent.style.setProperty('width', `${chatHistoryWidth}px`, 'important');
+                            window.controlledLog?.log(`✅ 已设置Drawer content样式: top=${chatHistoryTop}px, height=${chatHistoryHeight}px, width=${chatHistoryWidth}px`);
+                        }
+                        
+                        // 🔧 关键修复：同时设置content-wrapper的宽度
+                        if (drawerContentWrapper) {
+                            const chatHistoryWidth = chatHistoryRect.width;
+                            drawerContentWrapper.style.setProperty('width', `${chatHistoryWidth}px`, 'important');
+                            window.controlledLog?.log(`✅ 已设置Drawer content-wrapper宽度: ${chatHistoryWidth}px`);
                         }
                         
                         // 🔧 关键修复：强制移除body的固定高度设置，让它自然占据剩余空间（减去header高度）
@@ -178,53 +219,21 @@ class VoiceWebSocketManager {
                         }
                     };
                     
-                    // 立即执行
-                    applyDrawerStyles();
-                    // 延迟执行（确保DOM已完全渲染）- 增加更多延迟
-                    setTimeout(applyDrawerStyles, 50);
-                    setTimeout(applyDrawerStyles, 150);
-                    setTimeout(applyDrawerStyles, 300);
-                    setTimeout(applyDrawerStyles, 500);
-                    setTimeout(applyDrawerStyles, 800);
-                    
-                    // 🔧 关键修复：使用MutationObserver监听DOM变化，确保样式始终正确应用
-                    const drawerElement = document.getElementById('voice-call-text-drawer');
-                    if (drawerElement) {
-                        const observer = new MutationObserver((mutations) => {
-                            let needsUpdate = false;
-                            mutations.forEach((mutation) => {
-                                if (mutation.type === 'attributes' && 
-                                    (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
-                                    // 检查是否是Drawer相关元素
-                                    const target = mutation.target;
-                                    if (target.id === 'voice-call-text-drawer' ||
-                                        target.classList.contains('ant-drawer-content-wrapper') ||
-                                        target.classList.contains('ant-drawer-content') ||
-                                        target.classList.contains('ant-drawer-body')) {
-                                        needsUpdate = true;
-                                    }
-                                }
-                            });
-                            if (needsUpdate) {
-                                window.controlledLog?.log('🔄 检测到Drawer样式变化，重新应用样式');
-                                setTimeout(applyDrawerStyles, 10);
-                            }
-                        });
+                    // 🔧 关键修复：简化延迟逻辑，避免重复更新导致不稳定
+                    // 使用标志位防止重复执行
+                    if (!this._drawerStyleApplying) {
+                        this._drawerStyleApplying = true;
                         
-                        // 观察Drawer元素及其子元素的变化
-                        observer.observe(drawerElement, {
-                            attributes: true,
-                            attributeFilter: ['style', 'class'],
-                            subtree: true,
-                            childList: true
-                        });
-                        window.controlledLog?.log('✅ 已启动MutationObserver监听Drawer样式变化');
-                        
-                        // 5秒后停止观察（避免内存泄漏）
+                        // 立即执行
+                        applyDrawerStyles();
+                        // 延迟执行（确保DOM已完全渲染）- 减少延迟次数
                         setTimeout(() => {
-                            observer.disconnect();
-                            window.controlledLog?.log('✅ MutationObserver已停止');
-                        }, 5000);
+                            applyDrawerStyles();
+                            this._drawerStyleApplying = false;
+                        }, 100);
+                        setTimeout(applyDrawerStyles, 300);
+                    } else {
+                        window.controlledLog?.log('⚠️ Drawer样式正在应用中，跳过重复执行');
                     }
                 } catch (e) {
                     window.controlledLog?.error('❌ 设置Drawer visible属性失败:', e);
@@ -277,7 +286,7 @@ class VoiceWebSocketManager {
             // 语音通话停止后，其他场景（录音聊天、文字聊天）应该保持自己的状态
             window.controlledLog?.log('语音通话停止，不强制重置按钮状态，让其他场景自然管理');
             
-            // 更新Store状态为不活跃
+            // 更新Store状态为不活跃（但不关闭Drawer，Drawer由点击挂断按钮统一关闭）
             if (window.dash_clientside && window.dash_clientside.set_props) {
                 const currentDisplay = this.voiceCallTranscriptionDisplay || {
                     messages: [],
@@ -292,28 +301,9 @@ class VoiceWebSocketManager {
                     data: currentDisplay
                 });
                 
-                // 🔧 关键修复：直接使用set_props设置Drawer的visible属性为false，确保Drawer关闭
-                try {
-                    window.dash_clientside.set_props('voice-call-text-drawer', {
-                        visible: false
-                    });
-                    window.controlledLog?.log('✅ 已直接设置Drawer为隐藏状态');
-                    
-                    // 🔧 额外保障：强制移除样式，确保Drawer完全隐藏
-                    setTimeout(() => {
-                        const drawerElement = document.getElementById('voice-call-text-drawer');
-                        if (drawerElement) {
-                            const drawerContentWrapper = drawerElement.closest('.ant-drawer-content-wrapper') || 
-                                                           drawerElement.querySelector('.ant-drawer-content-wrapper');
-                            if (drawerContentWrapper) {
-                                drawerContentWrapper.style.setProperty('display', 'none', 'important');
-                                window.controlledLog?.log('✅ 已强制隐藏Drawer content-wrapper');
-                            }
-                        }
-                    }, 100);
-                } catch (e) {
-                    window.controlledLog?.error('❌ 设置Drawer visible属性失败:', e);
-                }
+                // 🔧 关键修复：只清理样式应用标志，不关闭Drawer（Drawer由点击挂断按钮统一关闭）
+                this._drawerStyleApplying = false;
+                window.controlledLog?.log('✅ Store状态已更新为不活跃，Drawer由点击挂断按钮统一关闭');
             }
             
             // 可选保存消息到数据库（如果启用）
@@ -2280,48 +2270,54 @@ class VoiceWebSocketManager {
                 second: '2-digit'
             });
             
-            // 🔧 关键修复：减少消息间距到原来的1/3，与chat_user_message和chat_agent_message保持一致的样式
+            // 🔧 关键修复：使用与chat_user_message.py和chat_agent_message.py完全一致的样式
             if (isUser) {
-                // 用户消息样式（减少间距）
+                // 用户消息样式（与chat_user_message.py完全一致）
                 return `
-                    <div class="chat-message user-message" style="margin-bottom: 5px; padding: 5px 24px 0 24px;">
-                        <!-- 第一行：时间戳、发送者名称和头像 -->
-                        <div style="display: flex; align-items: center; justify-content: flex-end; padding: 0 0 2px 0; min-height: 28px;">
-                            <div style="display: flex; align-items: center; margin-right: 8px;">
-                                <span style="font-size: 11px; color: rgba(0,0,0,0.45); margin-right: 6px;">${timeStr}</span>
-                                <span style="font-weight: 600; font-size: 13px;">我</span>
+                    <div class="chat-message user-message" style="margin-bottom: 16px; padding: 16px 24px 0 24px;">
+                        <!-- 第一行：时间戳、发送者名称和头像（与chat_user_message.py完全一致） -->
+                        <div style="display: flex; align-items: center; justify-content: flex-end; padding: 0 0 4px 0; min-height: 40px;">
+                            <div style="display: flex; align-items: center; flex: auto; justify-content: flex-end;">
+                                <span style="font-size: 12px; color: rgba(0,0,0,0.45); margin-right: 8px;">${timeStr}</span>
+                                <span style="font-weight: 600; font-size: 14px;">我</span>
                             </div>
-                            <div style="width: 28px; height: 28px; border-radius: 50%; background-color: #52c41a; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                <span style="font-size: 14px;">👤</span>
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background-color: #52c41a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 12px;">
+                                <svg viewBox="64 64 896 896" focusable="false" data-icon="user" width="1em" height="1em" fill="currentColor" aria-hidden="true" style="font-size: 16px; color: white; width: 16px; height: 16px;">
+                                    <path d="M858.5 763.6a374 374 0 00-80.6-119.5 375.63 375.63 0 00-119.5-80.6c-.4-.2-.8-.3-1.2-.5C719.5 518 760 444.7 760 362c0-137-111-248-248-248S264 225 264 362c0 82.7 40.5 156 102.8 201.1-.4.2-.8.3-1.2.5-44.8 18.9-85 46-119.5 80.6a375.63 375.63 0 00-80.6 119.5A371.7 371.7 0 00136 901.8a8 8 0 008 8.2h60c4.4 0 7.9-3.5 8-7.8 2-77.2 33-149.5 87.8-204.3 56.7-56.7 132-87.9 212.2-87.9s155.5 31.2 212.2 87.9C779 752.7 810 825 812 902.2c.1 4.4 3.6 7.8 8 7.8h60a8 8 0 008-8.2c-1-47.8-10.9-94.3-29.5-138.2zM512 534c-45.9 0-89.1-17.9-121.6-50.4S340 407.9 340 362c0-45.9 17.9-89.1 50.4-121.6S466.1 190 512 190s89.1 17.9 121.6 50.4S684 316.1 684 362c0 45.9-17.9 89.1-50.4 121.6S557.9 534 512 534z"></path>
+                                </svg>
                             </div>
                         </div>
-                        <!-- 第二行：消息内容 -->
-                        <div style="display: flex; justify-content: flex-end; padding: 0 0 3px 0;">
-                            <div style="background-color: #1890ff; border-radius: 8px 0 8px 8px; padding: 6px 12px; max-width: 80%; color: white; white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 1px 4px rgba(0,0,0,0.1); font-size: 13px; line-height: 1.4;">
-                                ${this.escapeHtml(msg.text || '')}
+                        <!-- 第二行：消息内容（与chat_user_message.py完全一致） -->
+                        <div style="display: flex; justify-content: flex-end; padding: 0 0 8px 0;">
+                            <div style="padding: 12px 16px; border-radius: 12px 0px 12px 12px; background-color: rgb(24, 144, 255); margin-left: auto; max-width: 80%; width: 100%;">
+                                <span style="color: white; white-space: pre-wrap;">${this.escapeHtml(msg.text || '')}</span>
                             </div>
                         </div>
                     </div>
                 `;
             } else {
-                // AI消息样式（减少间距）
+                // AI消息样式（与chat_agent_message.py完全一致，包括shadow，无padding，左对齐）
                 return `
-                    <div class="chat-message ai-message" style="margin-bottom: 5px; padding: 5px 24px 0 24px;">
-                        <!-- 第一行：头像、发送者名称和时间戳 -->
-                        <div style="display: flex; align-items: center; padding: 0 0 2px 0; min-height: 28px;">
-                            <div style="width: 28px; height: 28px; border-radius: 50%; background-color: #1890ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 8px;">
-                                <span style="font-size: 14px;">🤖</span>
+                    <div class="chat-message ai-message" style="margin-bottom: 16px; padding: 16px 24px 0 24px;">
+                        <!-- 第一行：头像、发送者名称和时间戳（与chat_agent_message.py完全一致） -->
+                        <div style="display: flex; align-items: center; padding: 0 0 4px 0; min-height: 40px;">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background-color: #1890ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 12px;">
+                                <svg viewBox="64 64 896 896" focusable="false" data-icon="robot" width="1em" height="1em" fill="currentColor" aria-hidden="true" style="font-size: 16px; color: white; width: 16px; height: 16px;">
+                                    <path d="M300 328a60 60 0 10120 0 60 60 0 10-120 0zM852 64H172c-17.7 0-32 14.3-32 32v660c0 17.7 14.3 32 32 32h680c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-32 660H204V128h616v596zM604 328a60 60 0 10120 0 60 60 0 10-120 0zm250.2 556H169.8c-16.5 0-29.8 14.3-29.8 32v36c0 4.4 3.3 8 7.4 8h729.1c4.1 0 7.4-3.6 7.4-8v-36c.1-17.7-13.2-32-29.7-32zM664 508H360c-4.4 0-8 3.6-8 8v60c0 4.4 3.6 8 8 8h304c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8z"></path>
+                                </svg>
                             </div>
-                            <div style="display: flex; align-items: center;">
-                                <span style="font-weight: 600; font-size: 13px;">智能助手</span>
-                                <span style="font-size: 11px; color: rgba(0,0,0,0.45); margin-left: 6px;">${timeStr}</span>
+                            <div style="display: flex; align-items: center; flex: auto;">
+                                <span style="font-weight: 600; font-size: 14px;">智能助手</span>
+                                <span style="font-size: 12px; color: rgba(0,0,0,0.45); margin-left: 8px;">${timeStr}</span>
                             </div>
                         </div>
-                        <!-- 第二行：消息内容 -->
-                        <div style="display: flex; padding: 0 0 3px 0;">
-                            <div style="width: 36px; height: 0; flex-shrink: 0;"></div>
-                            <div style="background-color: #f5f5f5; border-radius: 0 8px 8px 8px; padding: 6px 12px; max-width: 80%; color: #000; white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 1px 4px rgba(0,0,0,0.1); font-size: 13px; line-height: 1.4;">
-                                ${this.escapeHtml(msg.text || '')}
+                        <!-- 第二行：消息内容，保持缩进（与chat_agent_message.py完全一致） -->
+                        <div style="display: flex; padding: 0 0 8px 0;">
+                            <div style="width: 48px; height: 0; flex-shrink: 0;"></div>
+                            <div style="border-radius: 0px 12px 12px; background-color: rgb(245, 245, 245); max-width: 80%; width: 100%;">
+                                <div class="theme-pie agent-message-markdown-body" style="color: rgb(0, 0, 0);">
+                                    <p>${this.escapeHtml(msg.text || '')}</p>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -170,6 +170,63 @@ function bindVoiceCallButtonWithDelegate() {
                         window.controlledLog?.log('🎨 语音通话：点击挂断图标后隐藏音频可视化区域');
                     }
                     
+                    // 🔧 关键修复：点击挂断按钮时立即关闭Drawer并清除文字记录
+                    if (window.dash_clientside && window.dash_clientside.set_props) {
+                        try {
+                            // 清理样式应用标志（如果存在）
+                            if (window.voiceWebSocketManager) {
+                                window.voiceWebSocketManager._drawerStyleApplying = false;
+                                // 🔧 关键修复：清除之前的文字记录
+                                if (window.voiceWebSocketManager.voiceCallTranscriptionDisplay) {
+                                    window.voiceWebSocketManager.voiceCallTranscriptionDisplay.messages = [];
+                                    window.voiceWebSocketManager.voiceCallTranscriptionDisplay = null;
+                                }
+                                window.voiceWebSocketManager.pendingVoiceCallMessages = [];
+                                // 更新Store，清空消息列表
+                                window.dash_clientside.set_props('voice-call-transcription-display', {
+                                    data: {
+                                        messages: [],
+                                        is_active: false,
+                                        session_id: null,
+                                        max_messages: 50,
+                                        created_at: Date.now()
+                                    }
+                                });
+                                window.controlledLog?.log('✅ 已清除Drawer文字记录（点击挂断按钮）');
+                            }
+                            
+                            window.dash_clientside.set_props('voice-call-text-drawer', {
+                                visible: false
+                            });
+                            window.controlledLog?.log('✅ 已直接关闭Drawer（点击挂断按钮）');
+                            
+                            // 🔧 关键修复：立即强制隐藏，避免延迟导致状态不一致
+                            const hideDrawer = () => {
+                                const drawerElement = document.getElementById('voice-call-text-drawer');
+                                if (drawerElement) {
+                                    const drawerContentWrapper = drawerElement.closest('.ant-drawer-content-wrapper') || 
+                                                                   drawerElement.querySelector('.ant-drawer-content-wrapper');
+                                    if (drawerContentWrapper) {
+                                        drawerContentWrapper.style.setProperty('display', 'none', 'important');
+                                        window.controlledLog?.log('✅ 已强制隐藏Drawer content-wrapper（点击挂断按钮）');
+                                    }
+                                    // 🔧 关键修复：清空显示内容
+                                    const contentElement = document.getElementById('voice-call-text-content');
+                                    if (contentElement) {
+                                        contentElement.innerHTML = '';
+                                        window.controlledLog?.log('✅ 已清空Drawer内容（点击挂断按钮）');
+                                    }
+                                }
+                            };
+                            // 立即执行和延迟执行，确保Drawer被隐藏
+                            hideDrawer();
+                            setTimeout(hideDrawer, 50);
+                            setTimeout(hideDrawer, 150);
+                        } catch (e) {
+                            window.controlledLog?.error('❌ 关闭Drawer失败:', e);
+                        }
+                    }
+                    
                     // 🔧 关键修复：使用Drawer方式，不需要直接操作DOM
                     // Drawer的显示/隐藏由Dash回调根据voice-call-transcription-display Store的is_active字段控制
                     // 当is_active设为False时，Dash回调会自动隐藏Drawer

@@ -186,15 +186,32 @@
     bottom: auto !important;  /* 🔧 强制移除bottom，使用top和height控制 */
 }
 
-/* 🔧 强制确保Drawer body自然占据剩余空间（减去header高度）- 最高优先级 */
+/* 🔧 关键修复：强制隐藏Drawer的header（即使title=None也可能渲染） */
+.ant-drawer-content-wrapper:has([id="voice-call-text-drawer"]) .ant-drawer-header,
+[id="voice-call-text-drawer"] ~ .ant-drawer-content-wrapper .ant-drawer-header,
+.ant-drawer-content-wrapper [id="voice-call-text-drawer"] ~ .ant-drawer-header,
+[id="voice-call-text-drawer"] + .ant-drawer-header,
+[id="voice-call-text-drawer"] .ant-drawer-header,
+.ant-drawer-content-wrapper:has([id="voice-call-text-drawer"]) .ant-drawer-header-title,
+[id="voice-call-text-drawer"] ~ .ant-drawer-content-wrapper .ant-drawer-header-title,
+[id="voice-call-text-drawer"] .ant-drawer-header-title {
+    display: none !important;  /* 🔧 强制隐藏header */
+    visibility: hidden !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+}
+
+/* 🔧 强制确保Drawer body自然占据剩余空间（不需要减去header高度，因为header已隐藏）- 最高优先级 */
 .ant-drawer-content-wrapper:has([id="voice-call-text-drawer"]) .ant-drawer-body,
 [id="voice-call-text-drawer"] ~ .ant-drawer-content-wrapper .ant-drawer-body,
 .ant-drawer-content-wrapper [id="voice-call-text-drawer"] ~ .ant-drawer-body,
 [id="voice-call-text-drawer"] + .ant-drawer-body,
 [id="voice-call-text-drawer"] .ant-drawer-body {
     flex: 1 !important;
-    height: auto !important;
-    max-height: none !important;
+    height: 100% !important;  /* 🔧 因为没有header，body占据100%高度 */
+    max-height: 100% !important;
     min-height: 0 !important;
     overflow: hidden !important;
     display: flex !important;
@@ -222,9 +239,28 @@
     pointer-events: auto !important;  /* 🔧 确保Drawer内部可以点击 */
 }
 
-/* 🔧 确保Drawer不遮挡右侧消息内容（限制最大宽度） */
-[id="voice-call-text-drawer"] .ant-drawer-content-wrapper {
-    max-width: 300px !important;  /* 🔧 强制限制最大宽度，确保不遮挡右侧消息 */
+/* 🔧 确保Drawer内部内容不溢出（关键修复） */
+[id="voice-call-text-content"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;  /* 🔧 禁止横向滚动 */
+    word-wrap: break-word !important;  /* 🔧 自动换行 */
+    word-break: break-word !important;  /* 🔧 强制换行 */
+}
+
+/* 🔧 确保Drawer内部消息不溢出 */
+[id="voice-call-text-content"] .chat-message {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+}
+
+/* 🔧 确保Drawer内部消息内容不溢出 */
+[id="voice-call-text-content"] .chat-message > div {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
 }
 
 /* 🔧 确保Drawer右侧有足够空间显示消息（通过调整位置） */
