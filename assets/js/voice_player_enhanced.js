@@ -604,7 +604,7 @@ class VoicePlayerEnhanced {
                         }
                     }
                     
-                    // 🚀 重置播放标志，允许处理下一个音频
+                    // 🔧 修改5：重置播放标志，允许处理下一个音频
                     this.simplePlaying = false;
                     
                     // 更新状态跟踪
@@ -619,6 +619,15 @@ class VoicePlayerEnhanced {
                         
                         // 尝试最终收尾
                         this.maybeFinalize(messageId);
+                    }
+                    
+                    // 🔧 修改6：优化播放间隔 - 立即处理下一个音频，移除100ms延迟
+                    if (this.simpleQueue.length > 0) {
+                        window.controlledLog?.log('🎧 立即处理队列中的下一个音频，剩余队列长度:', this.simpleQueue.length);
+                        // 使用setTimeout(0)确保异步执行，避免阻塞
+                        setTimeout(() => {
+                            this.processSimpleQueue();
+                        }, 0);
                     }
                     
                     resolve();
@@ -669,30 +678,48 @@ class VoicePlayerEnhanced {
             this.simplePlaying = false;
         }
         
-        // 添加到队列（包含序列号）
-        this.simpleQueue.push({
+        // 创建新项
+        const newItem = {
             buffer: audioBuffer,
             messageId: messageId,
             seq: seq,
             timestamp: Date.now()
-        });
+        };
         
-        // 按序列号排序队列
-        this.simpleQueue.sort((a, b) => {
-            // 如果都有序列号，按序列号排序
-            if (a.seq !== null && b.seq !== null) {
-                return a.seq - b.seq;
+        // 🔧 优化：使用插入排序，因为队列已经有序，只需O(n)复杂度
+        // 找到正确的插入位置
+        let insertIndex = this.simpleQueue.length; // 默认插入到末尾
+        for (let i = 0; i < this.simpleQueue.length; i++) {
+            const item = this.simpleQueue[i];
+            
+            // 排序逻辑：seq优先，然后timestamp
+            let shouldInsertBefore = false;
+            
+            // 如果都有seq，按seq排序
+            if (newItem.seq !== null && item.seq !== null) {
+                shouldInsertBefore = newItem.seq < item.seq;
             }
-            // 如果只有一个有序列号，有序列号的优先
-            if (a.seq !== null && b.seq === null) {
-                return -1;
+            // 如果新项有seq而旧项没有，新项优先
+            else if (newItem.seq !== null && item.seq === null) {
+                shouldInsertBefore = true;
             }
-            if (a.seq === null && b.seq !== null) {
-                return 1;
+            // 如果新项没有seq而旧项有，旧项优先
+            else if (newItem.seq === null && item.seq !== null) {
+                shouldInsertBefore = false;
             }
-            // 都没有序列号，按时间戳排序
-            return a.timestamp - b.timestamp;
-        });
+            // 都没有seq，按timestamp排序
+            else {
+                shouldInsertBefore = newItem.timestamp < item.timestamp;
+            }
+            
+            if (shouldInsertBefore) {
+                insertIndex = i;
+                break;
+            }
+        }
+        
+        // 插入到正确位置
+        this.simpleQueue.splice(insertIndex, 0, newItem);
         
         window.controlledLog?.log('🎧 添加到简单播放队列:', messageId, 'seq:', seq, '队列长度:', this.simpleQueue.length);
         
@@ -712,68 +739,51 @@ class VoicePlayerEnhanced {
         
         this.simplePlaying = true;
         
-        // 按序列号排序队列
-        this.simpleQueue.sort((a, b) => {
-            if (a.seq !== null && b.seq !== null) {
-                return a.seq - b.seq;
-            }
-            if (a.seq !== null && b.seq === null) {
-                return -1;
-            }
-            if (a.seq === null && b.seq !== null) {
-                return 1;
-            }
-            return a.timestamp - b.timestamp;
-        });
+        // 🔧 优化：移除排序，因为队列在addToSimpleQueue中已经有序
+        // this.simpleQueue.sort(...) // 已移除
         
-        // 找到下一个可播放的音频（按序列号顺序）
-        const nextAudio = this.findNextPlayableSimpleAudio();
+        // 🔧 优化：直接取第一个（队列已经有序），不需要findNextPlayableSimpleAudio
+        const nextAudio = this.simpleQueue.length > 0 ? this.simpleQueue[0] : null;
         if (nextAudio) {
             window.controlledLog?.log('🎧 处理简单播放队列:', nextAudio.messageId, 'seq:', nextAudio.seq);
             
             try {
                 await this.playSimpleAudioBuffer(nextAudio.buffer, nextAudio.messageId);
                 
-                // 播放完成后，继续处理队列中的下一个音频
-                if (this.simpleQueue.length > 0) {
-                    window.controlledLog?.log('🎧 继续处理队列中的下一个音频，剩余队列长度:', this.simpleQueue.length);
-                    // 延迟一点时间再处理下一个音频，避免重叠
-                    setTimeout(() => {
-                        this.processSimpleQueue();
-                    }, 100);
-                }
+                // 🔧 优化：移除延迟，在onended回调中立即处理下一个音频
+                // 播放完成后，继续处理队列中的下一个音频的逻辑移到onended回调中
             } catch (error) {
                 console.error('❌ 简单播放队列音频失败:', error);
+                // 🔧 修复：播放失败时也要重置标志并处理下一个，防止队列卡住
+                this.simplePlaying = false;
+                if (this.simpleQueue.length > 0) {
+                    this.processSimpleQueue();
+                }
             }
+        } else {
+            // 队列为空，重置标志
+            this.simplePlaying = false;
         }
         
-        this.simplePlaying = false;
+        // 🔧 优化：移除这里的simplePlaying设置，只在onended回调中设置（修改5）
+        // this.simplePlaying = false; // 已移除
         window.controlledLog?.log('🎧 简单播放队列处理完成');
     }
     
     /**
      * 找到下一个可播放的简单音频
+     * 🔧 优化：此方法已不再需要，因为队列已经有序，直接取第一个即可
+     * 保留方法定义以保持向后兼容，但不再排序
      */
     findNextPlayableSimpleAudio() {
         if (this.simpleQueue.length === 0) {
             return null;
         }
         
-        // 按序列号排序
-        this.simpleQueue.sort((a, b) => {
-            if (a.seq !== null && b.seq !== null) {
-                return a.seq - b.seq;
-            }
-            if (a.seq !== null && b.seq === null) {
-                return -1;
-            }
-            if (a.seq === null && b.seq !== null) {
-                return 1;
-            }
-            return a.timestamp - b.timestamp;
-        });
+        // 🔧 优化：移除排序，因为队列在addToSimpleQueue中已经有序
+        // this.simpleQueue.sort(...) // 已移除
         
-        // 返回第一个音频
+        // 返回第一个音频（队列已经有序）
         return this.simpleQueue[0];
     }
 
