@@ -46,11 +46,11 @@ def register_chat_callbacks(app):
         State("ai-chat-x-user-dropdown", "clickedKey"),
         prevent_initial_call=True,
     )
-    def handle_my_info_click(nClicks, clickedKey):
-        """处理用户下拉菜单中"我的信息"项的点击事件"""
+    def handle_health_record_click(nClicks, clickedKey):
+        """处理用户下拉菜单中"健康档案"项的点击事件"""
         #log.debug(f"回调被触发，点击的key是: {clickedKey}")
-        if clickedKey == "my_info":
-            set_props("my-info-drawer", {"visible": True})
+        if clickedKey == "health_record":
+            set_props("health-record-drawer", {"visible": True})
         if clickedKey == "preference":
             set_props("preference-drawer", {"visible": True})
 

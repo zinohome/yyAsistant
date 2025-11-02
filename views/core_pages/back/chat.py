@@ -12,7 +12,7 @@ from components.chat_user_message import render as render_user_message
 from components.chat_session_list import render as render_session_list
 from components.chat_input_area import render as render_chat_input_area
 from components.ai_chat_message_history import AiChatMessageHistory
-from components.my_info import render_my_info_drawer as render_my_info_drawer
+from components.health_record import render_health_record_drawer
 # 添加preference组件导入
 from components.preference import render as render_preference_drawer
 
@@ -110,8 +110,8 @@ def render():
                             id="ai-chat-x-user-dropdown",
                             menuItems=[
                                 {
-                                    "title": "我的信息",
-                                    "key": "my_info",
+                                    "title": "健康档案",
+                                    "key": "health_record",
                                     "icon": "antd-user"
                                 },
                                 {
@@ -333,7 +333,7 @@ def render():
             ),
             session_collapse_store,  # 状态存储组件
             session_refresh_trigger,  # 添加：刷新触发器
-            render_my_info_drawer(),  # 添加我的信息抽屉组件
+            render_health_record_drawer(),  # 添加健康档案抽屉组件
             render_preference_drawer()  # 添加偏好设置抽屉组件
         ],
         style={
