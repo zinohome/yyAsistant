@@ -134,7 +134,8 @@ def render(
                                         'textarea': {
                                             'transition': 'none',
                                             'animation': 'none',
-                                            'resize': 'none'
+                                            'resize': 'none',
+                                            'fontSize': '14px'  # 🔧 统一字体大小为14px
                                         }
                                     },
                                     style=style(

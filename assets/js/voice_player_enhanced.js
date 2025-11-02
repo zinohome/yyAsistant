@@ -535,18 +535,19 @@ class VoicePlayerEnhanced {
     /**
      * 简单TTS播放（录音聊天和文本聊天）
      * 使用简单队列确保按序播放
+     * 🔧 优化：并行解码，不阻塞
      */
     async playSimpleTTS(base64, messageId, seq = null) {
         window.controlledLog?.log('🎧 简单TTS播放:', messageId);
         
         try {
-            // 确保音频上下文可用
+            // 确保音频上下文可用（需要await，因为需要确保上下文可用）
             if (!this.audioContext || this.audioContext.state === 'closed') {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 window.controlledLog?.log('🎧 重新创建音频上下文');
             }
             
-            // 恢复音频上下文（如果被暂停）
+            // 恢复音频上下文（如果被暂停）（需要await，因为需要确保上下文恢复）
             if (this.audioContext.state === 'suspended') {
                 await this.audioContext.resume();
                 window.controlledLog?.log('🎧 音频上下文已恢复');
@@ -561,15 +562,22 @@ class VoicePlayerEnhanced {
                 view[i] = audioData.charCodeAt(i);
             }
             
-            // 解码为AudioBuffer
-            const decodedBuffer = await this.audioContext.decodeAudioData(audioBuffer);
-            window.controlledLog?.log('🎧 简单TTS音频解码完成，时长:', decodedBuffer.duration.toFixed(2), '秒');
+            // 🔧 修改3：优化解码顺序 - 不阻塞解码，并行解码多个音频
+            // 使用Promise.then而不是await，允许并行解码
+            this.audioContext.decodeAudioData(audioBuffer)
+                .then(decodedBuffer => {
+                    window.controlledLog?.log('🎧 简单TTS音频解码完成，时长:', decodedBuffer.duration.toFixed(2), '秒');
+                    // 解码完成后添加到队列（会自动按seq排序）
+                    this.addToSimpleQueue(decodedBuffer, messageId, seq);
+                })
+                .catch(error => {
+                    console.error('❌ 音频解码失败:', error, 'messageId:', messageId, 'seq:', seq);
+                    // 解码失败不影响其他音频的解码和播放
+                });
             
-            // 添加到简单播放队列，确保按序播放
-            this.addToSimpleQueue(decodedBuffer, messageId, seq);
-            
+            // 不等待解码完成，立即返回，允许并行解码多个音频
         } catch (error) {
-            console.error('❌ 简单TTS播放失败:', error);
+            console.error('❌ 简单TTS播放失败:', error, 'messageId:', messageId, 'seq:', seq);
         }
     }
 
@@ -595,14 +603,8 @@ class VoicePlayerEnhanced {
                 source.onended = () => {
                     window.controlledLog?.log('🎧 简单音频播放完成:', messageId);
                     
-                    // 从队列中移除已播放的音频
-                    if (this.simpleQueue && this.simpleQueue.length > 0) {
-                        const index = this.simpleQueue.findIndex(item => item.messageId === messageId);
-                        if (index !== -1) {
-                            this.simpleQueue.splice(index, 1);
-                            window.controlledLog?.log('🎧 已从队列中移除:', messageId, '剩余队列长度:', this.simpleQueue.length);
-                        }
-                    }
+                    // 🔧 修改4：修复队列移除逻辑 - 不再需要查找和移除，因为已经在processSimpleQueue中使用shift()移除了
+                    // 这样确保移除的是当前播放的音频，而不是根据messageId查找（可能移除错误的音频片段）
                     
                     // 🔧 修改5：重置播放标志，允许处理下一个音频
                     this.simplePlaying = false;
@@ -742,10 +744,10 @@ class VoicePlayerEnhanced {
         // 🔧 优化：移除排序，因为队列在addToSimpleQueue中已经有序
         // this.simpleQueue.sort(...) // 已移除
         
-        // 🔧 优化：直接取第一个（队列已经有序），不需要findNextPlayableSimpleAudio
-        const nextAudio = this.simpleQueue.length > 0 ? this.simpleQueue[0] : null;
+        // 🔧 修改4：修复队列移除逻辑 - 在播放前就从队列移除（shift()），确保移除的是当前播放的音频
+        const nextAudio = this.simpleQueue.length > 0 ? this.simpleQueue.shift() : null;
         if (nextAudio) {
-            window.controlledLog?.log('🎧 处理简单播放队列:', nextAudio.messageId, 'seq:', nextAudio.seq);
+            window.controlledLog?.log('🎧 处理简单播放队列:', nextAudio.messageId, 'seq:', nextAudio.seq, '队列剩余长度:', this.simpleQueue.length);
             
             try {
                 await this.playSimpleAudioBuffer(nextAudio.buffer, nextAudio.messageId);
@@ -753,8 +755,8 @@ class VoicePlayerEnhanced {
                 // 🔧 优化：移除延迟，在onended回调中立即处理下一个音频
                 // 播放完成后，继续处理队列中的下一个音频的逻辑移到onended回调中
             } catch (error) {
-                console.error('❌ 简单播放队列音频失败:', error);
-                // 🔧 修复：播放失败时也要重置标志并处理下一个，防止队列卡住
+                console.error('❌ 简单播放队列音频失败:', error, 'messageId:', nextAudio.messageId, 'seq:', nextAudio.seq);
+                // 🔧 修改4补充：播放失败时也要重置标志并处理下一个，防止队列卡住
                 this.simplePlaying = false;
                 if (this.simpleQueue.length > 0) {
                     this.processSimpleQueue();

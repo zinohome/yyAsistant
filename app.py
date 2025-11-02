@@ -565,7 +565,7 @@ app.index_string = '''
             
             /* 防止iOS Safari缩放 */
             input, textarea, select {
-                font-size: 16px !important;
+                font-size: 14px !important;
             }
             
             /* 修复iOS Safari地址栏问题 */

@@ -85,6 +85,12 @@
     font-size: 14px;
 }
 
+/* 确保输入框内的textarea字体大小为14px */
+#ai-chat-x-input .ant-input,
+#ai-chat-x-input textarea {
+    font-size: 14px !important;
+}
+
 /* 当输入框获得焦点时，改变外框容器的边框颜色 */
 #chat-input-container:focus-within {
     border-color: #1890ff !important;
