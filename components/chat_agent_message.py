@@ -16,7 +16,7 @@ def ChatAgentMessage(
     message_id=None,
     sender_name="智能助手",
     timestamp=None,
-    icon="antd-robot",
+    icon=None,
     icon_bg_color="#1890ff",
     message_bg_color="#f5f5f5",
     message_text_color="#000000",
@@ -66,8 +66,14 @@ def ChatAgentMessage(
                 [
                     fac.AntdCol(
                         fac.AntdAvatar(
-                            icon=icon,
-                            style=style(backgroundColor=icon_bg_color, width="36px", height="36px")
+                            mode='image',
+                            src="/assets/imgs/girl-avatar.png",
+                            alt="智能助手头像",
+                            size=36,
+                            shape="circle",
+                            # 🔧 关键修复：完全不传递icon参数，根据Ant Design文档，优先级是 icon > children > src
+                            # 如果传递了icon参数（即使是None），都会优先使用icon，导致src无法生效
+                            style=style(width="36px", height="36px")
                         ),
                         flex="none",
                         style=style(marginRight="12px", display="flex", alignItems="center")

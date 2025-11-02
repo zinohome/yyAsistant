@@ -171,6 +171,9 @@
     display: flex !important;
     flex-direction: column !important;
     bottom: auto !important;  /* 🔧 强制移除bottom，使用top和height控制 */
+    /* 🔧 禁用所有动画效果 */
+    transition: none !important;
+    animation: none !important;
 }
 
 /* 🔧 Drawer content容器样式（强制覆盖） */
@@ -184,6 +187,9 @@
     display: flex !important;
     flex-direction: column !important;
     bottom: auto !important;  /* 🔧 强制移除bottom，使用top和height控制 */
+    /* 🔧 禁用所有动画效果 */
+    transition: none !important;
+    animation: none !important;
 }
 
 /* 🔧 关键修复：强制隐藏Drawer的header（即使title=None也可能渲染） */

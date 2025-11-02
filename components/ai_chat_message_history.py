@@ -20,7 +20,7 @@ def AiChatMessageHistory(messages=None):
             message="您好！我是智能助手，很高兴为您服务。我可以帮助您解答问题、提供建议或协助您完成工作。",
             sender_name="智能助手",
             timestamp=current_time,
-            icon="antd-robot",
+            #icon="antd-robot",
             icon_bg_color="#1890ff"
         ))
     else:
@@ -30,11 +30,12 @@ def AiChatMessageHistory(messages=None):
                 # 添加调试日志
                 #print(f"渲染AI消息 - ID: {msg.get('id')}, 内容: {msg.get('content')}")
                 # 传递所有必要参数给 render_agent_message，使用正确的message参数
+                # 🔧 关键修复：移除icon参数，让组件内部使用src图片路径
                 children.append(render_agent_message(
                     message=msg.get('content', ''),  # 修改为message参数
                     sender_name="智能助手",
                     timestamp=msg.get('timestamp', current_time),  # 使用消息自带的时间戳
-                    icon="antd-robot",
+                    # icon="antd-robot",  # 🔧 移除icon参数，使用src图片
                     icon_bg_color="#1890ff",
                     message_bg_color="#f5f5f5",
                     message_text_color="#000000",
@@ -57,11 +58,12 @@ def AiChatMessageHistory(messages=None):
                 ))
             elif msg.get('role') == 'system':
                 # 系统消息处理
+                # 🔧 关键修复：移除icon参数，让组件内部使用src图片路径
                 children.append(render_agent_message(
                     message=msg.get('content', ''),  # 修改为message参数
                     sender_name="系统",
                     timestamp=msg.get('timestamp', current_time),
-                    icon="antd-info-circle",
+                    # icon="antd-info-circle",  # 🔧 移除icon参数，使用src图片
                     icon_bg_color="#faad14"
                 ))
     return html.Div(children)

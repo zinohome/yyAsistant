@@ -41,7 +41,7 @@ def _create_header_content():
                     [
                         # logo图标
                         html.Img(
-                            src="/assets/imgs/logo.svg",
+                            src="/assets/imgs/girl.ico",
                             height=32,
                             style=style(display="block"),
                         ),

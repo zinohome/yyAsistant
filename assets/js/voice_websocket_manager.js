@@ -2301,10 +2301,8 @@ class VoiceWebSocketManager {
                     <div class="chat-message ai-message" style="margin-bottom: 16px; padding: 16px 24px 0 24px;">
                         <!-- 第一行：头像、发送者名称和时间戳（与chat_agent_message.py完全一致） -->
                         <div style="display: flex; align-items: center; padding: 0 0 4px 0; min-height: 40px;">
-                            <div style="width: 36px; height: 36px; border-radius: 50%; background-color: #1890ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 12px;">
-                                <svg viewBox="64 64 896 896" focusable="false" data-icon="robot" width="1em" height="1em" fill="currentColor" aria-hidden="true" style="font-size: 16px; color: white; width: 16px; height: 16px;">
-                                    <path d="M300 328a60 60 0 10120 0 60 60 0 10-120 0zM852 64H172c-17.7 0-32 14.3-32 32v660c0 17.7 14.3 32 32 32h680c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-32 660H204V128h616v596zM604 328a60 60 0 10120 0 60 60 0 10-120 0zm250.2 556H169.8c-16.5 0-29.8 14.3-29.8 32v36c0 4.4 3.3 8 7.4 8h729.1c4.1 0 7.4-3.6 7.4-8v-36c.1-17.7-13.2-32-29.7-32zM664 508H360c-4.4 0-8 3.6-8 8v60c0 4.4 3.6 8 8 8h304c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8z"></path>
-                                </svg>
+                            <div style="width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; margin-right: 12px; display: flex; align-items: center; justify-content: center; background-color: #f0f0f0;">
+                                <img src="/assets/imgs/girl-avatar.png" alt="智能助手头像" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.onerror=null; this.src=''; this.parentElement.style.backgroundColor='#1890ff'; this.parentElement.innerHTML='<span style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:white;font-size:14px;\\'>AI</span>';" />
                             </div>
                             <div style="display: flex; align-items: center; flex: auto;">
                                 <span style="font-weight: 600; font-size: 14px;">智能助手</span>

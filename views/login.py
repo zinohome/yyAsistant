@@ -121,8 +121,8 @@ def render():
                         fac.AntdSpace(
                             [
                                 html.Img(
-                                    src="/assets/imgs/logo.svg",
-                                    height=72,
+                                    src="/assets/imgs/girl-login.ico",
+                                    height=96,
                                 ),
                                 fac.AntdText(
                                     BaseConfig.app_title,
