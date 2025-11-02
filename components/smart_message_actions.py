@@ -61,14 +61,11 @@ def create_smart_message_actions(message_id, current_state='SUCCESS', is_streami
     # 智能状态感知操作
     smart_actions = []
     
-    # 流式传输时的取消按钮
+    # 流式传输时的进度指示器
     if current_state == 'PROCESSING' and is_streaming:
-        smart_actions.append(create_cancel_button(message_id))
         smart_actions.append(create_progress_indicator())
-    elif current_state == 'ERROR':
-        smart_actions.append(create_retry_button(message_id))
-        if error_info:
-            smart_actions.append(create_error_tooltip(error_info))
+    elif current_state == 'ERROR' and error_info:
+        smart_actions.append(create_error_tooltip(error_info))
     
     # 状态指示器
     smart_actions.append(create_status_indicator(current_state))
@@ -93,42 +90,6 @@ def create_smart_message_actions(message_id, current_state='SUCCESS', is_streami
             )
         ],
         justify="start"
-    )
-
-
-def create_cancel_button(message_id):
-    """创建取消按钮"""
-    return fac.AntdButton(
-        icon=fac.AntdIcon(icon='antd-close'),
-        id={'type': 'ai-chat-x-cancel', 'index': message_id},
-        type="text",
-        size="small",
-        nClicks=0,
-        style=style(
-            fontSize=16, 
-            color='#ff4d4f',
-            padding='4px 8px',
-            minWidth='auto',
-            height='auto'
-        )
-    )
-
-
-def create_retry_button(message_id):
-    """创建重试按钮"""
-    return fac.AntdButton(
-        icon=fac.AntdIcon(icon='antd-reload'),
-        id={'type': 'ai-chat-x-retry', 'index': message_id},
-        type="text",
-        size="small",
-        nClicks=0,
-        style=style(
-            fontSize=16, 
-            color='#1890ff',
-            padding='4px 8px',
-            minWidth='auto',
-            height='auto'
-        )
     )
 
 
