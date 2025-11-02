@@ -95,9 +95,10 @@ def render(
                     )
             ),
             
-            # 输入框区域 - 包含统一外框
+            # 输入框区域 - 包含统一外框，支持响应式布局
             fuc.FefferyDiv(
                 [
+                    # 第一行：附件按钮 + 输入框 + 发送按钮（大屏幕时包含录音和通话按钮）
                     fac.AntdRow(
                         [
                             # 左侧附件上传按钮
@@ -145,12 +146,15 @@ def render(
                                 )
                             ),
                             
-                            # 右侧按钮组
+                            # 右侧按钮组（大屏幕时显示所有按钮，小屏幕时只显示发送按钮）
                             fac.AntdCol(
                                 flex="none",
+                                # 大屏幕（≥576px）时显示所有按钮，小屏幕时只显示发送按钮
+                                xs={"flex": "none", "span": None},  # 小屏幕
+                                sm={"flex": "none"},  # 大屏幕
                                 children=fac.AntdSpace(
                                     [   
-                                        # 发送按钮（上箭头） - 统一样式
+                                        # 发送按钮（上箭头） - 统一样式，所有屏幕都显示
                                         *( [
                                             fac.AntdButton(
                                                 icon=fac.AntdIcon(icon="antd-arrow-up"),
@@ -169,7 +173,7 @@ def render(
                                             )
                                         ] if enable_send_button else [] ),
 
-                                        # 录音按钮 - 统一样式
+                                        # 录音按钮 - 统一样式，大屏幕（≥576px）时显示在第一行
                                         *( [
                                             fac.AntdButton(
                                                 id="voice-record-button",
@@ -190,11 +194,13 @@ def render(
                                                     backgroundColor="#dc2626",
                                                     borderColor="#dc2626",
                                                     boxShadow="0 2px 4px rgba(220, 38, 38, 0.2)"
-                                                )
+                                                ),
+                                                # 🔧 响应式：小屏幕（<576px）时隐藏，通过className控制
+                                                className="voice-button-desktop"
                                             )
                                         ] if enable_voice_input else [] ),
 
-                                        # 通话按钮 - 统一样式
+                                        # 通话按钮 - 统一样式，大屏幕（≥576px）时显示在第一行
                                         *( [
                                             fac.AntdButton(
                                                 id="voice-call-btn",
@@ -215,7 +221,9 @@ def render(
                                                     backgroundColor="#52c41a",
                                                     borderColor="#52c41a",
                                                     boxShadow="0 2px 4px rgba(82, 196, 26, 0.2)"
-                                                )
+                                                ),
+                                                # 🔧 响应式：小屏幕（<576px）时隐藏，通过className控制
+                                                className="voice-button-desktop"
                                             )
                                         ] if enable_voice_input else [] )
                                     ],
@@ -226,7 +234,73 @@ def render(
                         align="middle",
                         gutter=0,
                         style=style(width="100%")
-                    )
+                    ),
+                    
+                    # 第二行：录音按钮 + 通话按钮（仅在 < 576px 时显示，各占50%宽度）
+                    *( [
+                        fac.AntdRow(
+                            [
+                                # 录音按钮 - 小屏幕时显示，占50%宽度
+                                fac.AntdCol(
+                                    span=12,  # 占50%（24格系统中的12格）
+                                    children=fac.AntdButton(
+                                        id="voice-record-button-mobile",
+                                        icon=DashIconify(
+                                            id="voice-record-icon-mobile",
+                                            icon="proicons:microphone",
+                                            width=20,
+                                            height=20
+                                        ),
+                                        type="primary",
+                                        size="large",
+                                        title="开始录音",
+                                        block=True,  # 占满整列宽度
+                                        style=style(
+                                            padding="8px",
+                                            height="40px",
+                                            borderRadius="8px",
+                                            backgroundColor="#dc2626",
+                                            borderColor="#dc2626",
+                                            boxShadow="0 2px 4px rgba(220, 38, 38, 0.2)"
+                                        ),
+                                        className="voice-button-mobile"
+                                    )
+                                ),
+                                # 通话按钮 - 小屏幕时显示，占50%宽度
+                                fac.AntdCol(
+                                    span=12,  # 占50%（24格系统中的12格）
+                                    children=fac.AntdButton(
+                                        id="voice-call-btn-mobile",
+                                        icon=DashIconify(
+                                            icon="bi:telephone",
+                                            rotate=2,
+                                            width=20,
+                                            height=20
+                                        ),
+                                        type="primary",
+                                        size="large",
+                                        title="实时语音通话",
+                                        block=True,  # 占满整列宽度
+                                        style=style(
+                                            padding="8px",
+                                            height="40px",
+                                            borderRadius="8px",
+                                            backgroundColor="#52c41a",
+                                            borderColor="#52c41a",
+                                            boxShadow="0 2px 4px rgba(82, 196, 26, 0.2)"
+                                        ),
+                                        className="voice-button-mobile"
+                                    )
+                                )
+                            ],
+                            gutter=[8, 0],  # 左右间距8px
+                            style=style(
+                                width="100%",
+                                marginTop="8px"
+                            ),
+                            className="voice-buttons-row-mobile"
+                        )
+                    ] if enable_voice_input else [] )
                 ],
                 # 统一外框样式
                 id="chat-input-container",

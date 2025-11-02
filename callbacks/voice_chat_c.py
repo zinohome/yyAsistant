@@ -23,13 +23,20 @@ from server import app
         Output("voice-websocket-connection", "data"),
         Output("voice-error-notification", "children")
     ],
-    [Input("voice-record-button", "n_clicks"), Input("voice-call-btn", "n_clicks")],
+    [
+        Input("voice-record-button", "n_clicks"), 
+        Input("voice-call-btn", "n_clicks"),
+        # 🔧 响应式：同时监听移动端按钮
+        Input("voice-record-button-mobile", "n_clicks"),
+        Input("voice-call-btn-mobile", "n_clicks")
+    ],
     [State("voice-websocket-connection", "data")]
 )
-def manage_websocket_connection(record_clicks, call_clicks, connection_data):
+def manage_websocket_connection(record_clicks, call_clicks, record_clicks_mobile, call_clicks_mobile, connection_data):
     """管理WebSocket连接状态"""
     try:
-        if record_clicks or call_clicks:
+        # 🔧 响应式：同时处理桌面端和移动端按钮点击
+        if record_clicks or call_clicks or record_clicks_mobile or call_clicks_mobile:
             # 检查WebSocket连接状态
             if not connection_data or not connection_data.get('connected', False):
                 # 尝试建立连接

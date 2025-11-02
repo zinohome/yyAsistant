@@ -287,7 +287,8 @@ app.clientside_callback(
         function(state_data) {
             if (!state_data || !window.unifiedButtonStateManager) {
                 const noupdate = window.dash_clientside.no_update;
-                return [noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate];
+                // 🔧 响应式：返回值数量需要匹配所有Outputs（包括移动端按钮）
+                return [noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate, noupdate];
             }
             
             const state = state_data.state || 'idle';
@@ -349,17 +350,31 @@ app.clientside_callback(
                 callButtonIcon = 'material-symbols:call-end'; // 通话中显示挂断
             }
             
+            // 🔧 响应式：同时更新桌面端和移动端按钮样式、状态和图标
+            // 更新桌面端按钮样式
+            const recordButtonStyle = mergeButtonStyle('voice-record-button', styles.recordButton);
+            const callButtonStyle = mergeButtonStyle('voice-call-btn', styles.callButton);
+            
+            // 更新移动端按钮样式（与桌面端保持一致）
+            const recordButtonMobileStyle = mergeButtonStyle('voice-record-button-mobile', styles.recordButton);
+            const callButtonMobileStyle = mergeButtonStyle('voice-call-btn-mobile', styles.callButton);
+            
             const result = [
                 mergeButtonStyle('ai-chat-x-send-btn', styles.textButton),
                 styles.textLoading || false,
                 styles.textDisabled || false,
                 textButtonIcon, // 文本按钮图标
-                mergeButtonStyle('voice-record-button', styles.recordButton),
+                recordButtonStyle, // 桌面端录音按钮样式
                 recordButtonIcon, // 录音按钮图标
-                styles.recordDisabled || false,
-                mergeButtonStyle('voice-call-btn', styles.callButton),
+                styles.recordDisabled || false, // 桌面端录音按钮disabled状态
+                callButtonStyle, // 桌面端通话按钮样式
                 callButtonIcon, // 通话按钮图标
-                styles.callDisabled || false
+                styles.callDisabled || false, // 桌面端通话按钮disabled状态
+                // 🔧 响应式：移动端按钮样式和状态（与桌面端保持一致）
+                recordButtonMobileStyle, // 移动端录音按钮样式
+                styles.recordDisabled || false, // 移动端录音按钮disabled状态
+                callButtonMobileStyle, // 移动端通话按钮样式
+                styles.callDisabled || false // 移动端通话按钮disabled状态
             ];
             
             return result;
@@ -375,7 +390,12 @@ app.clientside_callback(
         Output('voice-record-button', 'disabled', allow_duplicate=True),
         Output('voice-call-btn', 'style', allow_duplicate=True),
         Output('voice-call-icon-store', 'data', allow_duplicate=True),
-        Output('voice-call-btn', 'disabled', allow_duplicate=True)
+        Output('voice-call-btn', 'disabled', allow_duplicate=True),
+        # 🔧 响应式：同时控制移动端按钮的样式和状态
+        Output('voice-record-button-mobile', 'style', allow_duplicate=True),
+        Output('voice-record-button-mobile', 'disabled', allow_duplicate=True),
+        Output('voice-call-btn-mobile', 'style', allow_duplicate=True),
+        Output('voice-call-btn-mobile', 'disabled', allow_duplicate=True)
     ],
     Input('unified-button-state', 'data'),
     prevent_initial_call=True
@@ -394,35 +414,49 @@ def update_text_button_icon(icon_data):
     
     return DashIconify(icon=icon_data, width=20, height=20)
 
-# 回调 4: 录音按钮图标更新回调
+# 回调 4: 录音按钮图标更新回调（同时更新桌面端和移动端）
 @app.callback(
-    Output('voice-record-button', 'icon', allow_duplicate=True),
+    [
+        Output('voice-record-button', 'icon', allow_duplicate=True),
+        # 🔧 关键修复：应该更新按钮的icon属性，而不是DashIconify组件的icon属性
+        Output('voice-record-button-mobile', 'icon', allow_duplicate=True)
+    ],
     Input('voice-record-icon-store', 'data'),
     prevent_initial_call=True
 )
 def update_record_button_icon(icon_data):
-    """更新录音按钮图标"""
+    """更新录音按钮图标（桌面端和移动端）"""
     if not icon_data:
-        return DashIconify(icon="proicons:microphone", width=20, height=20)
+        default_icon = DashIconify(icon="proicons:microphone", width=20, height=20)
+        return default_icon, default_icon
     
-    return DashIconify(icon=icon_data, width=20, height=20)
+    updated_icon = DashIconify(icon=icon_data, width=20, height=20)
+    return updated_icon, updated_icon
 
-# 回调 5: 通话按钮图标更新回调
+# 回调 5: 通话按钮图标更新回调（同时更新桌面端和移动端）
 @app.callback(
-    Output('voice-call-btn', 'icon', allow_duplicate=True),
+    [
+        Output('voice-call-btn', 'icon', allow_duplicate=True),
+        # 🔧 响应式：同时更新移动端通话按钮图标
+        Output('voice-call-btn-mobile', 'icon', allow_duplicate=True)
+    ],
     Input('voice-call-icon-store', 'data'),
     prevent_initial_call=True
 )
 def update_call_button_icon(icon_data):
-    """更新通话按钮图标"""
+    """更新通话按钮图标（桌面端和移动端）"""
     if not icon_data:
-        return DashIconify(icon="bi:telephone", rotate=2, width=20, height=20)
+        default_icon = DashIconify(icon="bi:telephone", rotate=2, width=20, height=20)
+        return default_icon, default_icon
     
+    # 🔧 响应式：同步更新移动端按钮图标
     # 如果是bi:telephone图标，需要旋转180度
     if icon_data == "bi:telephone":
-        return DashIconify(icon=icon_data, rotate=2, width=20, height=20)
+        updated_icon = DashIconify(icon=icon_data, rotate=2, width=20, height=20)
+        return updated_icon, updated_icon
     
-    return DashIconify(icon=icon_data, width=20, height=20)
+    updated_icon = DashIconify(icon=icon_data, width=20, height=20)
+    return updated_icon, updated_icon
 
 # 回调 4: 输入验证回调 (显示警告消息) - 暂时禁用以避免与重新生成功能冲突
 # app.clientside_callback(

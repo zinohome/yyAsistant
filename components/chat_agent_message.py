@@ -12,9 +12,9 @@ from components.smart_message_actions import create_smart_message_actions  # 导
 
 
 def ChatAgentMessage(
-    message="您好！我是智能助手，很高兴为您服务。我可以帮助您解答问题、提供建议或协助您完成工作。",
+    message="您好！我是小妍，很高兴为您服务。我可以帮助您解答问题、提供建议或协助您完成工作。",
     message_id=None,
-    sender_name="智能助手",
+    sender_name="小妍",
     timestamp=None,
     icon=None,
     icon_bg_color="#1890ff",
@@ -68,7 +68,7 @@ def ChatAgentMessage(
                         fac.AntdAvatar(
                             mode='image',
                             src="/assets/imgs/girl-avatar.png",
-                            alt="智能助手头像",
+                            alt="小妍头像",
                             size=36,
                             shape="circle",
                             # 🔧 关键修复：完全不传递icon参数，根据Ant Design文档，优先级是 icon > children > src

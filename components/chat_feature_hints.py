@@ -6,15 +6,15 @@ from feffery_dash_utils.style_utils import style
 
 
 def ChatFeatureHints(
-    message="您好！我是智能助手，很高兴为您服务。我可以帮助您解答问题、提供建议或协助您完成工作。",
-    sender_name="智能助手",
+    message="您好！我是小妍，很高兴为您服务。我可以帮助您解答问题、提供建议或协助您完成工作。",
+    sender_name="小妍",
     timestamp="10:30",
     #icon="antd-robot",
     icon=None,
     icon_bg_color="#1890ff"
 ):
     """
-    智能助手消息组件
+    小妍消息组件
     
     参数:
         message: 消息内容
@@ -24,7 +24,7 @@ def ChatFeatureHints(
         icon_bg_color: 头像背景颜色
     
     返回:
-        智能助手消息组件的渲染结果
+        小妍消息组件的渲染结果
     """
     
     return html.Div(
@@ -38,7 +38,7 @@ def ChatFeatureHints(
                             src="/assets/imgs/girl-avatar.png",
                             size=36,
                             shape="circle",
-                            alt="智能助手头像",
+                            alt="小妍头像",
                             # 🔧 关键修复：完全不传递icon参数，根据Ant Design文档，优先级是 icon > children > src
                             # 如果传递了icon参数（即使是None），都会优先使用icon，导致src无法生效
                             style=style(width="36px", height="36px")

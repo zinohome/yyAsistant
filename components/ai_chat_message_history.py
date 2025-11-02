@@ -17,8 +17,8 @@ def AiChatMessageHistory(messages=None):
     if messages is None or len(messages) == 0:
         # 传递所有必要参数给 render_feature_hints
         children.append(render_feature_hints(
-            message="您好！我是智能助手，很高兴为您服务。我可以帮助您解答问题、提供建议或协助您完成工作。",
-            sender_name="智能助手",
+            message="您好！我是小妍，很高兴为您服务。我可以帮助您解答问题、提供建议或协助您完成工作。",
+            sender_name="小妍",
             timestamp=current_time,
             #icon="antd-robot",
             icon_bg_color="#1890ff"
@@ -33,7 +33,7 @@ def AiChatMessageHistory(messages=None):
                 # 🔧 关键修复：移除icon参数，让组件内部使用src图片路径
                 children.append(render_agent_message(
                     message=msg.get('content', ''),  # 修改为message参数
-                    sender_name="智能助手",
+                    sender_name="小妍",
                     timestamp=msg.get('timestamp', current_time),  # 使用消息自带的时间戳
                     # icon="antd-robot",  # 🔧 移除icon参数，使用src图片
                     icon_bg_color="#1890ff",

@@ -40,7 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
  * 初始化DOM缓存
  */
 function initDOMCache() {
-    DOM_CACHE.voiceCallBtn = document.getElementById('voice-call-btn');
+    // 🔧 响应式：同时缓存桌面端和移动端按钮（优先使用桌面端）
+    DOM_CACHE.voiceCallBtn = document.getElementById('voice-call-btn') || 
+                             document.getElementById('voice-call-btn-mobile');
     DOM_CACHE.statusElement = document.getElementById('realtime-voice-status');
     DOM_CACHE.statusTextElement = document.getElementById('realtime-status-text');
     DOM_CACHE.audioVisualizer = document.getElementById('audio-visualizer');
@@ -50,16 +52,18 @@ function initDOMCache() {
  * 使用事件委托绑定通话按钮事件
  */
 function bindVoiceCallButtonWithDelegate() {
-    // 使用事件委托，监听整个文档的点击事件
+    // 使用事件委托，监听整个文档的点击事件（支持桌面端和移动端）
     document.addEventListener('click', function(event) {
-        // 检查点击的是否是语音通话按钮
-        if (event.target && event.target.closest('#voice-call-btn')) {
-            window.controlledLog?.log('语音通话按钮被点击');
+        // 🔧 响应式：同时支持桌面端和移动端通话按钮
+        const callButton = (event.target && event.target.closest('#voice-call-btn')) ||
+                          (event.target && event.target.closest('#voice-call-btn-mobile'));
+        if (callButton) {
+            window.controlledLog?.log('语音通话按钮被点击（桌面端或移动端）');
             
             // 触发语音通话事件
             if (window.dash_clientside && window.dash_clientside.set_props) {
                 // 检查当前状态（通过按钮的disabled属性和背景色）
-                const button = event.target.closest('#voice-call-btn');
+                const button = callButton;
                 const isCalling = button && (
                     button.style.backgroundColor.includes('rgb(255, 77, 79)') || // 红色表示通话中
                     button.style.backgroundColor.includes('#ff4d4f') || // 红色

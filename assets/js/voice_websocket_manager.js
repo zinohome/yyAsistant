@@ -2302,10 +2302,10 @@ class VoiceWebSocketManager {
                         <!-- 第一行：头像、发送者名称和时间戳（与chat_agent_message.py完全一致） -->
                         <div style="display: flex; align-items: center; padding: 0 0 4px 0; min-height: 40px;">
                             <div style="width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; margin-right: 12px; display: flex; align-items: center; justify-content: center; background-color: #f0f0f0;">
-                                <img src="/assets/imgs/girl-avatar.png" alt="智能助手头像" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.onerror=null; this.src=''; this.parentElement.style.backgroundColor='#1890ff'; this.parentElement.innerHTML='<span style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:white;font-size:14px;\\'>AI</span>';" />
+                                <img src="/assets/imgs/girl-avatar.png" alt="小妍头像" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.onerror=null; this.src=''; this.parentElement.style.backgroundColor='#1890ff'; this.parentElement.innerHTML='<span style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:white;font-size:14px;\\'>AI</span>';" />
                             </div>
                             <div style="display: flex; align-items: center; flex: auto;">
-                                <span style="font-weight: 600; font-size: 14px;">智能助手</span>
+                                <span style="font-weight: 600; font-size: 14px;">小妍</span>
                                 <span style="font-size: 12px; color: rgba(0,0,0,0.45); margin-left: 8px;">${timeStr}</span>
                             </div>
                         </div>

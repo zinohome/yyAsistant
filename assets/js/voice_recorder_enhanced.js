@@ -278,13 +278,15 @@ class VoiceRecorderEnhanced {
     bindEvents() {
         window.controlledLog?.log('绑定录音按钮事件监听器...');
         
-        // 监听录音按钮点击事件 - 使用新的按钮ID
+        // 监听录音按钮点击事件 - 使用新的按钮ID（支持桌面端和移动端）
         document.addEventListener('click', async (event) => {
             // window.controlledLog?.log('文档点击事件触发，目标元素:', event.target);
             
-            // 检查是否是录音按钮
-            if (event.target.closest('#voice-record-button')) {
-                window.controlledLog?.log('录音按钮被点击');
+            // 🔧 响应式：同时支持桌面端和移动端录音按钮
+            const recordButton = event.target.closest('#voice-record-button') || 
+                                event.target.closest('#voice-record-button-mobile');
+            if (recordButton) {
+                window.controlledLog?.log('录音按钮被点击（桌面端或移动端）');
                 event.preventDefault();
                 event.stopPropagation();
                 await this.toggleRecording();

@@ -274,3 +274,45 @@
     right: 0 !important;  /* 🔧 确保Drawer贴右边显示 */
     left: auto !important;  /* 🔧 确保不覆盖左侧内容 */
 }
+
+/* ============================================
+   响应式布局：小屏幕（< 576px）输入区域按钮布局
+   ============================================ */
+
+/* 小屏幕时隐藏桌面端按钮，显示移动端按钮行 */
+@media screen and (max-width: 575px) {
+    /* 隐藏桌面端的录音和通话按钮 */
+    .voice-button-desktop {
+        display: none !important;
+    }
+    
+    /* 显示移动端按钮行 */
+    .voice-buttons-row-mobile {
+        display: flex !important;
+    }
+    
+    /* 调整聊天历史区域高度，减去额外按钮行高度（56px：按钮40px + 间距16px） */
+    #ai-chat-x-history {
+        height: calc(100vh - 296px) !important;
+        max-height: calc(100vh - 296px) !important;
+    }
+}
+
+/* 大屏幕时隐藏移动端按钮，显示桌面端按钮 */
+@media screen and (min-width: 576px) {
+    /* 显示桌面端的录音和通话按钮 */
+    .voice-button-desktop {
+        display: inline-flex !important;
+    }
+    
+    /* 隐藏移动端按钮行 */
+    .voice-buttons-row-mobile {
+        display: none !important;
+    }
+    
+    /* 恢复聊天历史区域高度 */
+    #ai-chat-x-history {
+        height: calc(100vh - 240px) !important;
+        max-height: calc(100vh - 240px) !important;
+    }
+}
