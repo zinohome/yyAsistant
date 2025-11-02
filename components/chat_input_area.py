@@ -10,7 +10,7 @@ def render(
     max_length=2000,
     topics=None,
     icons=None,
-    enable_file_upload=True,
+    enable_file_upload=False,
     enable_voice_input=True,
     enable_send_button=True
 ):
