@@ -864,17 +864,16 @@ class VoicePlayerEnhanced {
                         window.controlledLog?.log(`🎵 播放分片 seq:${chunk.seq}, 剩余分片:${state.chunks.length}`);
                         
                         try {
-                            // 🔧 语音通话音频播放：添加播放间隔，避免一股脑播放
-                            await this.playAudioFromBase64(chunk.base64, messageId);
+                            // 🔧 关键修复：直接添加音频到队列，不等待播放完成
+                            // playAudioFromBase64 会调用 playVoiceCallAudio，然后 addToPlayQueue
+                            // processPlayQueue 会使用精确时间调度（scheduledTime += duration）实现无缝衔接
+                            // 因此不需要等待间隔，避免破坏音频连续性
+                            this.playAudioFromBase64(chunk.base64, messageId);
                             
-                            // 🔧 添加播放间隔，确保音频分片之间有适当的间隔
-                            const playbackDuration = this.estimateAudioDuration(chunk.base64);
-                            const minInterval = 50; // 最小间隔50ms（增加间隔）
-                            const interval = Math.max(minInterval, playbackDuration * 0.1); // 播放时长的10%作为间隔（增加间隔）
-                            
-                            window.controlledLog?.log(`🎵 播放间隔: ${interval}ms (播放时长: ${playbackDuration}ms)`);
-                            window.controlledLog?.log('🔍 [语音通话调试] 等待播放间隔:', interval, 'ms');
-                            await new Promise(resolve => setTimeout(resolve, interval));
+                            // 🔧 移除播放间隔，因为 processPlayQueue 已经使用精确时间调度确保无缝衔接
+                            // 立即处理下一个分片，让 processPlayQueue 负责时间调度
+                            // 只需短暂延迟，确保队列处理完成
+                            await new Promise(resolve => setTimeout(resolve, 10)); // 很短的延迟，仅用于让队列处理
                             
                         } catch (e) {
                             console.warn('播放分片失败，跳过该分片:', e);

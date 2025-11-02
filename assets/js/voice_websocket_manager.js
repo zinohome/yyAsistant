@@ -1811,7 +1811,11 @@ class VoiceWebSocketManager {
                 hasAudio: !!data.audio,
                 audioLength: data.audio ? data.audio.length : 0,
                 messageId: data.message_id,
-                timestamp: data.timestamp
+                timestamp: data.timestamp,
+                seq: data.seq,  // 🔧 记录序列号
+                item_id: data.item_id,  // 🔧 记录item_id
+                index: data.index,  // 🔧 记录index
+                created: data.created  // 🔧 记录OpenAI的created时间戳
             });
             
             // 🔧 详细调试日志
@@ -1822,7 +1826,11 @@ class VoiceWebSocketManager {
                 hasAudio: !!data.audio,
                 audioLength: data.audio ? data.audio.length : 0,
                 sessionId: data.session_id,
-                codec: data.codec
+                codec: data.codec,
+                seq: data.seq,  // 🔧 添加序列号
+                item_id: data.item_id,  // 🔧 添加item_id
+                index: data.index,  // 🔧 添加index
+                created: data.created  // 🔧 添加OpenAI的created时间戳
             });
             
             // 🚀 检查是否正在打断，如果是则忽略新的音频
@@ -1839,12 +1847,12 @@ class VoiceWebSocketManager {
             window.controlledLog?.log('🔍 [语音通话调试] 准备启动播放动画...');
             this.startVoiceCallPlaybackAnimation();
             
-            // 播放AI的音频回复
+            // 🔧 使用handleAudioStream处理音频，它会正确处理序列号
             if (data.audio && window.voicePlayerEnhanced) {
                 window.controlledLog?.log('🎵 开始播放AI音频，数据长度:', data.audio.length);
-                window.controlledLog?.log('🔍 [语音通话调试] 调用播放器播放音频，messageId:', data.message_id);
-                // 传递messageId，确保语音通话音频使用正确的播放方式
-                window.voicePlayerEnhanced.playAudioFromBase64(data.audio, data.message_id);
+                window.controlledLog?.log('🔍 [语音通话调试] 调用handleAudioStream处理音频，messageId:', data.message_id, 'seq:', data.seq);
+                // 🔧 使用handleAudioStream，它会根据场景选择正确的播放方式并传递序列号
+                window.voicePlayerEnhanced.handleAudioStream(data);
             } else {
                 console.warn('🎵 无法播放AI音频：', {
                     hasAudio: !!data.audio,
