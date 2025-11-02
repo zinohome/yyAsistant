@@ -85,12 +85,32 @@ class VoiceWebSocketManager {
                 });
                 window.controlledLog?.log('✅ voice-call-transcription-display Store已更新');
                 
+                // 🔧 关键修复：保存displayData到实例变量，以便后续使用
+                this.voiceCallTranscriptionDisplay = displayData;
+                
                 // 🔧 关键修复：参考my-info-drawer的实现，直接使用set_props设置Drawer的visible属性
                 try {
                     window.dash_clientside.set_props('voice-call-text-drawer', {
                         visible: true
                     });
                     window.controlledLog?.log('✅ 已直接设置Drawer为显示状态');
+                    
+                    // 🔧 新增：在Drawer显示后，显示问候文字
+                    const showGreeting = () => {
+                        const displayElement = document.getElementById('voice-call-text-content');
+                        if (displayElement) {
+                            window.controlledLog?.log('✅ 找到voice-call-text-content元素，显示问候文字');
+                            // 直接调用updateVoiceCallTextDisplay显示问候文字
+                            this.updateVoiceCallTextDisplay(displayData);
+                        } else {
+                            window.controlledLog?.warn('⚠️ 未找到voice-call-text-content元素，延迟重试');
+                        }
+                    };
+                    
+                    // 延迟显示问候文字，确保Drawer完全渲染
+                    setTimeout(showGreeting, 100);
+                    setTimeout(showGreeting, 300);
+                    setTimeout(showGreeting, 500);
                     
                     // 🔧 关键修复：立即移除可能存在的display:none !important，确保Drawer能够显示
                     const removeDisplayNone = () => {
@@ -2251,8 +2271,38 @@ class VoiceWebSocketManager {
         }
         
         if (!displayData || !displayData.messages || displayData.messages.length === 0) {
-            window.controlledLog?.log('⚠️ 显示数据为空，显示占位文本');
-            displayElement.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px; padding: 20px;">暂无对话记录</div>';
+            window.controlledLog?.log('⚠️ 显示数据为空，显示问候文字');
+            // 使用与 agent 消息相同的样式显示问候文字
+            const currentTime = new Date();
+            const timeStr = currentTime.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const greetingText = '您好！我是小妍，很高兴为您服务。我们现在可以进行语音对话，您可以随时打断我说话，我会立即停止并听取您的指示。';
+            displayElement.innerHTML = `
+                <div class="chat-message ai-message" style="margin-bottom: 16px; padding: 16px 24px 0 24px;">
+                    <!-- 第一行：头像、发送者名称和时间戳（与chat_agent_message.py完全一致） -->
+                    <div style="display: flex; align-items: center; padding: 0 0 4px 0; min-height: 40px;">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; margin-right: 12px; display: flex; align-items: center; justify-content: center; background-color: #f0f0f0;">
+                            <img src="/assets/imgs/girl-avatar.png" alt="小妍头像" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.onerror=null; this.src=''; this.parentElement.style.backgroundColor='#1890ff'; this.parentElement.innerHTML='<span style=\\'display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:white;font-size:14px;\\'>AI</span>';" />
+                        </div>
+                        <div style="display: flex; align-items: center; flex: auto;">
+                            <span style="font-weight: 600; font-size: 14px;">小妍</span>
+                            <span style="font-size: 12px; color: rgba(0,0,0,0.45); margin-left: 8px;">${timeStr}</span>
+                        </div>
+                    </div>
+                    <!-- 第二行：消息内容，保持缩进（与chat_agent_message.py完全一致） -->
+                    <div style="display: flex; padding: 0 0 8px 0;">
+                        <div style="width: 48px; height: 0; flex-shrink: 0;"></div>
+                        <div style="border-radius: 0px 12px 12px; background-color: rgb(245, 245, 245); max-width: 80%; width: 100%;">
+                            <div class="theme-pie agent-message-markdown-body" style="color: rgb(0, 0, 0);">
+                                <p>${this.escapeHtml(greetingText)}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
             return;
         }
         

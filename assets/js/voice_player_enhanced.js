@@ -31,6 +31,7 @@ class VoicePlayerEnhanced {
         this.streamStates = new Map(); // message_id -> { chunks: [{seq, base64}], nextSeq, codec, session_id }
         this.shouldStop = false; // 停止标志
         this.isPlayingVoiceCall = false; // 语音通话播放标志，确保分片按顺序播放
+        this.scheduledSources = []; // 🔧 保存所有已调度的音频源，用于打断和终止时停止
         
         // 异步初始化
         this.init().catch(error => {
@@ -1215,6 +1216,21 @@ class VoicePlayerEnhanced {
         try {
             window.controlledLog?.log('🎧 播放语音通话音频，base64长度:', base64Audio.length);
             
+            // 🔧 确保AudioContext可用且采样率正确
+            if (!this.audioContext || this.audioContext.state === 'closed') {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 24000,
+                    latencyHint: 'playback'
+                });
+            } else if (Math.abs(this.audioContext.sampleRate - 24000) > 100) {
+                // 采样率不匹配，重新创建
+                this.audioContext.close();
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 24000,
+                    latencyHint: 'playback'
+                });
+            }
+            
             // 解码base64音频数据
             const binaryString = atob(base64Audio);
             const audioBuffer = new ArrayBuffer(binaryString.length);
@@ -1224,26 +1240,44 @@ class VoicePlayerEnhanced {
                 view[i] = binaryString.charCodeAt(i);
             }
             
-            // 转换为PCM16
+            // 🔧 检查数据长度必须是偶数（PCM16是16位，即2字节）
+            if (audioBuffer.byteLength % 2 !== 0) {
+                console.warn('⚠️ 音频数据长度不是偶数，可能是数据不完整');
+            }
+            
+            // 转换为PCM16（小端序）
             const pcm16Data = new Int16Array(audioBuffer);
             const float32Data = new Float32Array(pcm16Data.length);
             
-            // PCM16到Float32转换
+            // 🔧 改进的PCM16到Float32转换：使用更精确的归一化
             for (let i = 0; i < pcm16Data.length; i++) {
-                float32Data[i] = pcm16Data[i] / 32768.0;
+                // 使用32767.5而不是32768，避免溢出
+                float32Data[i] = Math.max(-1.0, Math.min(1.0, pcm16Data[i] / 32767.5));
             }
             
-            // 创建音频缓冲区
-            const audioBufferNode = this.audioContext.createBuffer(1, float32Data.length, 24000);
+            // 🔧 创建音频缓冲区，确保采样率匹配
+            const audioBufferNode = this.audioContext.createBuffer(
+                1,  // 单声道
+                float32Data.length,  // 样本数
+                24000  // 采样率（必须匹配AudioContext）
+            );
             audioBufferNode.copyToChannel(float32Data, 0);
             
-            window.controlledLog?.log('🎵 语音通话音频准备完成，时长:', audioBufferNode.duration.toFixed(2), '秒');
+            // 🔧 验证音频缓冲区
+            if (audioBufferNode.length !== float32Data.length || 
+                audioBufferNode.sampleRate !== 24000) {
+                console.error('❌ 音频缓冲区创建失败或不匹配');
+                return;
+            }
             
-            // 🔧 关键修复：使用播放队列管理，确保顺序播放（参考备份实现）
+            window.controlledLog?.log('🎵 语音通话音频准备完成，时长:', audioBufferNode.duration.toFixed(3), '秒，采样数:', audioBufferNode.length, '采样率:', audioBufferNode.sampleRate);
+            
+            // 🔧 关键修复：使用播放队列管理，确保顺序播放和无缝衔接
             this.addToPlayQueue(audioBufferNode, messageId);
             
         } catch (error) {
             console.error('❌ 语音通话音频播放失败:', error);
+            window.controlledLog?.log('❌ 音频播放错误详情:', error.message, error.stack);
         }
     }
     
@@ -1350,32 +1384,31 @@ class VoicePlayerEnhanced {
             this.currentAudio = null;
         }
         
+        // 🔧 停止所有已调度的音频源（用于精确时间调度的音频）
+        if (this.scheduledSources && this.scheduledSources.length > 0) {
+            window.controlledLog?.log('🛑 停止所有已调度的音频源，数量:', this.scheduledSources.length);
+            this.scheduledSources.forEach(source => {
+                try {
+                    if (source && typeof source.stop === 'function') {
+                        source.stop(0);
+                        source.disconnect();
+                        window.controlledLog?.log('🛑 已停止已调度的音频源');
+                    }
+                } catch (error) {
+                    // 忽略已停止或无效的错误
+                    window.controlledLog?.log('已调度的音频源已停止或无效');
+                }
+            });
+            this.scheduledSources = [];
+        }
+        
         // 🚀 立即清空播放队列
         this.playQueue = [];
         this.audioQueue = []; // 清空所有队列
         this.isPlaying = false;
         
-        // 强制停止所有音频上下文中的音频源
-        if (this.audioContext && this.audioContext.state !== 'closed') {
-            try {
-                // 断开所有连接
-                const destination = this.audioContext.destination;
-                if (destination) {
-                    destination.disconnect();
-                }
-                
-                // 重新创建音频上下文以确保完全停止
-                this.audioContext.close();
-                this.audioContext = null;
-                window.controlledLog?.log('🛑 音频上下文已强制关闭');
-            } catch (error) {
-                window.controlledLog?.log('音频上下文清理完成');
-            }
-        }
-        
-        // 清空播放队列
-        this.audioQueue = [];
-        this.isPlaying = false;
+        // 🔧 不关闭AudioContext，保持上下文可用（避免重新创建的开销）
+        // 注释掉AudioContext的关闭逻辑，只在必要时关闭
         
         // 清空所有流状态
         this.streamStates.clear();
@@ -1385,10 +1418,12 @@ class VoicePlayerEnhanced {
     }
     
     async processPlayQueue() {
-        // 检查停止标志
+        // 🔧 检查停止标志（最高优先级）
         if (this.shouldStop) {
             window.controlledLog?.log('🛑 检测到停止标志，停止队列处理');
             this.isPlaying = false;
+            // 清理已调度的源
+            this._stopAllScheduledSources();
             return;
         }
         
@@ -1398,34 +1433,170 @@ class VoicePlayerEnhanced {
             return;
         }
         
+        // 🔧 如果已经在处理，直接返回（避免重复处理）
         if (this.isPlaying) {
-            window.controlledLog?.log('🎵 正在播放中，等待当前音频完成');
             return;
         }
         
-        this.isPlaying = true;
-        const audioItem = this.audioQueue.shift();
-        
-        window.controlledLog?.log('🎵 开始播放队列中的音频，剩余队列长度:', this.audioQueue.length);
-        
-        try {
-            await this.playAudioBuffer(audioItem.buffer, audioItem.messageId);
-        } catch (error) {
-            console.error('❌ 播放队列音频失败:', error);
+        // 🔧 确保AudioContext可用
+        if (!this.audioContext || this.audioContext.state === 'closed') {
+            window.controlledLog?.log('🔄 音频上下文不可用，重新创建');
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 24000,
+                latencyHint: 'playback'  // 改为playback以获得更好的播放质量
+            });
         }
         
-        // 播放完成后，检查停止标志
-        this.isPlaying = false;
-        window.controlledLog?.log('🎵 音频播放完成，检查队列状态:', {
-            shouldStop: this.shouldStop,
-            queueLength: this.audioQueue.length
-        });
+        // 🔧 确保AudioContext是运行状态
+        if (this.audioContext.state === 'suspended') {
+            window.controlledLog?.log('🔄 音频上下文已暂停，恢复中...');
+            await this.audioContext.resume();
+            window.controlledLog?.log('✅ 音频上下文已恢复，状态:', this.audioContext.state);
+        }
         
-        if (!this.shouldStop && this.audioQueue.length > 0) {
-            window.controlledLog?.log('🎵 继续播放队列中的下一个音频');
-            this.processPlayQueue();
-        } else {
-            window.controlledLog?.log('🎵 播放队列处理完成');
+        // 🔧 确保AudioContext采样率匹配（24kHz）
+        if (Math.abs(this.audioContext.sampleRate - 24000) > 100) {
+            window.controlledLog?.log('⚠️ AudioContext采样率不匹配:', this.audioContext.sampleRate, 'vs 24000，重新创建');
+            this.audioContext.close();
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 24000,
+                latencyHint: 'playback'
+            });
+        }
+        
+        this.isPlaying = true;
+        
+        // 🔧 使用精确时间调度，批量处理队列中的音频片段，确保无缝衔接
+        const currentTime = this.audioContext.currentTime;
+        let scheduledTime = Math.max(currentTime, currentTime + 0.01); // 稍微提前一点，确保不会因为时间误差导致跳过
+        const scheduledItems = [];
+        
+        // 🔧 批量调度队列中的音频（最多处理20个，确保流畅播放）
+        const batchSize = Math.min(this.audioQueue.length, 20);
+        window.controlledLog?.log('🎵 开始批量调度音频，队列长度:', this.audioQueue.length, '批次大小:', batchSize, '开始时间:', scheduledTime.toFixed(3), '秒');
+        
+        for (let i = 0; i < batchSize && !this.shouldStop; i++) {
+            const audioItem = this.audioQueue.shift();
+            if (!audioItem || !audioItem.buffer) {
+                continue;
+            }
+            
+            try {
+                // 🔧 创建音频源
+                const source = this.audioContext.createBufferSource();
+                const gainNode = this.audioContext.createGain();
+                
+                source.buffer = audioItem.buffer;
+                gainNode.gain.value = this.synthesisSettings.volume;
+                
+                // 连接音频节点
+                source.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                // 🔧 记录当前音频的开始时间（用于日志）
+                const currentScheduledTime = scheduledTime;
+                
+                // 🔧 关键：必须在 start() 之前设置 onended 回调
+                source.onended = () => {
+                    // 🔧 从已调度列表中移除
+                    const index = this.scheduledSources.indexOf(source);
+                    if (index > -1) {
+                        this.scheduledSources.splice(index, 1);
+                    }
+                    
+                    // 🔧 如果这是最后一个音频源，更新状态
+                    if (source === this.currentAudio) {
+                        this.currentAudio = null;
+                    }
+                    
+                    // 🔧 记录声源计数并尝试最终收尾
+                    if (audioItem.messageId && this.streamStates.has(audioItem.messageId)) {
+                        const st = this.streamStates.get(audioItem.messageId);
+                        st.playingSources = Math.max(0, (st.playingSources || 0) - 1);
+                        this.maybeFinalize(audioItem.messageId);
+                    }
+                    
+                    window.controlledLog?.log('TTS片段播放完成，messageId:', audioItem.messageId);
+                    
+                    // 🔧 检查是否所有音频都播放完成
+                    if (this.scheduledSources.length === 0 && this.audioQueue.length === 0) {
+                        this.isPlaying = false;
+                        window.controlledLog?.log('🎵 所有音频播放完成，队列处理完成');
+                    } else if (this.audioQueue.length > 0 && !this.shouldStop && this.scheduledSources.length === 0) {
+                        // 🔧 关键修复：当所有已调度的音频都完成后，队列中还有音频，继续处理
+                        window.controlledLog?.log('🎵 已调度音频已完成，队列中还有', this.audioQueue.length, '个音频，继续处理');
+                        this.isPlaying = false; // 重置标志以便继续处理
+                        // 立即处理下一个批次，确保无缝衔接
+                        setTimeout(() => {
+                            if (!this.shouldStop && this.audioQueue.length > 0) {
+                                this.processPlayQueue();
+                            }
+                        }, 5); // 很短的延迟，确保状态稳定
+                    }
+                };
+                
+                // 🔧 精确调度：在scheduledTime时刻播放（无缝衔接）
+                source.start(scheduledTime);
+                
+                // 🔧 保存引用，用于停止
+                this.scheduledSources.push(source);
+                scheduledItems.push({
+                    source: source,
+                    messageId: audioItem.messageId,
+                    scheduledTime: currentScheduledTime,
+                    duration: audioItem.buffer.duration
+                });
+                
+                // 🔧 更新当前音频源（最后一个）
+                if (i === batchSize - 1 || this.audioQueue.length === 0) {
+                    this.currentAudio = source;
+                }
+                
+                // 🔧 计算下一个音频的开始时间（当前音频结束时，无缝衔接）
+                scheduledTime += audioItem.buffer.duration;
+                
+                // 🔧 记录声源计数
+                if (audioItem.messageId && this.streamStates.has(audioItem.messageId)) {
+                    const st = this.streamStates.get(audioItem.messageId);
+                    st.playingSources = (st.playingSources || 0) + 1;
+                }
+                
+                window.controlledLog?.log('✅ 音频已调度，开始时间:', currentScheduledTime.toFixed(3), '秒，时长:', audioItem.buffer.duration.toFixed(3), '秒，下一个开始时间:', scheduledTime.toFixed(3), '秒');
+                
+            } catch (error) {
+                console.error('❌ 调度音频失败:', error);
+            }
+        }
+        
+        // 🔧 如果还有剩余音频，在当前批次播放到一半时继续处理下一批次
+        if (this.audioQueue.length > 0 && !this.shouldStop && scheduledItems.length > 0) {
+            const firstAudioDuration = scheduledItems[0].duration;
+            // 在当前批次播放到一半时，开始处理下一批次，确保无缝衔接
+            setTimeout(() => {
+                if (!this.shouldStop && this.audioQueue.length > 0) {
+                    this.processPlayQueue();
+                }
+            }, (firstAudioDuration * scheduledItems.length * 0.5) * 1000); // 播放到一半时继续
+        }
+        
+        window.controlledLog?.log('🎵 批量调度完成，已调度:', scheduledItems.length, '个音频，剩余队列:', this.audioQueue.length);
+    }
+    
+    // 🔧 辅助方法：停止所有已调度的音频源
+    _stopAllScheduledSources() {
+        if (this.scheduledSources && this.scheduledSources.length > 0) {
+            window.controlledLog?.log('🛑 停止所有已调度的音频源，数量:', this.scheduledSources.length);
+            this.scheduledSources.forEach(source => {
+                try {
+                    if (source && typeof source.stop === 'function') {
+                        source.stop(0);
+                        source.disconnect();
+                    }
+                } catch (error) {
+                    // 忽略已停止或无效的错误
+                }
+            });
+            this.scheduledSources = [];
         }
     }
     
@@ -2025,7 +2196,8 @@ VoicePlayerEnhanced.prototype.forceStopAllAudio = function() {
         streamStatesSize: this.streamStates?.size,
         playedMessagesSize: this.playedMessages?.size,
         shouldStop: this.shouldStop,
-        currentAudio: !!this.currentAudio
+        currentAudio: !!this.currentAudio,
+        scheduledSourcesCount: this.scheduledSources?.length || 0
     });
     window.controlledLog?.log('🔍 [forceStopAllAudio调试] 流状态详情:', Array.from(this.streamStates.entries()).map(([id, state]) => ({
         messageId: id,
@@ -2047,6 +2219,22 @@ VoicePlayerEnhanced.prototype.forceStopAllAudio = function() {
             window.controlledLog?.log('当前音频已停止');
         }
         this.currentAudio = null;
+    }
+    
+    // 🔧 停止所有已调度的音频源（用于精确时间调度的音频）
+    if (this.scheduledSources && this.scheduledSources.length > 0) {
+        window.controlledLog?.log('🛑 停止所有已调度的音频源，数量:', this.scheduledSources.length);
+        this.scheduledSources.forEach(source => {
+            try {
+                if (source && typeof source.stop === 'function') {
+                    source.stop(0);
+                    source.disconnect();
+                }
+            } catch (error) {
+                // 忽略已停止或无效的错误
+            }
+        });
+        this.scheduledSources = [];
     }
     
     // 清空语音通话相关队列

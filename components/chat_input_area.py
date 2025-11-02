@@ -149,9 +149,6 @@ def render(
                             # 右侧按钮组（大屏幕时显示所有按钮，小屏幕时只显示发送按钮）
                             fac.AntdCol(
                                 flex="none",
-                                # 大屏幕（≥576px）时显示所有按钮，小屏幕时只显示发送按钮
-                                xs={"flex": "none", "span": None},  # 小屏幕
-                                sm={"flex": "none"},  # 大屏幕
                                 children=fac.AntdSpace(
                                     [   
                                         # 发送按钮（上箭头） - 统一样式，所有屏幕都显示
