@@ -140,8 +140,7 @@ def render():
                                                     className="global-help-text",
                                                 ),
                                                 autoComplete="off",
-                                                # 🔧 Demo模式：如果启用demo模式，自动填充用户名
-                                                value=BaseConfig.demo_username if BaseConfig.demo_mode else None,
+                                                defaultValue=BaseConfig.demo_username if BaseConfig.demo_mode else "",
                                             ),
                                             label="用户名",
                                         ),
@@ -155,8 +154,7 @@ def render():
                                                     icon="antd-lock",
                                                     className="global-help-text",
                                                 ),
-                                                # 🔧 Demo模式：如果启用demo模式，自动填充密码
-                                                value=BaseConfig.demo_password if BaseConfig.demo_mode else None,
+                                                defaultValue=BaseConfig.demo_password if BaseConfig.demo_mode else "",
                                             ),
                                             label="密码",
                                         ),
@@ -176,6 +174,11 @@ def render():
                                     id="login-form",
                                     enableBatchControl=True,
                                     layout="vertical",
+                                    # 🔧 Demo模式：如果启用demo模式，自动填充用户名和密码
+                                    values={
+                                        "login-user-name": BaseConfig.demo_username,
+                                        "login-password": BaseConfig.demo_password,
+                                    } if BaseConfig.demo_mode else {},
                                     style=style(width={
                                         'xs': '100%',  # 小屏幕下宽度自适应
                                         'sm': '85%',   # 平板下宽度85%
