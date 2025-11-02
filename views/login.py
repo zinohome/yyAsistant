@@ -140,6 +140,8 @@ def render():
                                                     className="global-help-text",
                                                 ),
                                                 autoComplete="off",
+                                                # 🔧 Demo模式：如果启用demo模式，自动填充用户名
+                                                value=BaseConfig.demo_username if BaseConfig.demo_mode else None,
                                             ),
                                             label="用户名",
                                         ),
@@ -153,6 +155,8 @@ def render():
                                                     icon="antd-lock",
                                                     className="global-help-text",
                                                 ),
+                                                # 🔧 Demo模式：如果启用demo模式，自动填充密码
+                                                value=BaseConfig.demo_password if BaseConfig.demo_mode else None,
                                             ),
                                             label="密码",
                                         ),

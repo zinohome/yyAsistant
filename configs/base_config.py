@@ -88,3 +88,11 @@ class BaseConfig:
     websocket_reconnect_interval: int = 1000
     # WebSocket最大重连次数
     websocket_max_reconnect_attempts: int = 5
+    
+    # Demo模式配置
+    # 是否启用demo模式（启用后，登录页面会自动填充用户名和密码）
+    demo_mode: bool = True
+    # demo模式下的默认用户名
+    demo_username: str = "ZhangJun"
+    # demo模式下的默认密码
+    demo_password: str = "passw0rd"
