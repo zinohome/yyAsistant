@@ -670,6 +670,23 @@ class VoiceRecorderEnhanced {
     handleTranscriptionResult(data) {
         window.controlledLog?.log('收到转录结果:', data);
         
+        // 🔧 关键修复：检查场景类型
+        const scenario = data.scenario || data.scene || 'voice_recording';
+        
+        window.controlledLog?.log('🔍 [录音器] 场景类型:', scenario, '类型检查:', typeof scenario);
+        
+        if (scenario === 'voice_call' || scenario === 'voice-call' || String(scenario).toLowerCase() === 'voice_call') {
+            // 语音实时对话：交给 voice_websocket_manager.js 处理
+            window.controlledLog?.log('✅ [录音器] 场景为voice_call，转发给voice_websocket_manager处理');
+            if (window.voiceWebSocketManager && window.voiceWebSocketManager.handleVoiceCallTranscription) {
+                window.voiceWebSocketManager.handleVoiceCallTranscription(data);
+            } else {
+                window.controlledLog?.warn('⚠️ voice_websocket_manager或handleVoiceCallTranscription方法不存在');
+            }
+            return;
+        }
+        
+        // 录音聊天：使用现有逻辑（voice_recording 场景）
         if (data.text && data.text.trim()) {
             // 使用公共工具触发STT完成事件
             VoiceUtils.triggerEvent('voice_transcription_complete', { 

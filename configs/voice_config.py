@@ -37,6 +37,14 @@ class VoiceConfig:
     ERROR_RETRY_ATTEMPTS = 3
     ERROR_RETRY_DELAY = 1000  # 毫秒
     
+    # 新增：语音实时对话文本显示配置
+    VOICE_CALL_SHOW_TRANSCRIPTION = True  # 是否显示转录文本（前端配置）
+    VOICE_CALL_SAVE_TO_DATABASE = False  # 是否保存到数据库（默认不保存，避免干扰）
+    VOICE_CALL_AUTO_SAVE_ON_END = True  # 对话结束时是否自动保存（如果VOICE_CALL_SAVE_TO_DATABASE=True）
+    VOICE_CALL_MAX_DISPLAY_MESSAGES = 50  # 最大显示消息数（Store限制）
+    VOICE_CALL_TRANSCRIPTION_DEBOUNCE = 500  # 文本更新防抖时间（毫秒）
+    VOICE_CALL_STREAMING_DISPLAY = False  # 是否流式显示（建议False，整句显示）
+    
     @classmethod
     def get_voice_options(cls) -> list:
         """获取可用的语音选项"""

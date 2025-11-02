@@ -170,6 +170,11 @@ function bindVoiceCallButtonWithDelegate() {
                         window.controlledLog?.log('🎨 语音通话：点击挂断图标后隐藏音频可视化区域');
                     }
                     
+                    // 🔧 关键修复：使用Drawer方式，不需要直接操作DOM
+                    // Drawer的显示/隐藏由Dash回调根据voice-call-transcription-display Store的is_active字段控制
+                    // 当is_active设为False时，Dash回调会自动隐藏Drawer
+                    window.controlledLog?.log('✅ 语音通话已停止，Drawer将通过Dash回调自动隐藏');
+                    
                     // 🔧 关键修复：不要强制重置按钮状态，让其他场景自然管理状态
                     // 语音通话停止后，其他场景（录音聊天、文字聊天）应该保持自己的状态
                     window.controlledLog?.log('语音通话停止，不强制重置按钮状态，让其他场景自然管理');

@@ -307,3 +307,91 @@ def stream():
             'status': 'error',
             'error': str(e)
         }), 500
+
+# 新增：语音实时对话消息保存API端点
+@app.server.route('/api/voice-call/save-messages', methods=['POST'])
+def save_voice_call_messages():
+    """保存语音实时对话消息到数据库"""
+    from flask_login import login_required
+    from configs.voice_config import VoiceConfig
+    from models.conversations import Conversations
+    import datetime
+    
+    try:
+        # 检查是否启用保存功能
+        if not VoiceConfig.VOICE_CALL_SAVE_TO_DATABASE:
+            return jsonify({'error': '语音实时对话消息保存未启用'}), 400
+        
+        # 获取请求数据
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': '请求数据为空'}), 400
+        
+        session_id = data.get('session_id')
+        messages = data.get('messages', [])
+        source = data.get('source', 'voice_call')
+        
+        if not session_id:
+            return jsonify({'error': 'session_id不能为空'}), 400
+        
+        if not messages or len(messages) == 0:
+            return jsonify({'error': '消息列表不能为空'}), 400
+        
+        # 获取当前用户
+        if not current_user or not current_user.is_authenticated:
+            return jsonify({'error': '未登录'}), 401
+        
+        user_id = current_user.id
+        
+        # 保存消息到数据库
+        # 格式：将消息列表转换为JSON格式存储到conv_memory字段
+        conv_memory = {
+            'messages': messages,
+            'source': source,
+            'created_at': datetime.datetime.now().isoformat()
+        }
+        
+        # 查找或创建会话
+        try:
+            conv = Conversations.get_conversation_by_id(session_id)
+            if conv:
+                # 更新现有会话
+                existing_memory = conv.conv_memory or {}
+                if not isinstance(existing_memory, dict):
+                    existing_memory = {}
+                
+                # 合并消息（追加到现有消息）
+                existing_messages = existing_memory.get('messages', [])
+                existing_messages.extend(messages)
+                
+                existing_memory['messages'] = existing_messages
+                existing_memory['source'] = source
+                existing_memory['updated_at'] = datetime.datetime.now().isoformat()
+                
+                conv.conv_memory = existing_memory
+                conv.save()
+            else:
+                # 创建新会话
+                conv = Conversations.create_conversation(
+                    user_id=user_id,
+                    conversation_id=session_id,
+                    conversation_name=f'语音实时对话_{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}',
+                    conv_memory=conv_memory
+                )
+            
+            log.info(f"语音实时对话消息已保存: session_id={session_id}, 消息数={len(messages)}")
+            
+            return jsonify({
+                'status': 'success',
+                'message': '消息已保存',
+                'session_id': session_id,
+                'message_count': len(messages)
+            }), 200
+            
+        except Exception as e:
+            log.error(f"保存语音实时对话消息失败: {e}")
+            return jsonify({'error': f'保存失败: {str(e)}'}), 500
+            
+    except Exception as e:
+        log.error(f"处理保存请求失败: {e}")
+        return jsonify({'error': f'处理失败: {str(e)}'}), 500

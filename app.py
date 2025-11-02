@@ -454,6 +454,7 @@ def update_call_button_icon(icon_data):
 # 导入语音回调函数（在app初始化后导入）
 import callbacks.voice_chat_c  # 临时注释，使用新的统一回调
 import callbacks.realtime_voice_c  # 导入实时语音对话回调
+import callbacks.voice_call_display_c  # 导入语音实时对话文本显示回调
 
 # 注册完整的统一回调（处理所有聊天功能）
 #from callbacks.core_pages_c.core_chat_callback import register_core_chat_callback

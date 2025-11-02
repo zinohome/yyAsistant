@@ -158,3 +158,77 @@
     background-color: #fff2f0 !important;
     border-color: #ff4d4f !important;
 }
+
+/* 🔧 语音实时对话Drawer样式 - 控制高度和位置，与chat_history完全一致（强制覆盖所有样式） */
+.ant-drawer-content-wrapper:has([id="voice-call-text-drawer"]),
+[id="voice-call-text-drawer"] ~ .ant-drawer-content-wrapper,
+.ant-drawer-content-wrapper [id="voice-call-text-drawer"],
+[id="voice-call-text-drawer"].ant-drawer-content-wrapper {
+    height: calc(100vh - 240px) !important;  /* 🔧 与chat_history的高度完全一致 */
+    max-height: calc(100vh - 240px) !important;
+    position: fixed !important;
+    /* 🔧 通过JavaScript动态计算top位置，确保与chat_history对齐 */
+    display: flex !important;
+    flex-direction: column !important;
+    bottom: auto !important;  /* 🔧 强制移除bottom，使用top和height控制 */
+}
+
+/* 🔧 Drawer content容器样式（强制覆盖） */
+.ant-drawer-content-wrapper:has([id="voice-call-text-drawer"]) .ant-drawer-content,
+[id="voice-call-text-drawer"] ~ .ant-drawer-content-wrapper .ant-drawer-content,
+.ant-drawer-content-wrapper [id="voice-call-text-drawer"].ant-drawer-content,
+[id="voice-call-text-drawer"].ant-drawer-content {
+    height: calc(100vh - 240px) !important;  /* 🔧 与chat_history的高度完全一致 */
+    max-height: calc(100vh - 240px) !important;
+    position: fixed !important;
+    display: flex !important;
+    flex-direction: column !important;
+    bottom: auto !important;  /* 🔧 强制移除bottom，使用top和height控制 */
+}
+
+/* 🔧 强制确保Drawer body自然占据剩余空间（减去header高度）- 最高优先级 */
+.ant-drawer-content-wrapper:has([id="voice-call-text-drawer"]) .ant-drawer-body,
+[id="voice-call-text-drawer"] ~ .ant-drawer-content-wrapper .ant-drawer-body,
+.ant-drawer-content-wrapper [id="voice-call-text-drawer"] ~ .ant-drawer-body,
+[id="voice-call-text-drawer"] + .ant-drawer-body,
+[id="voice-call-text-drawer"] .ant-drawer-body {
+    flex: 1 !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    position: static !important;  /* 🔧 移除fixed定位 */
+    top: auto !important;  /* 🔧 移除top */
+    bottom: auto !important;  /* 🔧 移除bottom */
+}
+
+/* 🔧 确保Drawer的遮罩层完全不显示（即使存在也隐藏） */
+[id="voice-call-text-drawer"] ~ .ant-drawer-mask,
+.ant-drawer-mask:has(+ [id="voice-call-text-drawer"]),
+.ant-drawer-wrapper-body .ant-drawer-mask {
+    display: none !important;  /* 🔧 强制隐藏遮罩层，避免遮挡挂断按钮 */
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* 🔧 确保Drawer内容区域不遮挡挂断按钮（降低z-index并限制位置） */
+[id="voice-call-text-drawer"] .ant-drawer-content-wrapper,
+[id="voice-call-text-drawer"] .ant-drawer-content {
+    z-index: 999 !important;  /* 🔧 降低z-index，确保挂断按钮（通常z-index为1000）可以点击 */
+    pointer-events: auto !important;  /* 🔧 确保Drawer内部可以点击 */
+}
+
+/* 🔧 确保Drawer不遮挡右侧消息内容（限制最大宽度） */
+[id="voice-call-text-drawer"] .ant-drawer-content-wrapper {
+    max-width: 300px !important;  /* 🔧 强制限制最大宽度，确保不遮挡右侧消息 */
+}
+
+/* 🔧 确保Drawer右侧有足够空间显示消息（通过调整位置） */
+[id="voice-call-text-drawer"] .ant-drawer-content-wrapper {
+    right: 0 !important;  /* 🔧 确保Drawer贴右边显示 */
+    left: auto !important;  /* 🔧 确保不覆盖左侧内容 */
+}

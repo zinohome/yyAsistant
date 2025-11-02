@@ -22,6 +22,12 @@ class VoiceWebSocketManager {
         this.messageHandlers = new Map();
         this.connectionHandlers = [];
         this.disconnectionHandlers = [];
+        
+        // 新增：语音实时对话文本显示相关属性
+        this.pendingVoiceCallMessages = [];  // 待更新消息队列
+        this.voiceCallDisplayUpdateTimer = null;  // 防抖定时器
+        this.voiceCallTranscriptionDisplay = null;  // 当前显示数据
+        
         // 预注册心跳回应为no-op，避免未注册报错
         this.messageHandlers.set('heartbeat_response', () => {});
         // 预注册音频消息处理器占位，避免未注册时报错
@@ -30,6 +36,291 @@ class VoiceWebSocketManager {
         this.messageHandlers.set('synthesis_complete', () => {});
         this.messageHandlers.set('interrupt_confirmed', () => {});
         this.messageHandlers.set('stop_playback', () => {});
+        
+        // 🔧 关键修复：注册 transcription_result 处理器（仅处理 voice_call 场景）
+        this.registerMessageHandler('transcription_result', (data) => {
+            window.controlledLog?.log('🔍 [语音通话] 收到transcription_result消息:', data);
+            const scenario = data.scenario || data.scene || 'voice_recording';
+            
+            window.controlledLog?.log('🔍 [语音通话] 场景类型:', scenario, '类型检查:', typeof scenario, '文本内容:', data.text);
+            
+            // 🔧 关键修复：确保正确识别voice_call场景（字符串严格比较）
+            if (scenario === 'voice_call' || scenario === 'voice-call' || String(scenario).toLowerCase() === 'voice_call') {
+                // 语音实时对话：使用独立显示逻辑
+                window.controlledLog?.log('✅ [语音通话] 场景为voice_call，调用handleVoiceCallTranscription');
+                this.handleVoiceCallTranscription(data);
+            } else {
+                // 录音聊天：不处理，交给 voice_recorder_enhanced.js
+                window.controlledLog?.log('收到录音聊天转录结果，跳过语音实时对话处理，scenario:', scenario);
+            }
+        });
+        
+        // 🔧 关键修复：注册 voice_call_started 处理器（必须在构造函数中注册）
+        this.registerMessageHandler('voice_call_started', (data) => {
+            window.controlledLog?.log('语音通话已启动:', data);
+            // 显示音频可视化区域
+            this.showAudioVisualizer();
+            // 更新音频可视化器状态
+            this.updateAudioVisualizerState('listening');
+            // 启动音频流处理
+            this.startAudioStreaming();
+            // 🔧 关键修复：在音频流初始化成功后启动录音动画
+            window.controlledLog?.log('🔍 [语音通话调试] 语音通话开始，将在音频流初始化后启动录音动画');
+            // 更新状态指示器
+            this.updateStatusIndicator('通话中，等待用户说话', 'blue');
+            
+            // 新增：初始化文本显示
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                const displayData = {
+                    messages: [],
+                    is_active: true,
+                    session_id: this.sessionId,
+                    call_start_time: Date.now(),
+                    max_messages: 50,
+                    created_at: Date.now()
+                };
+                window.controlledLog?.log('🔧 准备更新voice-call-transcription-display Store，数据:', displayData);
+                window.dash_clientside.set_props('voice-call-transcription-display', {
+                    data: displayData
+                });
+                window.controlledLog?.log('✅ voice-call-transcription-display Store已更新');
+                
+                // 🔧 关键修复：参考my-info-drawer的实现，直接使用set_props设置Drawer的visible属性
+                try {
+                    window.dash_clientside.set_props('voice-call-text-drawer', {
+                        visible: true
+                    });
+                    window.controlledLog?.log('✅ 已直接设置Drawer为显示状态');
+                    
+                    // 🔧 关键修复：使用JavaScript动态计算Drawer的位置和高度，与chat_history完全对齐（强化版）
+                    const applyDrawerStyles = () => {
+                        // 获取chat_history元素的位置和高度
+                        const chatHistory = document.getElementById('ai-chat-x-history');
+                        if (!chatHistory) {
+                            window.controlledLog?.warn('⚠️ 未找到chat_history元素，无法对齐');
+                            return;
+                        }
+                        
+                        // 获取chat_history的实际位置（getBoundingClientRect）
+                        const chatHistoryRect = chatHistory.getBoundingClientRect();
+                        const chatHistoryTop = chatHistoryRect.top;
+                        const chatHistoryHeight = chatHistoryRect.height;
+                        
+                        window.controlledLog?.log('🔍 chat_history位置信息:', {
+                            top: chatHistoryTop,
+                            height: chatHistoryHeight,
+                            bottom: chatHistoryRect.bottom
+                        });
+                        
+                        // 查找Drawer元素（使用多种方法确保找到）
+                        let drawerById = document.getElementById('voice-call-text-drawer');
+                        if (!drawerById) {
+                            // 尝试通过content-wrapper查找
+                            drawerById = document.querySelector('.ant-drawer-content[id="voice-call-text-drawer"]');
+                        }
+                        
+                        if (!drawerById) {
+                            window.controlledLog?.warn('⚠️ 未找到Drawer元素');
+                            return;
+                        }
+                        
+                        // 🔧 关键修复：直接查找所有可能的Drawer容器元素（包括可能在外层的元素）
+                        const drawerContentWrapper = drawerById.closest('.ant-drawer-content-wrapper') || 
+                                                       drawerById.querySelector('.ant-drawer-content-wrapper') ||
+                                                       document.querySelector('[id="voice-call-text-drawer"] + .ant-drawer-content-wrapper') ||
+                                                       document.querySelector('.ant-drawer-content-wrapper [id="voice-call-text-drawer"]');
+                        
+                        const drawerContent = drawerById.closest('.ant-drawer-content') ||
+                                             drawerById.querySelector('.ant-drawer-content') ||
+                                             (drawerById.classList && drawerById.classList.contains('ant-drawer-content') ? drawerById : null);
+                        
+                        // 设置Drawer content-wrapper样式（外层容器）
+                        if (drawerContentWrapper) {
+                            drawerContentWrapper.style.setProperty('top', `${chatHistoryTop}px`, 'important');
+                            drawerContentWrapper.style.setProperty('height', `${chatHistoryHeight}px`, 'important');
+                            drawerContentWrapper.style.setProperty('max-height', `${chatHistoryHeight}px`, 'important');
+                            drawerContentWrapper.style.setProperty('position', 'fixed', 'important');
+                            drawerContentWrapper.style.setProperty('bottom', 'auto', 'important');
+                            window.controlledLog?.log(`✅ 已设置Drawer content-wrapper样式: top=${chatHistoryTop}px, height=${chatHistoryHeight}px`);
+                        }
+                        
+                        // 设置Drawer content样式（内容容器）
+                        if (drawerContent) {
+                            drawerContent.style.setProperty('top', `${chatHistoryTop}px`, 'important');
+                            drawerContent.style.setProperty('height', `${chatHistoryHeight}px`, 'important');
+                            drawerContent.style.setProperty('max-height', `${chatHistoryHeight}px`, 'important');
+                            drawerContent.style.setProperty('position', 'fixed', 'important');
+                            drawerContent.style.setProperty('bottom', 'auto', 'important');
+                            drawerContent.style.setProperty('display', 'flex', 'important');
+                            drawerContent.style.setProperty('flex-direction', 'column', 'important');
+                            window.controlledLog?.log(`✅ 已设置Drawer content样式: top=${chatHistoryTop}px, height=${chatHistoryHeight}px`);
+                        }
+                        
+                        // 🔧 关键修复：强制移除body的固定高度设置，让它自然占据剩余空间（减去header高度）
+                        const drawerBody = drawerById.querySelector('.ant-drawer-body') ||
+                                           (drawerContent ? drawerContent.querySelector('.ant-drawer-body') : null);
+                        if (drawerBody) {
+                            // 强制移除所有可能导致占满屏幕的样式
+                            drawerBody.style.removeProperty('height');
+                            drawerBody.style.removeProperty('max-height');
+                            drawerBody.style.removeProperty('min-height');
+                            drawerBody.style.removeProperty('top');
+                            drawerBody.style.removeProperty('bottom');
+                            drawerBody.style.removeProperty('position');
+                            // 强制设置flex布局，让body占据剩余空间
+                            drawerBody.style.setProperty('overflow', 'hidden', 'important');
+                            drawerBody.style.setProperty('display', 'flex', 'important');
+                            drawerBody.style.setProperty('flex-direction', 'column', 'important');
+                            drawerBody.style.setProperty('height', 'auto', 'important');
+                            drawerBody.style.setProperty('flex', '1', 'important');
+                            drawerBody.style.setProperty('min-height', '0', 'important');
+                            window.controlledLog?.log('✅ 已强制设置Drawer body为flex布局，自动占据剩余空间');
+                        }
+                    };
+                    
+                    // 立即执行
+                    applyDrawerStyles();
+                    // 延迟执行（确保DOM已完全渲染）- 增加更多延迟
+                    setTimeout(applyDrawerStyles, 50);
+                    setTimeout(applyDrawerStyles, 150);
+                    setTimeout(applyDrawerStyles, 300);
+                    setTimeout(applyDrawerStyles, 500);
+                    setTimeout(applyDrawerStyles, 800);
+                    
+                    // 🔧 关键修复：使用MutationObserver监听DOM变化，确保样式始终正确应用
+                    const drawerElement = document.getElementById('voice-call-text-drawer');
+                    if (drawerElement) {
+                        const observer = new MutationObserver((mutations) => {
+                            let needsUpdate = false;
+                            mutations.forEach((mutation) => {
+                                if (mutation.type === 'attributes' && 
+                                    (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                                    // 检查是否是Drawer相关元素
+                                    const target = mutation.target;
+                                    if (target.id === 'voice-call-text-drawer' ||
+                                        target.classList.contains('ant-drawer-content-wrapper') ||
+                                        target.classList.contains('ant-drawer-content') ||
+                                        target.classList.contains('ant-drawer-body')) {
+                                        needsUpdate = true;
+                                    }
+                                }
+                            });
+                            if (needsUpdate) {
+                                window.controlledLog?.log('🔄 检测到Drawer样式变化，重新应用样式');
+                                setTimeout(applyDrawerStyles, 10);
+                            }
+                        });
+                        
+                        // 观察Drawer元素及其子元素的变化
+                        observer.observe(drawerElement, {
+                            attributes: true,
+                            attributeFilter: ['style', 'class'],
+                            subtree: true,
+                            childList: true
+                        });
+                        window.controlledLog?.log('✅ 已启动MutationObserver监听Drawer样式变化');
+                        
+                        // 5秒后停止观察（避免内存泄漏）
+                        setTimeout(() => {
+                            observer.disconnect();
+                            window.controlledLog?.log('✅ MutationObserver已停止');
+                        }, 5000);
+                    }
+                } catch (e) {
+                    window.controlledLog?.error('❌ 设置Drawer visible属性失败:', e);
+                }
+            } else {
+                window.controlledLog?.error('❌ dash_clientside.set_props不可用，无法更新Store');
+            }
+            
+            // 重置显示数据
+            this.voiceCallTranscriptionDisplay = null;
+            this.pendingVoiceCallMessages = [];
+        });
+        
+        // 🔧 关键修复：注册 voice_call_stopped 处理器（必须在构造函数中注册）
+        this.registerMessageHandler('voice_call_stopped', (data) => {
+            window.controlledLog?.log('语音通话已停止:', data);
+            
+            // 完全清理语音通话相关状态
+            this.cleanupVoiceCallState();
+            
+            // 更新音频可视化器状态
+            this.updateAudioVisualizerState('idle');
+            
+            // 隐藏音频可视化区域
+            this.hideAudioVisualizer();
+            
+            // 🔧 关键修复：使用Drawer方式，不需要直接操作DOM
+            // Drawer的显示/隐藏由Dash回调根据voice-call-transcription-display Store的is_active字段控制
+            // 当is_active设为False时，Dash回调会自动隐藏Drawer
+            window.controlledLog?.log('✅ 语音通话已停止，Drawer将通过Dash回调自动隐藏');
+            
+            // 清理显示数据
+            this.voiceCallTranscriptionDisplay = null;
+            this.pendingVoiceCallMessages = [];
+            
+            // 清理防抖定时器
+            if (this.voiceCallDisplayUpdateTimer) {
+                clearTimeout(this.voiceCallDisplayUpdateTimer);
+                this.voiceCallDisplayUpdateTimer = null;
+                window.controlledLog?.log('防抖定时器已清理');
+            }
+            
+            // 停止音频流处理
+            this.stopAudioStreaming();
+            
+            // 更新状态指示器
+            this.updateStatusIndicator('等待开始', 'gray');
+            
+            // 🔧 关键修复：不要强制重置按钮状态，让其他场景自然管理状态
+            // 语音通话停止后，其他场景（录音聊天、文字聊天）应该保持自己的状态
+            window.controlledLog?.log('语音通话停止，不强制重置按钮状态，让其他场景自然管理');
+            
+            // 更新Store状态为不活跃
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                const currentDisplay = this.voiceCallTranscriptionDisplay || {
+                    messages: [],
+                    is_active: false,
+                    session_id: this.sessionId,
+                    max_messages: 50,
+                    created_at: Date.now()
+                };
+                currentDisplay.is_active = false;
+                
+                window.dash_clientside.set_props('voice-call-transcription-display', {
+                    data: currentDisplay
+                });
+                
+                // 🔧 关键修复：直接使用set_props设置Drawer的visible属性为false，确保Drawer关闭
+                try {
+                    window.dash_clientside.set_props('voice-call-text-drawer', {
+                        visible: false
+                    });
+                    window.controlledLog?.log('✅ 已直接设置Drawer为隐藏状态');
+                    
+                    // 🔧 额外保障：强制移除样式，确保Drawer完全隐藏
+                    setTimeout(() => {
+                        const drawerElement = document.getElementById('voice-call-text-drawer');
+                        if (drawerElement) {
+                            const drawerContentWrapper = drawerElement.closest('.ant-drawer-content-wrapper') || 
+                                                           drawerElement.querySelector('.ant-drawer-content-wrapper');
+                            if (drawerContentWrapper) {
+                                drawerContentWrapper.style.setProperty('display', 'none', 'important');
+                                window.controlledLog?.log('✅ 已强制隐藏Drawer content-wrapper');
+                            }
+                        }
+                    }, 100);
+                } catch (e) {
+                    window.controlledLog?.error('❌ 设置Drawer visible属性失败:', e);
+                }
+            }
+            
+            // 可选保存消息到数据库（如果启用）
+            if (window.voiceConfig && window.voiceConfig.VOICE_CALL_SAVE_TO_DATABASE) {
+                this.saveVoiceCallMessages();
+            }
+        });
         
         // 使用配置类获取WebSocket URL，并附带持久化client_id
         this.wsUrlBase = window.appConfig?.getWebSocketUrl() || 'ws://192.168.66.145:9800/ws/chat';
@@ -469,6 +760,13 @@ class VoiceWebSocketManager {
         if (window.voicePlayerEnhanced) {
             window.voicePlayerEnhanced.forceStopAllAudio();
             window.controlledLog?.log('🧹 播放器状态已清理');
+        }
+        
+        // 隐藏文本显示面板
+        const displayElement = document.getElementById('voice-call-text-display');
+        if (displayElement) {
+            displayElement.style.display = 'none';
+            window.controlledLog?.log('🧹 文本显示面板已隐藏');
         }
         
         // 清理WebSocket状态
@@ -1489,49 +1787,13 @@ class VoiceWebSocketManager {
                 window.voiceChatState.isConnected = this.isConnected;
                 window.controlledLog?.log('首次绑定client_id:', this.clientId);
                 
-        // 注册连接确认消息处理器
-        this.registerMessageHandler('connection_established', (data) => {
-            window.controlledLog?.log('WebSocket连接已建立:', data);
-            // 连接确认消息已处理
-        });
-        
-        // 注册语音通话相关消息处理器
-        this.registerMessageHandler('voice_call_started', (data) => {
-            window.controlledLog?.log('语音通话已启动:', data);
-            // 显示音频可视化区域
-            this.showAudioVisualizer();
-            // 更新音频可视化器状态
-            this.updateAudioVisualizerState('listening');
-            // 启动音频流处理
-            this.startAudioStreaming();
-            // 🔧 关键修复：在音频流初始化成功后启动录音动画
-            window.controlledLog?.log('🔍 [语音通话调试] 语音通话开始，将在音频流初始化后启动录音动画');
-            // 更新状态指示器
-            this.updateStatusIndicator('通话中，等待用户说话', 'blue');
-        });
-        
-        this.registerMessageHandler('voice_call_stopped', (data) => {
-            window.controlledLog?.log('语音通话已停止:', data);
-            
-            // 完全清理语音通话相关状态
-            this.cleanupVoiceCallState();
-            
-            // 更新音频可视化器状态
-            this.updateAudioVisualizerState('idle');
-            
-            // 隐藏音频可视化区域
-            this.hideAudioVisualizer();
-            
-            // 停止音频流处理
-            this.stopAudioStreaming();
-            
-            // 更新状态指示器
-            this.updateStatusIndicator('等待开始', 'gray');
-            
-            // 🔧 关键修复：不要强制重置按钮状态，让其他场景自然管理状态
-            // 语音通话停止后，其他场景（录音聊天、文字聊天）应该保持自己的状态
-            window.controlledLog?.log('语音通话停止，不强制重置按钮状态，让其他场景自然管理');
-        });
+                // 注册连接确认消息处理器（仅注册一次，避免重复注册）
+                if (!this.messageHandlers.has('connection_established') || this.messageHandlers.get('connection_established') === this.defaultHandlers?.connection_established) {
+                    this.registerMessageHandler('connection_established', (data) => {
+                        window.controlledLog?.log('WebSocket连接已建立:', data);
+                        // 连接确认消息已处理
+                    });
+                }
         
         // 注册AI音频响应处理器
         this.registerMessageHandler('audio_stream', (data) => {
@@ -1845,6 +2107,278 @@ class VoiceWebSocketManager {
     registerMessageHandler(messageType, handler) {
         this.messageHandlers.set(messageType, handler);
         window.controlledLog?.log('注册消息处理器:', messageType);
+    }
+    
+    /**
+     * 处理语音实时对话的转录结果（非流式显示，整句显示）
+     */
+    handleVoiceCallTranscription(message) {
+        try {
+            window.controlledLog?.log('🔍 处理语音实时对话转录结果:', message);
+            window.controlledLog?.log('🔍 [handleVoiceCallTranscription] 输入参数:', {
+                hasText: !!message.text,
+                textLength: message.text ? message.text.length : 0,
+                text: message.text ? message.text.substring(0, 50) + '...' : 'null',
+                scenario: message.scenario,
+                messageId: message.message_id
+            });
+            
+            // 确定消息角色和文本内容
+            const role = message.role || (message.assistant_text ? 'assistant' : 'user');
+            const messageText = message.assistant_text || message.text;  // AI回复使用assistant_text，用户转录使用text
+            
+            if (!messageText || !messageText.trim()) {
+                window.controlledLog?.warn('⚠️ 消息文本为空，跳过处理', { role, hasText: !!message.text, hasAssistantText: !!message.assistant_text });
+                return;
+            }
+            
+            const messageId = message.message_id || null;
+            const timestamp = message.timestamp || Date.now() / 1000;
+            
+            // 累积待更新消息（避免数据丢失）
+            if (!this.pendingVoiceCallMessages) {
+                this.pendingVoiceCallMessages = [];
+            }
+            
+            // 添加消息到待更新队列（根据role判断是用户还是AI）
+            this.pendingVoiceCallMessages.push({
+                role: role,
+                text: messageText.trim(),
+                timestamp: timestamp,
+                message_id: messageId || `voice-call-${role}-${Date.now()}`
+            });
+            
+            window.controlledLog?.log(`✅ 已添加${role === 'assistant' ? 'AI' : '用户'}消息到待更新队列，当前队列长度:`, this.pendingVoiceCallMessages.length);
+            
+            // 使用累积更新机制（防抖批量处理）
+            this.debounceUpdateVoiceCallDisplay();
+        } catch (error) {
+            console.error('处理语音实时对话转录失败:', error);
+        }
+    }
+    
+    /**
+     * 累积更新机制（改进版）
+     */
+    debounceUpdateVoiceCallDisplay() {
+        if (this.voiceCallDisplayUpdateTimer) {
+            clearTimeout(this.voiceCallDisplayUpdateTimer);
+        }
+        
+        this.voiceCallDisplayUpdateTimer = setTimeout(() => {
+            // 批量处理所有待更新消息
+            if (!this.pendingVoiceCallMessages || this.pendingVoiceCallMessages.length === 0) {
+                window.controlledLog?.log('⚠️ 待更新消息队列为空，跳过处理');
+                return;
+            }
+            
+            window.controlledLog?.log('🔄 开始批量处理待更新消息，队列长度:', this.pendingVoiceCallMessages.length);
+            
+            // 获取当前显示数据
+            const currentDisplay = this.voiceCallTranscriptionDisplay || {
+                messages: [],
+                is_active: true,
+                session_id: this.sessionId,
+                max_messages: 50,
+                created_at: Date.now()
+            };
+            
+            // 🔧 关键修复：去重和排序逻辑
+            // 1. 收集所有消息（包括待更新的和已有的）
+            const allMessages = [...currentDisplay.messages, ...this.pendingVoiceCallMessages];
+            
+            // 2. 去重：根据 message_id 或 (role + text + timestamp) 去重
+            const messageMap = new Map();
+            allMessages.forEach(msg => {
+                const key = msg.message_id || `${msg.role}-${msg.text}-${msg.timestamp}`;
+                // 如果已存在相同ID的消息，保留时间戳更早的（避免重复显示）
+                if (messageMap.has(key)) {
+                    const existing = messageMap.get(key);
+                    if (msg.timestamp < existing.timestamp) {
+                        messageMap.set(key, msg);
+                    }
+                } else {
+                    messageMap.set(key, msg);
+                }
+            });
+            
+            // 3. 转换为数组并按 timestamp 排序（确保消息顺序正确）
+            currentDisplay.messages = Array.from(messageMap.values()).sort((a, b) => {
+                // 按时间戳排序，如果时间戳相同，用户消息优先
+                if (Math.abs(a.timestamp - b.timestamp) < 1) {
+                    // 时间戳非常接近（1秒内），认为是同一轮对话，用户消息应该在AI消息之前
+                    if (a.role === 'user' && b.role === 'assistant') {
+                        return -1; // 用户消息在前
+                    } else if (a.role === 'assistant' && b.role === 'user') {
+                        return 1; // AI消息在后
+                    }
+                }
+                return a.timestamp - b.timestamp; // 正常按时间戳排序
+            });
+            
+            // 清空待更新队列
+            this.pendingVoiceCallMessages = [];
+            
+            window.controlledLog?.log('✅ 已处理消息，去重后总数:', currentDisplay.messages.length);
+            
+            // 限制消息数量（保持最新的50条）
+            if (currentDisplay.messages.length > currentDisplay.max_messages) {
+                const removedCount = currentDisplay.messages.length - currentDisplay.max_messages;
+                currentDisplay.messages = currentDisplay.messages.slice(-currentDisplay.max_messages);
+                window.controlledLog?.log('⚠️ 消息数量超过限制，已移除', removedCount, '条旧消息');
+            }
+            
+            // 保存到实例变量
+            this.voiceCallTranscriptionDisplay = currentDisplay;
+            
+            // 更新Store（不触发任何Dash回调）
+            if (window.dash_clientside && window.dash_clientside.set_props) {
+                try {
+                    window.dash_clientside.set_props('voice-call-transcription-display', {
+                        data: currentDisplay
+                    });
+                    window.controlledLog?.log('✅ Store已更新');
+                } catch (error) {
+                    console.error('更新Store失败:', error);
+                }
+            }
+            
+            // 更新UI显示（非流式，整句显示）
+            this.updateVoiceCallTextDisplay(currentDisplay);
+        }, 500);  // 500ms防抖
+    }
+    
+    /**
+     * 更新UI显示（非流式，整句显示）
+     */
+    updateVoiceCallTextDisplay(displayData) {
+        window.controlledLog?.log('🔄 更新UI显示，数据:', displayData);
+        
+        const displayElement = document.getElementById('voice-call-text-content');
+        if (!displayElement) {
+            window.controlledLog?.warn('⚠️ 未找到文本显示元素 voice-call-text-content');
+            return;
+        }
+        
+        if (!displayData || !displayData.messages || displayData.messages.length === 0) {
+            window.controlledLog?.log('⚠️ 显示数据为空，显示占位文本');
+            displayElement.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px; padding: 20px;">暂无对话记录</div>';
+            return;
+        }
+        
+        window.controlledLog?.log('✅ 开始渲染', displayData.messages.length, '条消息');
+        
+        // 显示所有消息（与聊天历史保持一致）
+        const allMessages = displayData.messages;
+        
+        // 🔧 关键修复：使用与user_message和agent_message相同的HTML结构和样式
+        displayElement.innerHTML = allMessages.map(msg => {
+            const isUser = msg.role === 'user';
+            const timeStr = new Date(msg.timestamp * 1000).toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            // 🔧 关键修复：减少消息间距到原来的1/3，与chat_user_message和chat_agent_message保持一致的样式
+            if (isUser) {
+                // 用户消息样式（减少间距）
+                return `
+                    <div class="chat-message user-message" style="margin-bottom: 5px; padding: 5px 24px 0 24px;">
+                        <!-- 第一行：时间戳、发送者名称和头像 -->
+                        <div style="display: flex; align-items: center; justify-content: flex-end; padding: 0 0 2px 0; min-height: 28px;">
+                            <div style="display: flex; align-items: center; margin-right: 8px;">
+                                <span style="font-size: 11px; color: rgba(0,0,0,0.45); margin-right: 6px;">${timeStr}</span>
+                                <span style="font-weight: 600; font-size: 13px;">我</span>
+                            </div>
+                            <div style="width: 28px; height: 28px; border-radius: 50%; background-color: #52c41a; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <span style="font-size: 14px;">👤</span>
+                            </div>
+                        </div>
+                        <!-- 第二行：消息内容 -->
+                        <div style="display: flex; justify-content: flex-end; padding: 0 0 3px 0;">
+                            <div style="background-color: #1890ff; border-radius: 8px 0 8px 8px; padding: 6px 12px; max-width: 80%; color: white; white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 1px 4px rgba(0,0,0,0.1); font-size: 13px; line-height: 1.4;">
+                                ${this.escapeHtml(msg.text || '')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // AI消息样式（减少间距）
+                return `
+                    <div class="chat-message ai-message" style="margin-bottom: 5px; padding: 5px 24px 0 24px;">
+                        <!-- 第一行：头像、发送者名称和时间戳 -->
+                        <div style="display: flex; align-items: center; padding: 0 0 2px 0; min-height: 28px;">
+                            <div style="width: 28px; height: 28px; border-radius: 50%; background-color: #1890ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-right: 8px;">
+                                <span style="font-size: 14px;">🤖</span>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <span style="font-weight: 600; font-size: 13px;">智能助手</span>
+                                <span style="font-size: 11px; color: rgba(0,0,0,0.45); margin-left: 6px;">${timeStr}</span>
+                            </div>
+                        </div>
+                        <!-- 第二行：消息内容 -->
+                        <div style="display: flex; padding: 0 0 3px 0;">
+                            <div style="width: 36px; height: 0; flex-shrink: 0;"></div>
+                            <div style="background-color: #f5f5f5; border-radius: 0 8px 8px 8px; padding: 6px 12px; max-width: 80%; color: #000; white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 1px 4px rgba(0,0,0,0.1); font-size: 13px; line-height: 1.4;">
+                                ${this.escapeHtml(msg.text || '')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }).join('');
+        
+        window.controlledLog?.log('✅ UI已更新，显示', allMessages.length, '条消息');
+        
+        // 🔧 关键修复：使用Drawer内容区域的滚动
+        const contentElement = document.getElementById('voice-call-text-content');
+        if (contentElement) {
+            contentElement.scrollTop = contentElement.scrollHeight;
+            window.controlledLog?.log('✅ 已滚动Drawer内容到底部');
+        } else {
+            window.controlledLog?.warn('⚠️ 未找到voice-call-text-content元素，无法滚动');
+        }
+    }
+    
+    /**
+     * HTML转义（防止XSS）
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    /**
+     * 保存语音实时对话消息到数据库（可选，阶段4实现）
+     */
+    async saveVoiceCallMessages() {
+        const displayData = this.voiceCallTranscriptionDisplay;
+        if (!displayData || !displayData.messages || displayData.messages.length === 0) {
+            return;
+        }
+        
+        try {
+            // 调用后端API保存（需要新增API端点，阶段4.2实现）
+            const response = await fetch('/api/voice-call/save-messages', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: displayData.session_id,
+                    messages: displayData.messages,
+                    source: 'voice_call'
+                })
+            });
+            
+            if (response.ok) {
+                window.controlledLog?.log('✅ 语音实时对话消息已保存到数据库');
+            } else {
+                console.error('保存失败:', response.statusText);
+            }
+        } catch (error) {
+            console.error('保存语音实时对话消息失败:', error);
+        }
     }
     
     /**

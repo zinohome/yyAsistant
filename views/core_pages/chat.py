@@ -247,14 +247,14 @@ def _create_content_area():
         style=style(padding="12px 24px", borderBottom="1px solid #f0f0f0", backgroundColor="#fff")
     )
 
-    # 聊天历史区域
+    # 修改 chat_history，移除之前的悬浮面板实现
     chat_history = fuc.FefferyDiv(
         id="ai-chat-x-history",
         children=[
             html.Div(
                 id="ai-chat-x-history-content",
                 children=AiChatMessageHistory(messages=None),
-                **{"data-dummy": {}}  # 使用字典展开和引号确保正确的data-*格式
+                **{"data-dummy": {}}
             )
         ],
         scrollbar='simple',
@@ -269,15 +269,17 @@ def _create_content_area():
 
     # 组合内容区域
     return fuc.FefferyDiv(
-        [chat_header,
-        # 添加SSE组件到布局
-        SSE(
-            id="chat-X-sse", 
-            concat=True, 
-            animate_chunk=BaseConfig.sse_animate_chunk, 
-            animate_delay=BaseConfig.sse_animate_delay
-        ), 
-        chat_history],
+        [
+            chat_header,
+            # 添加SSE组件到布局
+            SSE(
+                id="chat-X-sse", 
+                concat=True, 
+                animate_chunk=BaseConfig.sse_animate_chunk, 
+                animate_delay=BaseConfig.sse_animate_delay
+            ), 
+            chat_history
+        ],
         style=style(
             height="100%",
             display="flex",
@@ -349,6 +351,19 @@ def _create_state_stores():
     call_button_icon_store = dcc.Store(id='voice-call-icon-store', data='bi:telephone')
     voice_transcription_store_server = dcc.Store(id='voice-transcription-store-server', data=None)
     
+    # 新增：语音实时对话文本显示存储
+    voice_call_transcription_display = dcc.Store(
+        id='voice-call-transcription-display',
+        data={
+            'messages': [],  # 格式: [{'role': 'user'|'assistant', 'text': str, 'timestamp': float, 'message_id': str}]
+            'is_active': False,  # 是否在语音实时对话中
+            'session_id': None,  # 当前会话ID
+            'call_start_time': None,  # 对话开始时间
+            'max_messages': 50,  # 最大消息数（限制内存使用）
+            'created_at': None  # Store创建时间
+        }
+    )
+    
     # 不再需要隐藏div，直接通过JavaScript更新Store
     
     # 添加语音功能相关的显示组件
@@ -371,7 +386,13 @@ def _create_state_stores():
                         AUDIO_BIT_RATE: ''' + str(VoiceConfig.AUDIO_BIT_RATE) + ''',
                         VOICE_DEFAULT: '''' + VoiceConfig.VOICE_DEFAULT + '''',
                         VOLUME_DEFAULT: ''' + str(VoiceConfig.VOLUME_DEFAULT) + ''',
-                        AUTO_PLAY_DEFAULT: ''' + str(VoiceConfig.AUTO_PLAY_DEFAULT).lower() + '''
+                        AUTO_PLAY_DEFAULT: ''' + str(VoiceConfig.AUTO_PLAY_DEFAULT).lower() + ''',
+                        VOICE_CALL_SHOW_TRANSCRIPTION: ''' + ('true' if VoiceConfig.VOICE_CALL_SHOW_TRANSCRIPTION else 'false') + ''',
+                        VOICE_CALL_SAVE_TO_DATABASE: ''' + ('true' if VoiceConfig.VOICE_CALL_SAVE_TO_DATABASE else 'false') + ''',
+                        VOICE_CALL_AUTO_SAVE_ON_END: ''' + ('true' if VoiceConfig.VOICE_CALL_AUTO_SAVE_ON_END else 'false') + ''',
+                        VOICE_CALL_MAX_DISPLAY_MESSAGES: ''' + str(VoiceConfig.VOICE_CALL_MAX_DISPLAY_MESSAGES) + ''',
+                        VOICE_CALL_TRANSCRIPTION_DEBOUNCE: ''' + str(VoiceConfig.VOICE_CALL_TRANSCRIPTION_DEBOUNCE) + ''',
+                        VOICE_CALL_STREAMING_DISPLAY: ''' + ('true' if VoiceConfig.VOICE_CALL_STREAMING_DISPLAY else 'false') + '''
                     }};
                     
                     window.controlledLog?.log('语音配置已设置:', window.voiceConfig);
@@ -719,6 +740,7 @@ def _create_state_stores():
         voice_enable_voice_store,
         voice_transcription_store,
         voice_transcription_store_server,
+        voice_call_transcription_display,  # 新增：语音实时对话文本显示存储
         
         # 按钮图标存储组件
         text_button_icon_store,
@@ -727,7 +749,52 @@ def _create_state_stores():
         voice_error_notification,
         voice_js_integration,
         
-        html.Div(id="global-message")  # 全局消息提示组件
+        html.Div(id="global-message"),  # 全局消息提示组件
+        
+        # 🔧 新增：语音实时对话文本显示Drawer（使用Drawer方式，不遮挡顶部和底部按钮）
+        fac.AntdDrawer(
+            id='voice-call-text-drawer',
+            title=fac.AntdSpace([
+                fac.AntdIcon(icon="antd-sound"),
+                fac.AntdText("语音实时对话", strong=True)
+            ]),
+            placement='right',
+            width="300px",  # 🔧 进一步减小宽度，确保不遮挡右侧消息
+            visible=False,  # 默认隐藏
+            mask=False,  # 🔧 禁用遮罩层，避免遮挡挂断按钮
+            maskClosable=False,  # 🔧 禁用点击遮罩层关闭（挂断语音通话时自动关闭）
+            closable=False,  # 🔧 隐藏关闭按钮（挂断语音通话时自动关闭）
+            # 🔧 关键修复：使用classNames添加自定义CSS类，通过CSS控制高度和位置（与chat_history一致）
+            classNames={
+                'content': 'voice-call-drawer-content'  # 自定义CSS类名
+            },
+            styles={
+                'body': {
+                    'padding': 0,
+                    'margin': 0,
+                    'height': '100%',
+                    'overflow': 'hidden',  # 禁用drawer body的滚动
+                    'backgroundColor': '#fafafa',
+                    'display': 'flex',
+                    'flexDirection': 'column'
+                }
+            },
+            children=[
+                # 消息内容区域（可滚动）
+                html.Div(
+                    id='voice-call-text-content',
+                    style=style(
+                        padding=0,
+                        margin=0,
+                        flex=1,  # 占据剩余空间
+                        overflowY='auto',  # 内容区域可滚动
+                        backgroundColor='#fafafa',
+                        minHeight=0  # 允许flex收缩
+                    ),
+                    children=[]
+                )
+            ]
+        )
     ]
 
 
