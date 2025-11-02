@@ -316,3 +316,25 @@
         max-height: calc(100vh - 240px) !important;
     }
 }
+
+/* ============================================
+   统一断点：395px以下特殊优化（确保与575px规则一致）
+   ============================================ */
+
+@media screen and (max-width: 395px) {
+    /* 确保桌面端按钮隐藏（与chat.css的575px规则保持一致） */
+    .voice-button-desktop {
+        display: none !important;
+    }
+    
+    /* 确保移动端按钮行显示 */
+    .voice-buttons-row-mobile {
+        display: flex !important;
+    }
+    
+    /* 调整聊天历史区域高度（与575px规则保持一致） */
+    #ai-chat-x-history {
+        height: calc(100vh - 296px) !important;
+        max-height: calc(100vh - 296px) !important;
+    }
+}

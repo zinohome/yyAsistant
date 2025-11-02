@@ -1,64 +1,213 @@
-/* 超小屏幕输入区域优化 - 专门处理390px宽度下的换行问题 */
+/* 超小屏幕输入区域优化 - 专门处理395px宽度下的布局问题 */
 
-/* 超小屏幕输入区域优化 */
+/* 超小屏幕输入区域优化 - 修复按钮显示和输入框挤压问题 */
 @media screen and (max-width: 395px) {
-    /* 强制单行布局 - 关键修复 */
-    #ai-chat-x-input-container {
-        overflow: hidden !important;
-        white-space: nowrap !important;
-    }
+    /* ========== 第一步：确保按钮正确显示/隐藏（最高优先级） ========== */
     
-    #ai-chat-x-input-container .ant-row {
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-        margin: 0 !important;
-        gap: 0 !important;
-        width: 100% !important;
-        display: flex !important;
-    }
-    
-    /* 输入容器优化 */
-    #chat-input-container {
-        padding: 2px 4px !important; /* 减少内边距 */
-        overflow: hidden !important;
-    }
-    
-    /* 输入框列强制不换行 */
-    #ai-chat-x-input-container .ant-col[flex="auto"] {
-        min-width: 0 !important;
-        flex: 1 1 auto !important;
-        max-width: calc(100% - 140px) !important; /* 为按钮组预留空间 */
-        overflow: hidden !important;
-    }
-    
-    /* 输入框优化 */
-    #ai-chat-x-input {
-        font-size: 14px !important;
-        padding: 8px 6px !important; /* 减少输入框内边距 */
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-    }
-    
-    /* 按钮组强制不换行 */
-    #ai-chat-x-input-container .ant-col[flex="none"] {
-        flex-shrink: 0 !important;
-        min-width: 120px !important; /* 三个按钮的最小宽度 */
-        max-width: 140px !important;
-        white-space: nowrap !important;
-    }
-    
-    /* 按钮组优化 */
-    #ai-chat-x-input-container .ant-space {
-        gap: 4px !important; /* 减少按钮间距 */
-        flex-wrap: nowrap !important;
-        white-space: nowrap !important;
-    }
-    
-    /* 按钮尺寸优化 */
-    #ai-chat-x-send-btn,
+    /* 强制隐藏桌面端按钮（最高优先级，确保不会显示） */
+    .voice-button-desktop,
     #voice-record-button,
     #voice-call-btn {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        flex: 0 0 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+    }
+    
+    /* 强制隐藏桌面端按钮的父容器中的按钮 */
+    #chat-input-container .ant-space .voice-button-desktop,
+    #ai-chat-x-input-container .ant-space .voice-button-desktop {
+        display: none !important;
+    }
+    
+    /* 确保移动端按钮行正常显示 */
+    .voice-buttons-row-mobile {
+        display: flex !important;
+        visibility: visible !important;
+    }
+    
+    /* ========== 第二步：修复第一行布局（确保顺序正确，计算准确） ========== */
+    
+    /* 第一行容器：不换行，保持DOM顺序，优化布局 */
+    #chat-input-container .ant-row:first-child {
+        display: flex !important;
+        flex-wrap: nowrap !important; /* 不换行，保持DOM顺序 */
+        flex-direction: row !important; /* 确保从左到右 */
+        align-items: center !important;
+        margin: 0 !important;
+        gap: 4px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* ========== 列的基础样式：确保不换行，保持DOM顺序 ========== */
+    
+    /* 所有列的通用样式：确保不换行，保持顺序，不改变顺序 */
+    #chat-input-container .ant-row:first-child > .ant-col {
+        display: flex !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+        /* 明确不设置order，保持DOM自然顺序 */
+    }
+    
+    /* ========== 输入框列（flex="auto"）- 最高优先级 ========== */
+    
+    /* 输入框列：弹性宽度，占据剩余空间 - 使用最精确的选择器 */
+    /* 必须确保输入框列在中间位置，不被错误选择 */
+    #chat-input-container .ant-row:first-child > .ant-col[flex="auto"] {
+        flex: 1 1 auto !important;
+        flex-shrink: 1 !important; /* 允许收缩，但不小于min-width */
+        flex-grow: 1 !important; /* 占据剩余空间 */
+        min-width: 200px !important; /* 确保输入框有足够的最小宽度（增加） */
+        max-width: none !important; /* 移除max-width限制，让flex自动分配 */
+        box-sizing: border-box !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        /* 确保不改变位置 */
+        order: initial !important; /* 使用初始值，保持DOM顺序 */
+    }
+    
+    /* ========== 附件按钮列（如果存在）- 第一个flex="none"的列 ========== */
+    
+    /* 附件按钮列：固定宽度（如果存在，是第一个col且flex="none"） */
+    /* 必须排除flex="auto"的输入框列，只选择第一个且flex="none"的列 */
+    #chat-input-container .ant-row:first-child > .ant-col[flex="none"]:first-child {
+        flex: 0 0 auto !important;
+        flex-shrink: 0 !important;
+        min-width: 32px !important;
+        max-width: 40px !important;
+        width: auto !important;
+        order: initial !important; /* 保持DOM顺序 */
+    }
+    
+    /* ========== 按钮组列（包含.ant-space的flex="none"列）- 确保在最后 ========== */
+    
+    /* 按钮组列：固定宽度，包含发送按钮 - 通过包含.ant-space识别 */
+    /* 按钮组列的特征：flex="none" 且包含 .ant-space */
+    /* 注意：不能只用:last-child，因为如果没有附件，按钮组列既是:first-child也是:last-child */
+    /* 解决方案：通过包含.ant-space来识别按钮组列 */
+    
+    /* 所有包含.ant-space的flex="none"列都是按钮组列 */
+    #chat-input-container .ant-row:first-child > .ant-col[flex="none"] .ant-space {
+        /* 通过父元素选择，确保按钮组列正确显示 */
+    }
+    
+    /* 按钮组列的样式（通过包含.ant-space的列） */
+    /* 使用更通用的选择器：所有flex="none"的列，但通过包含.ant-space来识别按钮组列 */
+    /* 先处理所有flex="none"的列 */
+    #chat-input-container .ant-row:first-child > .ant-col[flex="none"] {
+        flex: 0 0 auto !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* 第一个flex="none"的列：可能是附件按钮列，也可能是按钮组列（如果没有附件） */
+    /* 附件按钮列的特征：不包含.ant-space */
+    #chat-input-container .ant-row:first-child > .ant-col[flex="none"]:first-child:not(:has(.ant-space)) {
+        min-width: 32px !important;
+        max-width: 40px !important;
+        width: auto !important;
+    }
+    
+    /* 最后一个flex="none"的列：一定是按钮组列（包含.ant-space） */
+    /* 但如果只有一个flex="none"的列（没有附件），它既是:first-child也是:last-child */
+    /* 在这种情况下，如果它包含.ant-space，则是按钮组列，应该在最后 */
+    #chat-input-container .ant-row:first-child > .ant-col[flex="none"]:last-child {
+        flex: 0 0 40px !important;
+        flex-shrink: 0 !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+        width: 40px !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    
+    /* 特殊情况：如果没有附件按钮，第一个且唯一的flex="none"列是按钮组列 */
+    /* 这种情况下，它既是:first-child也是:last-child，但应该保持原有位置（在输入框后面） */
+    /* 由于DOM顺序已经是正确的（输入框在前，按钮组在后），只需要确保样式正确即可 */
+    
+    /* 按钮组内部：只显示发送按钮，确保正确显示 */
+    #chat-input-container .ant-row:first-child .ant-space {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        flex-direction: row !important;
+        gap: 0 !important;
+        justify-content: center !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+    
+    /* 发送按钮：固定尺寸 */
+    #ai-chat-x-send-btn {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+        flex-shrink: 0 !important;
+        display: inline-flex !important;
+    }
+    
+    /* ========== 第三步：优化输入框样式 ========== */
+    
+    /* 输入容器：不强制单行 */
+    #chat-input-container {
+        padding: 4px 6px !important;
+        overflow: visible !important; /* 允许内容换行 */
+    }
+    
+    /* 输入框：确保不被压缩，有足够的宽度 */
+    #ai-chat-x-input {
+        font-size: 14px !important;
+        padding: 8px 6px !important;
+        min-width: 180px !important; /* 确保有足够的最小宽度 */
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* 输入框内部的textarea：确保宽度正确 */
+    #ai-chat-x-input .ant-input,
+    #ai-chat-x-input textarea {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        white-space: normal !important; /* 允许文本换行 */
+        overflow-wrap: break-word !important;
+        resize: none !important;
+    }
+    
+    /* 附件按钮优化 */
+    #chat-input-container .ant-btn[title="上传附件"] {
+        padding: 4px 6px !important;
+        min-width: 32px !important;
+        flex-shrink: 0 !important;
+    }
+}
+
+/* 极小屏幕进一步优化 */
+@media screen and (max-width: 360px) {
+    /* 确保桌面端按钮隐藏（继承395px的规则） */
+    .voice-button-desktop,
+    #voice-record-button,
+    #voice-call-btn {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    /* 发送按钮：进一步减少尺寸 */
+    #ai-chat-x-send-btn {
         width: 36px !important;
         height: 36px !important;
         padding: 6px !important;
@@ -67,258 +216,65 @@
         display: inline-flex !important;
     }
     
-    /* 按钮图标优化 */
-    #ai-chat-x-send-btn .anticon,
-    #voice-record-button .anticon,
-    #voice-call-btn .anticon {
-        font-size: 16px !important;
-    }
-    
-    /* 附件按钮优化 */
-    #ai-chat-x-input-container .ant-btn[title="上传附件"] {
-        padding: 4px 6px !important;
-        min-width: 32px !important;
-        flex-shrink: 0 !important;
-    }
-    
-    /* 强制所有列不换行 */
-    #ai-chat-x-input-container .ant-col {
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
-    }
-    
-    /* 输入框列特殊处理 */
-    #ai-chat-x-input-container .ant-col[flex="auto"] {
-        white-space: normal !important;
-        flex-shrink: 1 !important;
-    }
-}
-
-/* 极小屏幕进一步优化 */
-@media screen and (max-width: 360px) {
-    /* 进一步减少按钮尺寸 */
-    #ai-chat-x-send-btn,
-    #voice-record-button,
-    #voice-call-btn {
-        width: 32px !important;
-        height: 32px !important;
-        padding: 4px !important;
-        min-width: 32px !important;
-        flex-shrink: 0 !important;
-    }
-    
-    /* 减少按钮间距 */
-    #ai-chat-x-input-container .ant-space {
-        gap: 2px !important;
-        flex-wrap: nowrap !important;
-    }
-    
     /* 输入框进一步优化 */
     #ai-chat-x-input {
         font-size: 13px !important;
         padding: 6px 4px !important;
-        max-width: calc(100% - 110px) !important; /* 为更小的按钮组预留空间 */
+        min-width: 100px !important;
+        max-width: calc(100% - 90px) !important; /* 附件32px + 发送36px + 间距22px */
     }
     
-    /* 按钮组空间调整 */
-    #ai-chat-x-input-container .ant-col[flex="none"] {
-        min-width: 100px !important; /* 三个32px按钮的最小宽度 */
-        max-width: 110px !important;
+    /* 按钮组列：只包含发送按钮 */
+    #chat-input-container .ant-row:first-child .ant-col[flex="none"] {
+        min-width: 36px !important;
+        max-width: 36px !important;
+        width: 36px !important;
+    }
+    
+    /* 输入框列：进一步优化 */
+    #chat-input-container .ant-row:first-child .ant-col[flex="auto"] {
+        min-width: 100px !important;
+        max-width: calc(100% - 90px) !important; /* 附件32px + 发送36px + 间距22px */
     }
     
     /* 容器进一步压缩 */
     #chat-input-container {
-        padding: 1px 3px !important;
-    }
-    
-    /* 强制单行布局 */
-    #ai-chat-x-input-container {
-        overflow: hidden !important;
-        white-space: nowrap !important;
-    }
-    
-    #ai-chat-x-input-container .ant-row {
-        flex-wrap: nowrap !important;
-        align-items: center !important;
+        padding: 2px 4px !important;
     }
 }
 
-/* 确保在超小屏幕下输入区域不换行 */
-@media screen and (max-width: 395px) {
-    #ai-chat-x-input-container {
-        overflow: hidden !important;
-    }
-    
-    #ai-chat-x-input-container .ant-row {
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-    }
-    
-    /* 强制单行显示 */
-    #ai-chat-x-input-container .ant-col {
-        white-space: nowrap !important;
-    }
-    
-    /* 输入框文本不换行 */
-    #ai-chat-x-input textarea {
-        white-space: nowrap !important;
-        overflow-x: auto !important;
-    }
-    
-    /* 强制单行布局 - 最高优先级 */
-    #ai-chat-x-input-container {
-        display: flex !important;
-        align-items: center !important;
-        white-space: nowrap !important;
-    }
-    
-    #ai-chat-x-input-container .ant-row {
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-        width: 100% !important;
-        margin: 0 !important;
-        gap: 0 !important;
-    }
-    
-    /* 强制所有列不换行 */
-    #ai-chat-x-input-container .ant-col {
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-    }
-    
-    /* 附件按钮列特殊处理 */
-    #ai-chat-x-input-container .ant-col:first-child {
-        min-width: 32px !important;
-        max-width: 40px !important;
-        flex-shrink: 0 !important;
-    }
-    
-    /* 输入框列特殊处理 */
-    #ai-chat-x-input-container .ant-col[flex="auto"] {
-        white-space: normal !important;
-        flex-shrink: 1 !important;
-        min-width: 0 !important;
-        max-width: calc(100% - 200px) !important;  /* 附件按钮40px + 按钮组160px = 200px */
-    }
-    
-    /* 按钮组列强制不换行 */
-    #ai-chat-x-input-container .ant-col[flex="none"] {
-        white-space: nowrap !important;
-        flex-shrink: 0 !important;
-        min-width: 160px !important;  /* 3×40px + 2×8px + 24px余量 = 160px */
-        max-width: 180px !important;  /* 留更多余量 */
-        width: 160px !important;  /* 强制固定宽度 */
-    }
-    
-    /* 按钮组内部强制不换行 */
-    #ai-chat-x-input-container .ant-space {
-        flex-wrap: nowrap !important;
-        white-space: nowrap !important;
-        display: flex !important;
-        align-items: center !important;
-    }
-    
-    /* 所有按钮强制不换行 */
-    #ai-chat-x-send-btn,
-    #voice-record-button,
-    #voice-call-btn {
-        display: inline-flex !important;
-        flex-shrink: 0 !important;
-        white-space: nowrap !important;
-    }
-}
-
-/* 390px宽度下强制单行布局 */
-@media screen and (max-width: 395px) {
-    /* 强制输入容器使用Flexbox单行布局 */
-    #ai-chat-x-input-container {
-        display: flex !important;
-        align-items: center !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        width: 100% !important;
-        gap: 4px !important;
-    }
-    
-    /* 强制AntdRow不换行 */
-    #ai-chat-x-input-container .ant-row {
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        align-items: center !important;
-        width: 100% !important;
-        margin: 0 !important;
-        gap: 4px !important;
-    }
-    
-    /* 附件按钮 - 固定宽度 */
-    #ai-chat-x-input-container .ant-col:first-child {
-        flex: 0 0 32px !important;
-        min-width: 32px !important;
-        max-width: 32px !important;
-        width: 32px !important;
-        flex-shrink: 0 !important;
-    }
-    
-    /* 输入框 - 弹性宽度，但限制最大宽度 */
-    #ai-chat-x-input-container .ant-col[flex="auto"] {
-        flex: 1 1 auto !important;
-        min-width: 0 !important;
-        max-width: calc(100% - 180px) !important;  /* 附件32px + 按钮组140px + 8px余量 */
-        width: auto !important;
-    }
-    
-    /* 按钮组 - 固定宽度 */
-    #ai-chat-x-input-container .ant-col[flex="none"] {
-        flex: 0 0 140px !important;
-        min-width: 140px !important;
-        max-width: 140px !important;
-        width: 140px !important;
-        flex-shrink: 0 !important;
-    }
-    
-    /* 按钮组内部不换行 */
-    #ai-chat-x-input-container .ant-space {
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        white-space: nowrap !important;
-        align-items: center !important;
-        gap: 4px !important;
-    }
-    
-    /* 所有按钮固定尺寸 */
-    #ai-chat-x-send-btn,
-    #voice-record-button,
-    #voice-call-btn {
-        width: 36px !important;
-        height: 36px !important;
-        min-width: 36px !important;
-        max-width: 36px !important;
-        flex-shrink: 0 !important;
-        display: inline-flex !important;
-    }
-}
 
 /* 微信浏览器特殊处理 */
 @media screen and (max-width: 395px) and (-webkit-min-device-pixel-ratio: 2) {
-    /* 微信浏览器下进一步优化 */
-    #chat-input-container {
-        padding: 1px 2px !important;
-    }
-    
-    #ai-chat-x-send-btn,
+    /* 确保桌面端按钮隐藏 */
+    .voice-button-desktop,
     #voice-record-button,
     #voice-call-btn {
-        width: 34px !important;
-        height: 34px !important;
-        padding: 5px !important;
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    /* 微信浏览器下进一步优化 */
+    #chat-input-container {
+        padding: 3px 5px !important;
+    }
+    
+    /* 发送按钮：微信浏览器优化 */
+    #ai-chat-x-send-btn {
+        width: 38px !important;
+        height: 38px !important;
+        padding: 7px !important;
     }
     
     #ai-chat-x-input {
-        padding: 6px 4px !important;
+        padding: 7px 5px !important;
         font-size: 13px !important;
+        min-width: 120px !important;
     }
 }
 
@@ -346,3 +302,4 @@
         gap: 2px !important;
     }
 }
+

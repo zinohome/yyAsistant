@@ -35,32 +35,23 @@
         height: 100svh;
     }
     
-    /* 调整页首高度 */
-    #ai-chat-x-header {
-        height: 45px !important;
-        min-height: 45px !important;
-    }
+    /* 🔧 移除header高度设置，保持和575px以下一致（由chat.css控制） */
+    /* header高度由chat.css的@media (max-width: 575px)规则控制，不再单独设置 */
     
-    .ai-chat-x-header-row {
-        height: 40px !important;
-        min-height: 40px !important;
-        padding: 8px 16px !important;
-    }
-    
-    /* 调整主体布局高度 */
+    /* 调整主体布局高度 - 使用chat.css的header高度（42px），加上padding约等于50px */
     #ai-chat-x-main-layout > div.ant-layout {
-        height: calc(100vh - 45px);
-        height: calc(100dvh - 45px);
-        height: calc(100svh - 45px);
+        height: calc(100vh - 50px);
+        height: calc(100dvh - 50px);
+        height: calc(100svh - 50px);
     }
     
-    /* 调整聊天历史高度 */
+    /* 调整聊天历史高度 - 保持和其他屏幕一致的计算方式 */
     #ai-chat-x-history {
-        height: calc(100vh - 235px);
-        height: calc(100dvh - 235px);
-        height: calc(100svh - 235px);
-        maxHeight: calc(100dvh - 235px);
-        maxHeight: calc(100svh - 235px);
+        height: calc(100vh - 240px);
+        height: calc(100dvh - 240px);
+        height: calc(100svh - 240px);
+        maxHeight: calc(100dvh - 240px);
+        maxHeight: calc(100svh - 240px);
     }
     
     /* 优化字体大小 */
