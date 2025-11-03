@@ -13,8 +13,6 @@ cd /opt && \
 git clone https://github.com/zinohome/yyAsistant.git && \
 cd /opt/yyAsistant/ && \
 git pull && \
-git checkout -b refactor/state-management-v2 origin/refactor/state-management-v2 && \
-git pull && \
 virtualenv .venv && \
 . .venv/bin/activate && \
 pip install -r requirements.txt && \
