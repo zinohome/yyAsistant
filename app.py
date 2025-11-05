@@ -559,17 +559,18 @@ app.layout = lambda: fuc.FefferyTopProgress(
             id="root-container",
         ),
         # 基础配置文件（所有页面都需要）
-        html.Script(src="/assets/js/config.js"),
-        # 应用配置运行时
-        html.Script(src="/assets/js/app_config_runtime.js"),
-        # 微信浏览器兼容性处理
-        html.Script(src="/assets/js/wechat_compatibility.js"),
-        # 微信浏览器调试工具
-        html.Script(src="/assets/js/wechat_debug.js"),
-        # 移动端视口处理
-        html.Script(src="/assets/js/mobile_viewport_handler.js"),
-        # 聊天页面专用JS加载器（条件加载）
-        html.Script(src="/assets/js/chat_page_loader.js"),
+        # 使用 defer 属性允许并行下载，但保持执行顺序
+        html.Script(src="/assets/js/config.js", defer=True),
+        # 应用配置运行时（依赖 config.js，使用 defer 保持顺序）
+        html.Script(src="/assets/js/app_config_runtime.js", defer=True),
+        # 微信浏览器兼容性处理（可以并行）
+        html.Script(src="/assets/js/wechat_compatibility.js", defer=True),
+        # 微信浏览器调试工具（可以并行）
+        html.Script(src="/assets/js/wechat_debug.js", defer=True),
+        # 移动端视口处理（可以并行）
+        html.Script(src="/assets/js/mobile_viewport_handler.js", defer=True),
+        # 聊天页面专用JS加载器（条件加载，使用 defer）
+        html.Script(src="/assets/js/chat_page_loader.js", defer=True),
     ],
     id="layout-top-progress",
     minimum=0.33,
@@ -859,8 +860,8 @@ if __name__ == "__main__":
     print("   - 自适应UI系统: 已启动")
     
     # 非正式环境下开发调试预览用
-    app.run(debug=True, host='0.0.0.0', port=8050)
-    #app.run(host='0.0.0.0', port=8050)
+    #app.run(debug=True, host='0.0.0.0', port=8050)
+    app.run(host='0.0.0.0', port=8050)
     # 生产环境推荐使用gunicorn启动
     #gunicorn -w 4 -b 0.0.0.0:8050 app:server
 

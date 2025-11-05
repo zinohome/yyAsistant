@@ -30,7 +30,13 @@ app = DashProxy(
         '/assets/css/ultra_small_screen.css'
     ],
     # 添加静态文件配置，避免dash_table字体文件404错误
-    serve_locally=True
+    serve_locally=True,
+    # 忽略聊天相关的JS文件，由chat_page_loader.js并行加载
+    # 这样可以避免Dash按字母顺序串行加载，提升加载速度
+    # 只忽略聊天相关的JS文件，基础脚本（config.js等）仍然通过html.Script手动加载
+    # 忽略模式：匹配包含这些关键词的JS文件名（使用更宽松的匹配）
+    assets_ignore='.*(state_manager|state_sync|voice|realtime|enhanced|smart|adaptive_ui).*\\.js$',
+    include_assets_files=True  # 仍然包含CSS等其他资源
 )
 server = app.server
 

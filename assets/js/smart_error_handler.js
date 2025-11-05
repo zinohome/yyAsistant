@@ -216,7 +216,16 @@ class SmartErrorHandler {
         console.warn('🔧 智能错误处理（已隐藏弹出框）:', analysis);
         
         // 只记录错误历史，不显示弹出框
-        this.recordError(analysis);
+        this.errorHistory.push({
+            ...analysis,
+            id: this.generateErrorId(),
+            timestamp: Date.now()
+        });
+        
+        // 限制历史记录长度
+        if (this.errorHistory.length > 100) {
+            this.errorHistory = this.errorHistory.slice(-50);
+        }
         
         // 注释掉原来的弹出框逻辑
         /*
