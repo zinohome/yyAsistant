@@ -1,0 +1,75 @@
+# Caddy反向代理配置示例
+# 用于通过国外服务器代理到国内服务器
+
+# 基础配置：HTTP反向代理
+# 将 example.com 替换为您的域名
+# 将 your-tencent-cloud-domain.com:8080 替换为您的国内服务器地址
+example.com {
+    # 启用HTTPS（自动申请Let's Encrypt证书）
+    tls {
+        protocols tls1.2 tls1.3
+    }
+    
+    # 反向代理到国内服务器
+    reverse_proxy http://your-tencent-cloud-domain.com:8080 {
+        # 传递原始主机头
+        header_up Host {host}
+        
+        # 传递真实IP地址
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        
+        # 保持连接
+        header_up Connection keep-alive
+        
+        # 健康检查（如果后端有健康检查端点）
+        health_uri /health
+        health_interval 30s
+        health_timeout 5s
+        
+        # 超时设置
+        timeout 30s
+    }
+    
+    # WebSocket支持（如果需要）
+    @websocket {
+        path /ws/*
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websocket http://your-tencent-cloud-domain.com:8080 {
+        header_up Host your-tencent-cloud-domain.com
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    # 启用压缩
+    encode gzip zstd
+    
+    # 安全头
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+    
+    # 静态资源缓存
+    @static {
+        path *.css *.js *.jpg *.png *.gif *.ico *.woff *.woff2 *.svg
+    }
+    header @static {
+        Cache-Control "public, max-age=31536000, immutable"
+    }
+    
+    # 日志
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+}
+
