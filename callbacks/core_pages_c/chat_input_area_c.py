@@ -9,6 +9,7 @@ from server import app, server  # 确保同时导入了server
 from utils.yychat_client import yychat_client
 from utils.log import log
 from configs.topics_loader import get_random_topic_description_by_category, get_categories
+from configs.base_config import BaseConfig
 import copy
 import threading
 import time
@@ -415,17 +416,25 @@ def trigger_sse(messages, enable_voice, ws_connection, current_session_id):
             except Exception:
                 enable_requested = bool(enable_voice)
 
+            # 🔧 关键修复：根据 enable_auto_tts_after_sse 配置决定是否启用后端TTS
+            # 只有当 enable_auto_tts_after_sse=True 且有 client_id 时，才启用后端TTS处理
+            # 这样后端就不会在SSE流式传输过程中自动进行TTS处理
+            enable_voice_for_backend = bool(client_id) and BaseConfig.enable_auto_tts_after_sse
+            
             request_data = {
                 'messages': conversation_messages,
                 'session_id': session_id,
                 'personality_id': 'health_assistant',
                 'message_id': message_id,
                 'role': role,
-            # 当有client_id时启用TTS（文本聊天和语音聊天都支持）
-            'enable_voice': bool(client_id),
+                # 🔧 修复：只有当 enable_auto_tts_after_sse=True 且有 client_id 时，才启用后端TTS
+                'enable_voice': enable_voice_for_backend,
                 # 后端需要定向推送的client_id（可能为空）
                 'client_id': client_id
             }
+            
+            if client_id and not BaseConfig.enable_auto_tts_after_sse:
+                log.debug(f"🔧 enable_auto_tts_after_sse=False，禁用后端TTS处理: client_id={client_id}, message_id={message_id}")
             # 兼容后端新字段：conversation_id = session_id
             request_data['conversation_id'] = session_id
 

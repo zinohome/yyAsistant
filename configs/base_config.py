@@ -15,7 +15,7 @@ class BaseConfig:
     app_title: str = "研翌助手"
 
     # 应用版本
-    app_version: str = "0.5.4"
+    app_version: str = "0.6.4"
 
     # 应用密钥
     app_secret_key: str = "yyAsistant-bgt56yhn-passkey"
