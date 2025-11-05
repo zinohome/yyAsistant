@@ -7,7 +7,7 @@ class BaseConfig:
 
     # 添加SSE配置参数
     # 每次动画显示的字符数
-    sse_animate_chunk: int = 50
+    sse_animate_chunk: int = 3000
     # 动画显示的延迟时间(毫秒)
     sse_animate_delay: int = 1
 
@@ -88,6 +88,10 @@ class BaseConfig:
     websocket_reconnect_interval: int = 1000
     # WebSocket最大重连次数
     websocket_max_reconnect_attempts: int = 5
+    
+    # 聊天输入栏模式配置
+    # 控制聊天输入栏显示模式：chattips（话题提示栏）或 tools（工具栏）
+    chat_input_bar_mode: str = "tools"
     
     # Demo模式配置
     # 是否启用demo模式（启用后，登录页面会自动填充用户名和密码）

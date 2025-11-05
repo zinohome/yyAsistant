@@ -17,6 +17,7 @@ def render_health_record_drawer():
             fac.AntdText("健康档案")
         ],
         # 移除固定宽度，由回调函数动态设置
+        maskClosable=False,  # 禁用点击遮罩关闭
         children=[
             html.Div(id="health-record-content")
         ]
@@ -53,6 +54,16 @@ def update_drawer_content(visible):
                                 "key": "health_history",
                                 "label": "健康史",
                                 "children": _render_health_history_tab()
+                            },
+                            {
+                                "key": "health_report",
+                                "label": "健康报告",
+                                "children": _render_health_report_tab()
+                            },
+                            {
+                                "key": "health_plan",
+                                "label": "健康计划",
+                                "children": _render_health_plan_tab()
                             },
                             {
                                 "key": "diet_health",
@@ -588,6 +599,38 @@ def _render_health_check_tab():
                 style={'marginTop': '16px'}
             )
         ]
+    )
+
+
+def _render_health_report_tab():
+    """渲染健康报告Tab内容"""
+    return html.Div(
+        [
+            fac.AntdButton(
+                "生成健康报告",
+                type="primary",
+                block=True,
+                icon=fac.AntdIcon(icon="antd-file-text"),
+                style={'marginTop': '16px'}
+            )
+        ],
+        style={'padding': '16px'}
+    )
+
+
+def _render_health_plan_tab():
+    """渲染健康计划Tab内容"""
+    return html.Div(
+        [
+            fac.AntdButton(
+                "生成专属健康计划",
+                type="primary",
+                block=True,
+                icon=fac.AntdIcon(icon="antd-calendar"),
+                style={'marginTop': '16px'}
+            )
+        ],
+        style={'padding': '16px'}
     )
 
 

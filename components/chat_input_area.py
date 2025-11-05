@@ -3,6 +3,7 @@ import feffery_antd_components as fac
 from dash_iconify import DashIconify
 from feffery_dash_utils.style_utils import style
 from configs.topics_loader import get_category_topics, get_settings
+from configs import BaseConfig
 
 
 def render(
@@ -44,56 +45,163 @@ def render(
         topics = topics[:max_topics_display]
         icons = icons[:max_topics_display]
     
+    # 根据配置决定渲染话题提示栏还是工具栏
+    bar_mode = BaseConfig.chat_input_bar_mode
+    
+    # 渲染工具栏
+    if bar_mode == "tools":
+        toolbar_content = fuc.FefferyDiv(
+            [
+                fac.AntdSpace(
+                    [
+                        # 健康档案按钮
+                        fuc.FefferyDiv(
+                            [
+                                fac.AntdIcon(
+                                    icon="antd-user",
+                                    style=style(marginRight="8px", color="#666")
+                                ),
+                                "健康档案"
+                            ],
+                            id="toolbar-health-record-btn",
+                            shadow="hover-shadow-light",
+                            style=style(
+                                display="flex",
+                                alignItems="center",
+                                padding="8px 16px",
+                                backgroundColor="#f5f5f5",
+                                color="#333",
+                                borderRadius="6px",
+                                cursor="pointer",
+                                border="1px solid #e8e8e8",
+                                transition="all 0.2s ease",
+                                whiteSpace="nowrap"
+                            ),
+                            enableEvents=['click', 'hover'],
+                            nClicks=0
+                        ),
+                        # 偏好设置按钮
+                        fuc.FefferyDiv(
+                            [
+                                fac.AntdIcon(
+                                    icon="antd-setting",
+                                    style=style(marginRight="8px", color="#666")
+                                ),
+                                "偏好设置"
+                            ],
+                            id="toolbar-preference-btn",
+                            shadow="hover-shadow-light",
+                            style=style(
+                                display="flex",
+                                alignItems="center",
+                                padding="8px 16px",
+                                backgroundColor="#f5f5f5",
+                                color="#333",
+                                borderRadius="6px",
+                                cursor="pointer",
+                                border="1px solid #e8e8e8",
+                                transition="all 0.2s ease",
+                                whiteSpace="nowrap"
+                            ),
+                            enableEvents=['click', 'hover'],
+                            nClicks=0
+                        ),
+                        # 康泰友聚按钮（暂时禁用）
+                        fuc.FefferyDiv(
+                            [
+                                DashIconify(
+                                    icon="material-symbols:groups",
+                                    width=16,
+                                    height=16,
+                                    style=style(marginRight="8px", color="#999")
+                                ),
+                                "康泰友聚"
+                            ],
+                            id="toolbar-social-btn",
+                            shadow="hover-shadow-light",
+                            style=style(
+                                display="flex",
+                                alignItems="center",
+                                padding="8px 16px",
+                                backgroundColor="#f5f5f5",
+                                color="#999",
+                                borderRadius="6px",
+                                cursor="not-allowed",
+                                border="1px solid #e8e8e8",
+                                transition="all 0.2s ease",
+                                whiteSpace="nowrap",
+                                opacity=0.6
+                            ),
+                            enableEvents=[],  # 禁用事件
+                            nClicks=0
+                        )
+                    ],
+                    wrap=False,
+                    style=style(width="100%")
+                )
+            ],
+            scrollbar='hidden',
+            style=style(
+                display="flex", 
+                overflowX="auto",
+                marginBottom="8px",
+                paddingBottom="4px" 
+            )
+        )
+    else:
+        # 渲染话题提示栏（原有逻辑）
+        toolbar_content = fuc.FefferyDiv(
+            [
+                fac.AntdSpace(
+                    [
+                        fuc.FefferyDiv(
+                            [
+                                DashIconify(
+                                    icon=icons[index],  # 使用icons列表中的图标
+                                    width=16,
+                                    height=16,
+                                    style=style(marginRight="8px", color="#666")
+                                ),
+                                topic
+                            ],
+                            id={'type': 'chat-topic', 'index': index},
+                            shadow="hover-shadow-light",
+                            style=style(
+                                display="flex",
+                                alignItems="center",
+                                padding="8px 16px",  # 更宽的按钮
+                                backgroundColor="#f5f5f5",  # 浅灰色背景
+                                color="#333",  # 深灰色文字
+                                borderRadius="6px",  # 稍大的圆角
+                                cursor="pointer",  # 鼠标移到上面显示手型
+                                border="1px solid #e8e8e8",  # 更浅的边框
+                                transition="all 0.2s ease",  # 平滑过渡
+                                whiteSpace="nowrap"  # 关键修改：防止工具项内文本换行
+                            ),
+                            enableEvents=['click', 'hover'],
+                            # 点击事件，暂时置空
+                            nClicks=0
+
+                        ) for index, topic in enumerate(topics)
+                    ],
+                    wrap=False,
+                    style=style(width="100%")
+                )
+            ],
+            scrollbar='hidden',
+            style=style(
+                display="flex", 
+                overflowX="auto",
+                marginBottom="8px",
+                paddingBottom="4px" 
+                )
+        )
+    
     # 统一外框的输入区域容器
     children =  fuc.FefferyDiv(
         [
-            # 话题提示栏 - 替代工具栏
-            fuc.FefferyDiv(
-                [
-                    fac.AntdSpace(
-                        [
-                            fuc.FefferyDiv(
-                                [
-                                    DashIconify(
-                                        icon=icons[index],  # 使用icons列表中的图标
-                                        width=16,
-                                        height=16,
-                                        style=style(marginRight="8px", color="#666")
-                                    ),
-                                    topic
-                                ],
-                                id={'type': 'chat-topic', 'index': index},
-                                shadow="hover-shadow-light",
-                                style=style(
-                                    display="flex",
-                                    alignItems="center",
-                                    padding="8px 16px",  # 更宽的按钮
-                                    backgroundColor="#f5f5f5",  # 浅灰色背景
-                                    color="#333",  # 深灰色文字
-                                    borderRadius="6px",  # 稍大的圆角
-                                    cursor="pointer",  # 鼠标移到上面显示手型
-                                    border="1px solid #e8e8e8",  # 更浅的边框
-                                    transition="all 0.2s ease",  # 平滑过渡
-                                    whiteSpace="nowrap"  # 关键修改：防止工具项内文本换行
-                                ),
-                                enableEvents=['click', 'hover'],
-                                # 点击事件，暂时置空
-                                nClicks=0
-
-                            ) for index, topic in enumerate(topics)
-                        ],
-                        wrap=False,
-                        style=style(width="100%")
-                    )
-                ],
-                scrollbar='hidden',
-                style=style(
-                    display="flex", 
-                    overflowX="auto",
-                    marginBottom="8px",
-                    paddingBottom="4px" 
-                    )
-            ),
+            # 话题提示栏或工具栏（根据配置决定）
+            toolbar_content,
             
             # 输入框区域 - 包含统一外框，支持响应式布局
             fuc.FefferyDiv(

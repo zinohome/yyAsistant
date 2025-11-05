@@ -53,6 +53,27 @@ def register_chat_callbacks(app):
             set_props("health-record-drawer", {"visible": True})
         if clickedKey == "preference":
             set_props("preference-drawer", {"visible": True})
+    
+    # 添加处理工具栏按钮点击事件的回调函数
+    @app.callback(
+        [
+            Input("toolbar-health-record-btn", "nClicks"),
+            Input("toolbar-preference-btn", "nClicks"),
+        ],
+        prevent_initial_call=True,
+    )
+    def handle_toolbar_click(health_record_clicks, preference_clicks):
+        """处理工具栏按钮点击事件"""
+        ctx_info = ctx.triggered
+        if not ctx_info or len(ctx_info) == 0:
+            return
+        
+        triggered_id = ctx_info[0]['prop_id'].split('.')[0]
+        
+        if triggered_id == "toolbar-health-record-btn":
+            set_props("health-record-drawer", {"visible": True})
+        elif triggered_id == "toolbar-preference-btn":
+            set_props("preference-drawer", {"visible": True})
 
     # 合并的会话管理回调函数（桌面端 + 移动端）
     @app.callback(

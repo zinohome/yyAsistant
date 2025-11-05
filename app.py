@@ -150,13 +150,48 @@ app.clientside_callback(
         }
         // 处理SSE事件（此回调仅用于完成/镜像，不再用来切入text_processing，避免TTS完成后被旧事件拉回S1）
         else if (triggeredId === 'ai-chat-x-sse-completed-receiver' && sse_event) {
-            window.controlledLog?.log('🔍 收到SSE事件（镜像/完成），不改变当前状态');
-            return window.dash_clientside.no_update;
+            window.controlledLog?.log('🔍 收到SSE事件（镜像/完成），检查配置');
+            
+            // 🔧 关键修复：检查 enable_auto_tts_after_sse 配置
+            // 如果为 false，对于文本聊天和录音聊天场景，直接重置按钮状态
+            const enableAutoTTS = window.voiceConfig && window.voiceConfig.ENABLE_AUTO_TTS_AFTER_SSE === 'true';
+            const currentScenario = current_state?.scenario || null;
+            const isTextOrRecordingChat = currentScenario === 'text_chat' || currentScenario === 'voice_recording';
+            
+            if (!enableAutoTTS && isTextOrRecordingChat && current_state?.state === 'text_processing') {
+                window.controlledLog?.log('🔧 enable_auto_tts_after_sse 为 false，且是文本/录音聊天场景，直接重置按钮状态到idle');
+                newState = {
+                    state: 'idle',
+                    scenario: null,
+                    timestamp: Date.now(),
+                    metadata: {}
+                };
+                window.controlledLog?.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+            } else {
+                window.controlledLog?.log('🔍 收到SSE事件（镜像/完成），不改变当前状态');
+                return window.dash_clientside.no_update;
+            }
         }
-        // SSE完成 - 不更新状态，继续等待TTS完成
+        // SSE完成 - 检查配置，决定是等待TTS完成还是立即重置状态
         else if (triggeredId === 'ai-chat-x-sse-completed-receiver') {
-            window.controlledLog?.log('🔍 SSE完成事件被忽略，等待TTS完成');
-            return window.dash_clientside.no_update;
+            // 🔧 关键修复：检查 enable_auto_tts_after_sse 配置
+            const enableAutoTTS = window.voiceConfig && window.voiceConfig.ENABLE_AUTO_TTS_AFTER_SSE === 'true';
+            const currentScenario = current_state?.scenario || null;
+            const isTextOrRecordingChat = currentScenario === 'text_chat' || currentScenario === 'voice_recording';
+            
+            if (!enableAutoTTS && isTextOrRecordingChat && current_state?.state === 'text_processing') {
+                window.controlledLog?.log('🔧 enable_auto_tts_after_sse 为 false，且是文本/录音聊天场景，直接重置按钮状态到idle');
+                newState = {
+                    state: 'idle',
+                    scenario: null,
+                    timestamp: Date.now(),
+                    metadata: {}
+                };
+                window.controlledLog?.log('🔍 状态转换:', window.unifiedButtonStateManager.getStateInfo(newState.state, newState.scenario));
+            } else {
+                window.controlledLog?.log('🔍 SSE完成事件被忽略，等待TTS完成');
+                return window.dash_clientside.no_update;
+            }
         }
         // 外部事件 (录音/播放)
         else if (triggeredId === 'button-event-trigger' && recording_event) {
@@ -824,8 +859,8 @@ if __name__ == "__main__":
     print("   - 自适应UI系统: 已启动")
     
     # 非正式环境下开发调试预览用
-    #app.run(debug=True, host='0.0.0.0', port=8050)
-    app.run(host='0.0.0.0', port=8050)
+    app.run(debug=True, host='0.0.0.0', port=8050)
+    #app.run(host='0.0.0.0', port=8050)
     # 生产环境推荐使用gunicorn启动
     #gunicorn -w 4 -b 0.0.0.0:8050 app:server
 

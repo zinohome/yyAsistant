@@ -387,6 +387,7 @@ def _create_state_stores():
                         VOICE_DEFAULT: '''' + VoiceConfig.VOICE_DEFAULT + '''',
                         VOLUME_DEFAULT: ''' + str(VoiceConfig.VOLUME_DEFAULT) + ''',
                         AUTO_PLAY_DEFAULT: ''' + str(VoiceConfig.AUTO_PLAY_DEFAULT).lower() + ''',
+                        ENABLE_AUTO_TTS_AFTER_SSE: ''' + ('true' if BaseConfig.enable_auto_tts_after_sse else 'false') + ''',
                         VOICE_CALL_SHOW_TRANSCRIPTION: ''' + ('true' if VoiceConfig.VOICE_CALL_SHOW_TRANSCRIPTION else 'false') + ''',
                         VOICE_CALL_SAVE_TO_DATABASE: ''' + ('true' if VoiceConfig.VOICE_CALL_SAVE_TO_DATABASE else 'false') + ''',
                         VOICE_CALL_AUTO_SAVE_ON_END: ''' + ('true' if VoiceConfig.VOICE_CALL_AUTO_SAVE_ON_END else 'false') + ''',
@@ -491,8 +492,10 @@ def _create_state_stores():
                     const originalDispatchEvent = window.dispatchEvent;
                     window.dispatchEvent = function(event) {{
                         if (event.type === 'messageCompleted' && event.detail) {{
-                            // 触发语音播放
-                            if (window.voicePlayer) {{
+                            // 检查 enable_auto_tts_after_sse 配置
+                            const enableAutoTTS = window.voiceConfig && window.voiceConfig.ENABLE_AUTO_TTS_AFTER_SSE === 'true';
+                            if (enableAutoTTS && window.voicePlayer) {{
+                                // 触发语音播放
                                 window.voicePlayer.playText(event.detail.text);
                             }}
                         }}

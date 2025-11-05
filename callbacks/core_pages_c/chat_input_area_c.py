@@ -707,14 +707,35 @@ app.clientside_callback(
                             });
                             document.dispatchEvent(event);
 
-                            // 触发TTS播放（voice_player_enhanced.js 会监听 messageCompleted）
-                            try {
-                                const ttsEvent = new CustomEvent('messageCompleted', {
-                                    detail: { text: fullContent }
-                                });
-                                document.dispatchEvent(ttsEvent);
-                            } catch (e) {
-                                console.warn('触发TTS事件失败:', e);
+                            // 检查 enable_auto_tts_after_sse 配置，决定是否触发TTS播放
+                            const enableAutoTTS = window.voiceConfig && window.voiceConfig.ENABLE_AUTO_TTS_AFTER_SSE === 'true';
+                            if (enableAutoTTS) {
+                                // 触发TTS播放（voice_player_enhanced.js 会监听 messageCompleted）
+                                try {
+                                    const ttsEvent = new CustomEvent('messageCompleted', {
+                                        detail: { text: fullContent }
+                                    });
+                                    document.dispatchEvent(ttsEvent);
+                                } catch (e) {
+                                    console.warn('触发TTS事件失败:', e);
+                                }
+                            } else {
+                                console.log('SSE完成，但 enable_auto_tts_after_sse 为 false，跳过TTS播放');
+                                // 🔧 关键修复：当 enable_auto_tts_after_sse 为 false 时，直接重置按钮状态
+                                // 触发按钮状态重置事件，让统一按钮状态管理器重置到idle状态
+                                try {
+                                    if (window.dash_clientside && window.dash_clientside.set_props) {
+                                        window.dash_clientside.set_props('button-event-trigger', {
+                                            data: {
+                                                type: 'tts_complete',
+                                                timestamp: Date.now()
+                                            }
+                                        });
+                                        console.log('🔧 已触发按钮状态重置事件（enable_auto_tts_after_sse=false）');
+                                    }
+                                } catch (e) {
+                                    console.warn('触发按钮状态重置事件失败:', e);
+                                }
                             }
                             
                             // 新增：SSE完成时强制滚动到底部

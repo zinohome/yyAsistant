@@ -328,7 +328,14 @@ class VoicePlayerEnhanced {
             try {
                 window.controlledLog?.log('🎵 SSE完成事件触发:', event.detail);
                 
-                // 强制启用TTS播放，确保功能正常
+                // 检查 enable_auto_tts_after_sse 配置
+                const enableAutoTTS = window.voiceConfig && window.voiceConfig.ENABLE_AUTO_TTS_AFTER_SSE === 'true';
+                if (!enableAutoTTS) {
+                    window.controlledLog?.log('🎵 enable_auto_tts_after_sse 为 false，跳过TTS播放');
+                    return;
+                }
+                
+                // 检查是否有文本内容
                 if (event.detail && event.detail.text) {
                     window.controlledLog?.log('🎵 开始TTS播放:', event.detail.text.substring(0, 50) + '...');
                     
@@ -339,8 +346,9 @@ class VoicePlayerEnhanced {
                 }
             } catch (e) {
                 console.error('messageCompleted TTS 处理失败:', e);
-                // 即使出错也要尝试播放
-                if (event.detail && event.detail.text) {
+                // 检查配置后再尝试播放
+                const enableAutoTTS = window.voiceConfig && window.voiceConfig.ENABLE_AUTO_TTS_AFTER_SSE === 'true';
+                if (enableAutoTTS && event.detail && event.detail.text) {
                     this.synthesizeAndPlay(event.detail.text);
                 }
             }
@@ -515,14 +523,26 @@ class VoicePlayerEnhanced {
             window.controlledLog?.log(`🎵 音频流场景判断: 录音聊天=${isRecordingChat}, 语音通话=${isVoiceCall}, 文本聊天=${isTextChat}`);
             
             if (isRecordingChat || isTextChat) {
+                // 录音聊天TTS 或 文本聊天TTS：检查 enable_auto_tts_after_sse 配置
+                const enableAutoTTS = window.voiceConfig && window.voiceConfig.ENABLE_AUTO_TTS_AFTER_SSE === 'true';
+                if (!enableAutoTTS) {
+                    window.controlledLog?.log('🎧 enable_auto_tts_after_sse 为 false，跳过TTS播放');
+                    return;
+                }
                 // 录音聊天TTS 或 文本聊天TTS：简单按序播放，不使用分片管理
                 window.controlledLog?.log('🎧 聊天TTS（录音/文本），简单按序播放');
                 this.playSimpleTTS(base64, messageId, seq);
             } else if (isVoiceCall) {
-                // 语音通话TTS：使用复杂分片管理
+                // 语音通话TTS：使用复杂分片管理（不受 enable_auto_tts_after_sse 配置影响）
                 window.controlledLog?.log('🎤 语音通话TTS，使用分片管理');
                 this.playVoiceCallTTS(base64, messageId, sessionId, codec, seq);
             } else {
+                // 未知场景：检查配置后决定是否播放
+                const enableAutoTTS = window.voiceConfig && window.voiceConfig.ENABLE_AUTO_TTS_AFTER_SSE === 'true';
+                if (!enableAutoTTS) {
+                    window.controlledLog?.log('❓ enable_auto_tts_after_sse 为 false，跳过未知场景TTS播放');
+                    return;
+                }
                 // 未知场景：默认简单播放
                 window.controlledLog?.log('❓ 未知场景TTS，默认简单播放');
                 this.playSimpleTTS(base64, messageId);
