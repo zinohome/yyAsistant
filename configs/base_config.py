@@ -79,7 +79,7 @@ class BaseConfig:
     
     # 语音自动播放配置
     # SSE结束后是否自动触发TTS语音播放
-    enable_auto_tts_after_sse: bool = True
+    enable_auto_tts_after_sse: bool = False
     
     # WebSocket配置
     # WebSocket服务器地址
