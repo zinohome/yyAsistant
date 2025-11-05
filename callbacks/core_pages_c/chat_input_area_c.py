@@ -369,19 +369,29 @@ def trigger_sse(messages, enable_voice, ws_connection, current_session_id):
                 return no_update, no_update
             role = last_message.get('role', 'assistant')
             
-            # 仅发送“最后一条用户消息”到/stream（按需避免提交全量历史）
+            # 构建完整的历史消息列表（包含所有用户和助手消息，用于保持对话连贯性）
             conversation_messages = []
-            last_user_msg = None
-            for i in range(len(messages) - 1, -1, -1):
-                m = messages[i]
-                if m.get('role') == 'user':
-                    last_user_msg = m
-                    break
-            if last_user_msg:
-                conversation_messages.append({
-                    'role': 'user',
-                    'content': last_user_msg.get('content', '')
-                })
+            for m in messages:
+                # 跳过最后一条正在流式传输的AI消息占位符
+                if m.get('id') == message_id and m.get('is_streaming', False):
+                    continue
+                # 跳过占位消息
+                if m.get('content') == '正在思考中...':
+                    continue
+                # 提取有效的消息（user 或 assistant）
+                msg_role = m.get('role')
+                msg_content = m.get('content', '').strip()
+                if msg_role in ['user', 'assistant', 'agent'] and msg_content:
+                    conversation_messages.append({
+                        'role': 'user' if msg_role == 'user' else 'assistant',
+                        'content': msg_content
+                    })
+            
+            # 限制历史消息数量，只保留最近的N条消息（避免请求过大）
+            max_history = BaseConfig.max_history_messages_count
+            if len(conversation_messages) > max_history:
+                conversation_messages = conversation_messages[-max_history:]
+                log.debug(f"历史消息过多，已限制为最近{max_history}条消息")
             
             # 处理会话ID - 如果为空，使用默认值
             session_id = current_session_id or 'conversation_0001'

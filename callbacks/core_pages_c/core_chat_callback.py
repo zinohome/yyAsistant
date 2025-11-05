@@ -161,9 +161,33 @@ def _handle_text_message_send(messages, message_content, current_session_id, def
         except Exception as e:
             log.error(f"保存用户消息到数据库失败: {e}")
     
-    # 构建SSE请求
+    # 构建SSE请求（包含完整历史消息以保持对话连贯性）
     try:
-        conversation_messages = [{'role': 'user', 'content': message_content}]
+        # 构建完整的历史消息列表（包含所有用户和助手消息）
+        conversation_messages = []
+        for m in updated_messages:
+            # 跳过最后一条正在流式传输的AI消息占位符
+            if m.get('id') == ai_message_id and m.get('is_streaming', False):
+                continue
+            # 跳过占位消息
+            if m.get('content') == '正在思考中...':
+                continue
+            # 提取有效的消息（user 或 assistant）
+            msg_role = m.get('role')
+            msg_content = m.get('content', '').strip()
+            if msg_role in ['user', 'assistant', 'agent'] and msg_content:
+                conversation_messages.append({
+                    'role': 'user' if msg_role == 'user' else 'assistant',
+                    'content': msg_content
+                })
+        
+        # 限制历史消息数量，只保留最近的N条消息（避免请求过大）
+        from configs.base_config import BaseConfig
+        max_history = BaseConfig.max_history_messages_count
+        if len(conversation_messages) > max_history:
+            conversation_messages = conversation_messages[-max_history:]
+            log.debug(f"历史消息过多，已限制为最近{max_history}条消息")
+        
         session_id = current_session_id or 'conversation_0001'
         
         request_data = {
@@ -246,8 +270,31 @@ def _handle_voice_transcription(messages, transcription_data, current_session_id
         }
         updated_messages.append(ai_message)
 
-        # 构建SSE请求（语音模式）
-        conversation_messages = [{'role': 'user', 'content': transcribed_text}]
+        # 构建SSE请求（语音模式，包含完整历史消息以保持对话连贯性）
+        conversation_messages = []
+        for m in updated_messages:
+            # 跳过最后一条正在流式传输的AI消息占位符
+            if m.get('id') == ai_message_id and m.get('is_streaming', False):
+                continue
+            # 跳过占位消息
+            if m.get('content') == '正在思考中...':
+                continue
+            # 提取有效的消息（user 或 assistant）
+            msg_role = m.get('role')
+            msg_content = m.get('content', '').strip()
+            if msg_role in ['user', 'assistant', 'agent'] and msg_content:
+                conversation_messages.append({
+                    'role': 'user' if msg_role == 'user' else 'assistant',
+                    'content': msg_content
+                })
+        
+        # 限制历史消息数量，只保留最近的N条消息（避免请求过大）
+        from configs.base_config import BaseConfig
+        max_history = BaseConfig.max_history_messages_count
+        if len(conversation_messages) > max_history:
+            conversation_messages = conversation_messages[-max_history:]
+            log.debug(f"历史消息过多，已限制为最近{max_history}条消息")
+        
         session_id = current_session_id or 'conversation_0001'
         
         request_data = {

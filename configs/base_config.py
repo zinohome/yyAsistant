@@ -77,6 +77,11 @@ class BaseConfig:
     # 默认是否使用工具
     yychat_default_use_tools: bool = True
     
+    # 历史消息限制配置
+    # 发送给服务端的历史消息最大数量（保留最近的N轮对话，每轮包含user和assistant各一条）
+    # 建议值：20-30（即40-60条消息），既能保持对话连贯性，又不会导致请求过大
+    max_history_messages_count: int = 30  # 保留最近30条消息（约15轮对话）
+    
     # 语音自动播放配置
     # SSE结束后是否自动触发TTS语音播放
     enable_auto_tts_after_sse: bool = False
